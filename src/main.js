@@ -17,6 +17,7 @@ import { virtualBackgroundService } from './services/VirtualBackgroundService.js
 import { ParticleSystem } from './ui/ParticleSystem.js';
 import { WaveformVisualizer } from './ui/WaveformVisualizer.js';
 import { HandVisualizer } from './ui/HandVisualizer.js';
+import { jingleBellsService, JINGLE_BELLS_NOTES, PIANO_KEYS } from './services/JingleBellsService.js';
 
 class App {
   constructor() {
@@ -192,6 +193,8 @@ class App {
         return this._templateGameplayPhase();
       case GAME_STATES.RESULT_PHASE:
         return this._templateResultPhase();
+      case GAME_STATES.JINGLE_BELLS:
+        return this._templateJingleBells();
       default:
         return this._templateHome();
     }
@@ -218,6 +221,10 @@ class App {
     } else if (state === GAME_STATES.CALIBRATION || state === GAME_STATES.GAMEPLAY_PHASE) {
       this._clearAutoAdvance();
       this._setupCameraAndTracking();
+    } else if (state === GAME_STATES.JINGLE_BELLS) {
+      this._clearAutoAdvance();
+      this._setupCameraAndTracking();
+      this._setupJingleBellsListeners();
     } else if (state === GAME_STATES.RESULT_PHASE) {
       this._clearAutoAdvance();
       this._stopCameraAndTracking();
@@ -326,6 +333,14 @@ class App {
               <span class="mode-btn-desc">Open Jam • Direct Chord Sounds • Audio Presets</span>
             </div>
             <span style="font-size:16px;">🎵</span>
+          </button>
+
+          <button class="mode-btn jingle-bells" id="btn-home-jingle">
+            <div class="mode-btn-left">
+              <span class="mode-btn-title">🔔 JINGLE BELLS PIANO</span>
+              <span class="mode-btn-desc">Tutorial & Lagu • Petunjuk Not & Gesture • Partitur Asli</span>
+            </div>
+            <span style="font-size:18px;">🎄</span>
           </button>
         </div>
 
@@ -525,10 +540,13 @@ class App {
           <button class="btn-icon-back" id="btn-back-home">‹</button>
           <h2 class="subpage-title">FREE SYNTHESIZER</h2>
           <select id="synth-preset-select">
-            <option value="Dreamy Piano" ${settingsManager.settings.soundPreset === 'Dreamy Piano' ? 'selected' : ''}>Dreamy Piano</option>
-            <option value="Warm Synth" ${settingsManager.settings.soundPreset === 'Warm Synth' ? 'selected' : ''}>Warm Synth</option>
-            <option value="Soft Electronic" ${settingsManager.settings.soundPreset === 'Soft Electronic' ? 'selected' : ''}>Soft Electronic</option>
-            <option value="Ambient" ${settingsManager.settings.soundPreset === 'Ambient' ? 'selected' : ''}>Ambient</option>
+            <option value="Acoustic Piano" ${settingsManager.settings.soundPreset === 'Acoustic Piano' ? 'selected' : ''}>🎹 Acoustic Piano (Tone.js)</option>
+            <option value="Acoustic Guitar" ${settingsManager.settings.soundPreset === 'Acoustic Guitar' ? 'selected' : ''}>🎸 Acoustic Guitar (Tone.js)</option>
+            <option value="Nylon Guitar" ${settingsManager.settings.soundPreset === 'Nylon Guitar' ? 'selected' : ''}>🎼 Nylon Guitar (Tone.js)</option>
+            <option value="Dreamy Piano" ${settingsManager.settings.soundPreset === 'Dreamy Piano' ? 'selected' : ''}>✨ Dreamy Piano</option>
+            <option value="Warm Synth" ${settingsManager.settings.soundPreset === 'Warm Synth' ? 'selected' : ''}>🎛️ Warm Synth</option>
+            <option value="Soft Electronic" ${settingsManager.settings.soundPreset === 'Soft Electronic' ? 'selected' : ''}>⚡ Soft Electronic</option>
+            <option value="Ambient" ${settingsManager.settings.soundPreset === 'Ambient' ? 'selected' : ''}>🌌 Ambient</option>
           </select>
         </div>
 
@@ -551,6 +569,220 @@ class App {
         </div>
 
         ${this._templateVirtualControls()}
+      </div>
+    `;
+  }
+
+  _templateJingleBells() {
+    const curNote = jingleBellsService.getCurrentNote();
+    const curIdx = jingleBellsService.currentIndex;
+    const isDemo = jingleBellsService.mode === 'DEMO';
+    const isTempo = jingleBellsService.mode === 'TEMPO';
+    const isGuide = jingleBellsService.mode === 'GUIDE';
+
+    // 4 Systems (Lines 1 to 4) - Matching sheet music in Image 1
+    const systems = [
+      { id: 1, measures: [1, 2, 3, 4], label: 'Line 1 (Jin-gle bells)' },
+      { id: 2, measures: [5, 6, 7, 8], label: 'Line 2 (Oh, what fun it is...)' },
+      { id: 3, measures: [9, 10, 11, 12], label: 'Line 3 (Jin-gle bells)' },
+      { id: 4, measures: [13, 14, 15, 16], label: 'Line 4 (One-horse open sleigh!)' },
+    ];
+
+    const systemsHtml = systems.map(sys => {
+      const measuresHtml = sys.measures.map(mNum => {
+        const mNotes = JINGLE_BELLS_NOTES.filter(n => n.measure === mNum);
+        const mChord = mNotes[0]?.chord || 'C';
+
+        const notesHtml = mNotes.map(n => {
+          const isActive = n.index === curIdx;
+          const isDone = n.index < curIdx;
+          const isHollow = n.duration >= 2;
+          const isWhole = n.duration >= 4;
+
+          return `
+            <div class="score-note-item pitch-${n.note} ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}" data-index="${n.index}" title="${n.note} (${n.solfege}) - ${n.fingerCount} Jari">
+              ${isActive ? '<span class="active-pointer">▼</span>' : ''}
+              <span class="note-top-cue">${n.note} • ${n.fingerCount}F</span>
+              <div class="note-glyph-box">
+                ${n.note === 'C4' ? '<div class="ledger-line"></div>' : ''}
+                <div class="notehead-circle ${isHollow ? 'notehead-hollow' : ''}">
+                  <div class="note-stem ${isWhole ? 'note-stem-none' : ''}"></div>
+                </div>
+              </div>
+              <span class="note-lyric-cue">${n.lyric}</span>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="score-measure" data-measure="${mNum}">
+            <span class="measure-chord-badge">${mChord}</span>
+            ${notesHtml}
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="score-system" data-system="${sys.id}">
+          <div class="system-meta">
+            <span>BAR ${sys.measures[0]} - ${sys.measures[sys.measures.length - 1]}</span>
+            <span>${sys.label}</span>
+          </div>
+          <div class="system-staff-wrapper">
+            <div class="staff-lines-bg">
+              <div class="staff-line"></div>
+              <div class="staff-line"></div>
+              <div class="staff-line"></div>
+              <div class="staff-line"></div>
+              <div class="staff-line"></div>
+            </div>
+            <div class="staff-clef-box">
+              <span class="treble-clef">𝄞</span>
+              ${sys.id === 1 ? '<div class="time-sig"><span>4</span><span>4</span></div>' : ''}
+            </div>
+            <div class="system-measures">
+              ${measuresHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const whiteKeys = PIANO_KEYS.filter(k => !k.isBlack);
+    const blackKeys = PIANO_KEYS.filter(k => k.isBlack);
+
+    const whiteKeysHtml = whiteKeys.map(k => {
+      const isTarget = curNote && curNote.note === k.note;
+      return `
+        <div class="piano-white-key ${isTarget ? 'target-key' : ''}" data-note="${k.note}">
+          <span class="key-note-label">${k.label}</span>
+          ${k.fingerCount ? `<span class="key-finger-badge">${k.emoji} ${k.fingerCount}</span>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    const blackKeysHtml = blackKeys.map(k => {
+      const noteClass = `bkey-${k.note.replace('#', 's')}`;
+      return `
+        <div class="piano-black-key ${noteClass}" data-note="${k.note}"></div>
+      `;
+    }).join('');
+
+    return `
+      <div class="jingle-bells-screen">
+        <div class="jingle-header">
+          <button class="btn-icon-back" id="btn-back-home">‹</button>
+          <div class="jingle-header-center">
+            <div class="jingle-title">
+              <span>🔔</span> JINGLE BELLS PIANO
+            </div>
+            <span class="jingle-subtitle">Petunjuk Notasi Piano • Partitur C Major • 48 Not</span>
+          </div>
+          <div class="jingle-mode-pills">
+            <button class="mode-pill ${isGuide ? 'active' : ''}" id="btn-jingle-mode-guide">🎓 BELAJAR</button>
+            <button class="mode-pill ${isTempo ? 'active' : ''}" id="btn-jingle-mode-tempo">⏱️ TEMPO</button>
+            <button class="mode-pill ${isDemo ? 'active' : ''}" id="btn-jingle-demo">${isDemo ? '⏹️ STOP' : '▶️ DEMO'}</button>
+          </div>
+        </div>
+
+        <div class="jingle-hud-card">
+          <div class="jingle-hud-top-row">
+            <div class="hud-target-block">
+              <span class="hud-kicker">🎯 PETUNJUK SEKARANG</span>
+              <div class="hud-target-main">
+                <span class="hud-note-badge" id="jingle-cur-note">${curNote.note}</span>
+                <span class="hud-solfege" id="jingle-cur-solfege">(${curNote.solfege})</span>
+                <span class="hud-lyric" id="jingle-cur-lyric">"${curNote.lyric}"</span>
+              </div>
+            </div>
+
+            <div class="hud-gesture-block">
+              <span class="hud-kicker">GESTURE TANGAN</span>
+              <div class="hud-gesture-pill" id="jingle-cur-gesture">
+                <span class="hud-emoji">${curNote.emoji}</span>
+                <span class="hud-gesture-name">${curNote.fingerCount} Jari</span>
+              </div>
+            </div>
+
+            <div class="hud-piano-block">
+              <span class="hud-kicker">TUTS PIANO</span>
+              <div class="hud-piano-pill" id="jingle-cur-key">
+                <span>🎹 Tuts ${curNote.note}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="jingle-feedback-strip" id="jingle-feedback-strip">
+            <div class="jingle-live-status">
+              <span class="live-dot waiting" id="jingle-live-dot"></span>
+              <span class="live-text" id="jingle-live-text">Kamera: Tunjukkan ${curNote.fingerCount} Jari ${curNote.emoji}</span>
+            </div>
+            <div class="jingle-progress-text" id="jingle-progress-text">
+              Not ${curIdx + 1} / 48 (Bar ${curNote.measure})
+            </div>
+          </div>
+
+          <div class="jingle-progress-bar">
+            <div class="jingle-progress-fill" id="jingle-progress-fill" style="width: ${Math.round(((curIdx) / 48) * 100)}%;"></div>
+          </div>
+        </div>
+
+        <div class="jingle-score-card">
+          <div class="score-card-header">
+            <span class="score-title">🎼 PARTITUR JINGLE BELLS (C MAJOR • 4/4)</span>
+            <button class="btn-score-reset" id="btn-jingle-reset">↺ Ulang dari Awal</button>
+          </div>
+          <div class="jingle-score-container" id="jingle-score-container">
+            ${systemsHtml}
+          </div>
+        </div>
+
+        <div class="jingle-piano-card">
+          <div class="piano-card-header">
+            <span>🎹 VIRTUAL PIANO (Sentuh / Klik Tuts Emas)</span>
+            <span class="piano-hint-text">1F=C • 2F=D • 3F=E • 4F=F • 5F=G</span>
+          </div>
+          <div class="jingle-piano-keyboard" id="jingle-piano-keyboard">
+            ${whiteKeysHtml}
+            ${blackKeysHtml}
+          </div>
+        </div>
+
+        <div class="jingle-camera-row">
+          <div class="camera-viewport jingle-camera-viewport">
+            <video id="camera-video" autoplay playsinline muted></video>
+            <canvas id="camera-canvas"></canvas>
+            <canvas id="tracking-canvas"></canvas>
+            <div class="camera-guide-frame"></div>
+            <div class="camera-guidance-pill" id="jingle-guidance-pill">
+              TUNJUKKAN ${curNote.fingerCount} JARI UNTUK ${curNote.note} ${curNote.emoji}
+            </div>
+            ${this._templateCameraOverlay()}
+          </div>
+
+          <div class="jingle-quick-buttons">
+            <button class="jingle-fbtn ${curNote.fingerCount === 1 ? 'active' : ''}" data-fingers="1" data-note="C4">
+              <span class="jf-emoji">☝️</span>
+              <span class="jf-label">1: C4</span>
+            </button>
+            <button class="jingle-fbtn ${curNote.fingerCount === 2 ? 'active' : ''}" data-fingers="2" data-note="D4">
+              <span class="jf-emoji">✌️</span>
+              <span class="jf-label">2: D4</span>
+            </button>
+            <button class="jingle-fbtn ${curNote.fingerCount === 3 ? 'active' : ''}" data-fingers="3" data-note="E4">
+              <span class="jf-emoji">🤟</span>
+              <span class="jf-label">3: E4</span>
+            </button>
+            <button class="jingle-fbtn ${curNote.fingerCount === 4 ? 'active' : ''}" data-fingers="4" data-note="F4">
+              <span class="jf-emoji">🖐️</span>
+              <span class="jf-label">4: F4</span>
+            </button>
+            <button class="jingle-fbtn ${curNote.fingerCount === 5 ? 'active' : ''}" data-fingers="5" data-note="G4">
+              <span class="jf-emoji">🖐️</span>
+              <span class="jf-label">5: G4</span>
+            </button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -778,10 +1010,13 @@ class App {
                 <div class="setting-desc">Harmonic character</div>
               </div>
               <select id="set-sound-preset">
-                <option value="Dreamy Piano" ${s.soundPreset === 'Dreamy Piano' ? 'selected' : ''}>Dreamy Piano</option>
-                <option value="Warm Synth" ${s.soundPreset === 'Warm Synth' ? 'selected' : ''}>Warm Synth</option>
-                <option value="Soft Electronic" ${s.soundPreset === 'Soft Electronic' ? 'selected' : ''}>Soft Electronic</option>
-                <option value="Ambient" ${s.soundPreset === 'Ambient' ? 'selected' : ''}>Ambient</option>
+                <option value="Acoustic Piano" ${s.soundPreset === 'Acoustic Piano' ? 'selected' : ''}>🎹 Acoustic Piano (Tone.js)</option>
+                <option value="Acoustic Guitar" ${s.soundPreset === 'Acoustic Guitar' ? 'selected' : ''}>🎸 Acoustic Guitar (Tone.js)</option>
+                <option value="Nylon Guitar" ${s.soundPreset === 'Nylon Guitar' ? 'selected' : ''}>🎼 Nylon Guitar (Tone.js)</option>
+                <option value="Dreamy Piano" ${s.soundPreset === 'Dreamy Piano' ? 'selected' : ''}>✨ Dreamy Piano</option>
+                <option value="Warm Synth" ${s.soundPreset === 'Warm Synth' ? 'selected' : ''}>🎛️ Warm Synth</option>
+                <option value="Soft Electronic" ${s.soundPreset === 'Soft Electronic' ? 'selected' : ''}>⚡ Soft Electronic</option>
+                <option value="Ambient" ${s.soundPreset === 'Ambient' ? 'selected' : ''}>🌌 Ambient</option>
               </select>
             </div>
           </div>
@@ -980,6 +1215,25 @@ class App {
     const fpsEl = document.getElementById('fps-display');
     if (fpsEl && fps > 0) {
       fpsEl.innerText = `${fps} FPS`;
+    }
+
+    // Update Jingle Bells live status indicator
+    if (gameEngine.currentState === GAME_STATES.JINGLE_BELLS) {
+      const liveDot = document.getElementById('jingle-live-dot');
+      const liveText = document.getElementById('jingle-live-text');
+      const curNote = jingleBellsService.getCurrentNote();
+      if (liveDot && liveText && curNote) {
+        if (!gestureResult.hasHand) {
+          liveDot.className = 'live-dot';
+          liveText.innerText = 'Kamera: Tunjukkan tangan di depan kamera 📷';
+        } else if (gestureResult.totalFingers === curNote.fingerCount) {
+          liveDot.className = 'live-dot matched';
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK! ✔)`;
+        } else {
+          liveDot.className = 'live-dot waiting';
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curNote.fingerCount} Jari ${curNote.emoji})`;
+        }
+      }
     }
 
     // --- Real-time Latency Debug Profiler ---
@@ -1286,6 +1540,180 @@ class App {
       overlay.classList.remove('show');
     }, 420);
   }
+
+  // ----------------------------------------------------
+  // JINGLE BELLS INTERACTIVE PIANO & SHEET MUSIC LOGIC
+  // ----------------------------------------------------
+  _setupJingleBellsListeners() {
+    jingleBellsService.onNoteChanged = (curNote, idx) => {
+      this._updateJingleBellsUI(curNote, idx);
+    };
+    jingleBellsService.onNoteHit = (note, idx, isUserAction) => {
+      this._onJingleNoteHit(note, idx, isUserAction);
+    };
+    jingleBellsService.onSongFinished = (stats) => {
+      this._showJingleCompleteModal(stats);
+    };
+    jingleBellsService.onTempoBeat = () => {
+      if (this.particleSystem) this.particleSystem.triggerPulse(0.25);
+    };
+    this._updateJingleBellsUI(jingleBellsService.getCurrentNote(), jingleBellsService.currentIndex);
+  }
+
+  _updateJingleBellsUI(curNote, idx) {
+    if (!curNote) return;
+
+    // 1. HUD elements
+    const noteEl = document.getElementById('jingle-cur-note');
+    if (noteEl) noteEl.innerText = curNote.note;
+
+    const solfegeEl = document.getElementById('jingle-cur-solfege');
+    if (solfegeEl) solfegeEl.innerText = `(${curNote.solfege})`;
+
+    const lyricEl = document.getElementById('jingle-cur-lyric');
+    if (lyricEl) lyricEl.innerText = `"${curNote.lyric}"`;
+
+    const gestureEl = document.getElementById('jingle-cur-gesture');
+    if (gestureEl) {
+      gestureEl.innerHTML = `
+        <span class="hud-emoji">${curNote.emoji}</span>
+        <span class="hud-gesture-name">${curNote.fingerCount} Jari</span>
+      `;
+    }
+
+    const keyEl = document.getElementById('jingle-cur-key');
+    if (keyEl) keyEl.innerHTML = `<span>🎹 Tuts ${curNote.note}</span>`;
+
+    const progText = document.getElementById('jingle-progress-text');
+    if (progText) progText.innerText = `Not ${idx + 1} / 48 (Bar ${curNote.measure})`;
+
+    const progFill = document.getElementById('jingle-progress-fill');
+    if (progFill) progFill.style.width = `${Math.round(((idx) / 48) * 100)}%`;
+
+    const guidancePill = document.getElementById('jingle-guidance-pill');
+    if (guidancePill) {
+      guidancePill.innerText = `TUNJUKKAN ${curNote.fingerCount} JARI UNTUK ${curNote.note} ${curNote.emoji}`;
+    }
+
+    const liveText = document.getElementById('jingle-live-text');
+    if (liveText && !gestureRecognitionService.confirmedHasHand) {
+      liveText.innerText = `Kamera: Tunjukkan ${curNote.fingerCount} Jari ${curNote.emoji}`;
+    }
+
+    // 2. Highlight score notes on sheet music
+    const scoreNotes = document.querySelectorAll('.score-note-item');
+    scoreNotes.forEach(el => {
+      const i = parseInt(el.dataset.index, 10);
+      const isCur = i === idx;
+      const isPast = i < idx;
+      el.classList.toggle('active', isCur);
+      el.classList.toggle('done', isPast);
+
+      // Manage active pointer
+      let pointer = el.querySelector('.active-pointer');
+      if (isCur) {
+        if (!pointer) {
+          const pt = document.createElement('span');
+          pt.className = 'active-pointer';
+          pt.innerText = '▼';
+          el.prepend(pt);
+        }
+        try {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        } catch (e) {}
+      } else if (pointer) {
+        pointer.remove();
+      }
+    });
+
+    // 3. Highlight target piano white key
+    const pKeys = document.querySelectorAll('.piano-white-key');
+    pKeys.forEach(k => {
+      const isTarget = k.dataset.note === curNote.note;
+      k.classList.toggle('target-key', isTarget);
+    });
+
+    // 4. Quick buttons
+    const fbtns = document.querySelectorAll('.jingle-fbtn');
+    fbtns.forEach(btn => {
+      const f = parseInt(btn.dataset.fingers, 10);
+      btn.classList.toggle('active', f === curNote.fingerCount);
+    });
+  }
+
+  _onJingleNoteHit(note, idx, isUserAction) {
+    if (this.particleSystem) {
+      this.particleSystem.triggerPulse(0.4);
+    }
+
+    // Flash live feedback dot
+    const liveDot = document.getElementById('jingle-live-dot');
+    if (liveDot) {
+      liveDot.className = 'live-dot matched';
+      setTimeout(() => {
+        if (liveDot) liveDot.className = 'live-dot waiting';
+      }, 350);
+    }
+
+    // Flash piano key pressed animation
+    const targetKey = document.querySelector(`.piano-white-key[data-note="${note.note}"]`);
+    if (targetKey) {
+      targetKey.classList.add('pressed');
+      setTimeout(() => targetKey.classList.remove('pressed'), 180);
+    }
+  }
+
+  _showJingleCompleteModal(stats) {
+    try {
+      confetti({
+        particleCount: 160,
+        spread: 95,
+        origin: { y: 0.55 },
+      });
+    } catch (e) {}
+
+    const existing = document.getElementById('jingle-complete-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'jingle-complete-overlay';
+    modal.id = 'jingle-complete-modal';
+    modal.innerHTML = `
+      <div class="jingle-complete-card">
+        <div style="font-size:42px;animation:noteBounce 0.8s infinite alternate;">🎄🔔✨</div>
+        <h3 style="font-family:var(--font-display);color:#ffd700;font-size:22px;letter-spacing:1.5px;text-shadow:0 0 15px rgba(255,215,0,0.6);">
+          LAGU SELESAI!
+        </h3>
+        <p style="font-size:13px;color:var(--text-main);line-height:1.5;">
+          Selamat! Kamu berhasil menyelesaikan lagu <strong style="color:#00ffaa;">Jingle Bells</strong> dengan tutorial piano & gesture!
+        </p>
+
+        <div style="display:flex;justify-content:space-around;background:rgba(255,255,255,0.06);padding:12px;border-radius:14px;border:1px solid rgba(0,255,170,0.3);margin:6px 0;">
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:700;">TOTAL NOT</div>
+            <div style="font-family:var(--font-display);font-size:20px;font-weight:900;color:#00f7ff;">48 / 48</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:700;">AKURASI</div>
+            <div style="font-family:var(--font-display);font-size:20px;font-weight:900;color:#00ffaa;">100%</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);font-weight:700;">PREDIKAT</div>
+            <div style="font-size:17px;">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btn-jingle-replay" style="margin-top:4px;width:100%;box-shadow:0 0 25px rgba(0,255,170,0.6);background:linear-gradient(135deg, #00ffaa 0%, #0099ff 100%);color:#050210;">
+          <span>↺</span> MAINKAN LAGI
+        </button>
+        <button class="btn-secondary" id="btn-jingle-home" style="width:100%;">
+          <span>🏠</span> KEMBALI KE HOME
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
 }
 
 // Global delegated click handler
@@ -1343,10 +1771,18 @@ document.addEventListener('click', (e) => {
   } else if (e.target.closest('#btn-home-settings')) {
     audioManager.init();
     gameEngine.setState(GAME_STATES.SETTINGS);
+  } else if (e.target.closest('#btn-home-jingle')) {
+    audioManager.init();
+    audioManager.resume();
+    const tempVideo = document.getElementById('camera-video');
+    cameraService.requestCamera(tempVideo).catch(() => {});
+    jingleBellsService.setMode('GUIDE');
+    gameEngine.setState(GAME_STATES.JINGLE_BELLS);
   }
 
   // 2. Navigation Back
   else if (e.target.closest('#btn-back-home')) {
+    jingleBellsService.stop();
     gameEngine.setState(GAME_STATES.HOME);
   }
 
@@ -1406,6 +1842,61 @@ document.addEventListener('click', (e) => {
     const btn = e.target.closest('.virtual-btn');
     const fingers = parseInt(btn.dataset.fingers, 10);
     if (window.app) window.app.triggerVirtualGesture(fingers);
+  }
+
+  // 8. Jingle Bells Actions & Controls
+  else if (e.target.closest('#btn-jingle-mode-guide')) {
+    jingleBellsService.setMode('GUIDE');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-jingle-mode-tempo')) {
+    jingleBellsService.startTempo();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-jingle-demo')) {
+    if (jingleBellsService.isPlaying && jingleBellsService.mode === 'DEMO') {
+      jingleBellsService.stop();
+      if (window.app) window.app.render();
+    } else {
+      jingleBellsService.startDemo();
+      const demoBtn = document.getElementById('btn-jingle-demo');
+      if (demoBtn) demoBtn.innerText = '⏹️ STOP';
+    }
+  } else if (e.target.closest('#btn-jingle-reset')) {
+    jingleBellsService.reset();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('.piano-white-key') || e.target.closest('.piano-black-key')) {
+    const keyEl = e.target.closest('.piano-white-key') || e.target.closest('.piano-black-key');
+    const note = keyEl.dataset.note;
+    if (note) {
+      audioManager.playPianoNote(note, { duration: 0.8 });
+      keyEl.classList.add('pressed');
+      setTimeout(() => keyEl.classList.remove('pressed'), 180);
+      const cur = jingleBellsService.getCurrentNote();
+      if (cur && cur.note === note) {
+        jingleBellsService.triggerNote(jingleBellsService.currentIndex, true);
+      }
+    }
+  } else if (e.target.closest('.score-note-item')) {
+    const noteEl = e.target.closest('.score-note-item');
+    const idx = parseInt(noteEl.dataset.index, 10);
+    if (!isNaN(idx)) {
+      jingleBellsService.jumpToNote(idx);
+    }
+  } else if (e.target.closest('.jingle-fbtn')) {
+    const fbtn = e.target.closest('.jingle-fbtn');
+    const fingers = parseInt(fbtn.dataset.fingers, 10);
+    if (!isNaN(fingers)) {
+      if (window.app) window.app.triggerVirtualGesture(fingers);
+    }
+  } else if (e.target.closest('#btn-jingle-replay')) {
+    const modal = document.getElementById('jingle-complete-modal');
+    if (modal) modal.remove();
+    jingleBellsService.reset();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-jingle-home')) {
+    const modal = document.getElementById('jingle-complete-modal');
+    if (modal) modal.remove();
+    jingleBellsService.stop();
+    gameEngine.setState(GAME_STATES.HOME);
   }
 
   // 8. Settings change inputs

@@ -1,7 +1,7 @@
 // AudioManager.js - Web Audio Engine for Gesture Synth
 // Implements Soft Piano + Dreamy Synth Pad, ADSR, Algorithmic Reverb, Delay, and Musical SFX
 
-import { getChordData } from './ChordLibrary.js';
+import { getChordData, midiToFreq, noteToMidi } from './ChordLibrary.js';
 
 class AudioManager {
   constructor() {
@@ -32,6 +32,28 @@ class AudioManager {
 
     this.lastAudioTriggerMs = 0;
     this.initialized = false;
+
+    // Real Sampled Instruments (Tone.js / Studio recordings)
+    this.instrumentBuffers = {
+      piano: {},
+      acousticGuitar: {},
+      nylonGuitar: {},
+    };
+    this.instrumentsLoaded = {
+      piano: false,
+      acousticGuitar: false,
+      nylonGuitar: false,
+    };
+    this.instrumentsLoading = {
+      piano: false,
+      acousticGuitar: false,
+      nylonGuitar: false,
+    };
+
+    // Backwards compatibility aliases
+    this.pianoBuffers = this.instrumentBuffers.piano;
+    this.isPianoSamplesLoaded = false;
+    this.isPianoSamplesLoading = false;
   }
 
   async init() {
@@ -123,6 +145,9 @@ class AudioManager {
     this.limiter.connect(this.ctx.destination);
 
     this.initialized = true;
+    this.loadPianoSamples().catch(() => {});
+    this.loadAcousticGuitarSamples().catch(() => {});
+    this.loadNylonGuitarSamples().catch(() => {});
   }
 
   async resume() {
@@ -175,17 +200,45 @@ class AudioManager {
     // ADSR settings based on preset
     const adsr = this._getPresetADSR();
 
+    const isSamplePreset = (
+      (this.currentPreset === 'Acoustic Piano' && this.instrumentsLoaded.piano) ||
+      (this.currentPreset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) ||
+      (this.currentPreset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar)
+    );
+
     chordData.frequencies.forEach((freq, idx) => {
       // Pan each note slightly across the stereo field for rich depth
       const panOffset = ((idx / (chordData.frequencies.length - 1 || 1)) - 0.5) * 0.6;
+      const midi = (chordData.midis && chordData.midis[idx]) || 60;
 
-      // 1. Soft Piano Layer
-      const pianoVoice = this._createPianoVoice(freq, now, adsr, panOffset, holdDuration);
-      newVoices.push(pianoVoice);
+      // Natural acoustic strum timing cascade for guitar presets (~16ms between strings)
+      const isGuitar = (this.currentPreset === 'Acoustic Guitar' || this.currentPreset === 'Nylon Guitar');
+      const noteStartTime = isGuitar ? (now + idx * 0.016) : now;
 
-      // 2. Dreamy Synth Pad Layer (adds atmospheric warmth)
-      const padVoice = this._createPadVoice(freq, now, adsr, panOffset, holdDuration);
-      newVoices.push(padVoice);
+      // 1. Primary Instrument Voice Layer: Sampled Real Instrument or Soft Synth
+      if (this.currentPreset === 'Acoustic Piano' && this.instrumentsLoaded.piano) {
+        const pianoVoice = this._createSamplePianoVoice(midi, freq, noteStartTime, panOffset, holdDuration);
+        newVoices.push(pianoVoice);
+      } else if (this.currentPreset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) {
+        const guitarVoice = this._createSampleAcousticGuitarVoice(midi, freq, noteStartTime, panOffset, holdDuration);
+        newVoices.push(guitarVoice);
+      } else if (this.currentPreset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar) {
+        const guitarVoice = this._createSampleNylonGuitarVoice(midi, freq, noteStartTime, panOffset, holdDuration);
+        newVoices.push(guitarVoice);
+      } else {
+        const pianoVoice = this._createPianoVoice(freq, noteStartTime, adsr, panOffset, holdDuration);
+        newVoices.push(pianoVoice);
+      }
+
+      // 2. Pad Layer (adds atmospheric warmth for synth and piano presets)
+      if (!isSamplePreset) {
+        const padVoice = this._createPadVoice(freq, now, adsr, panOffset, holdDuration);
+        newVoices.push(padVoice);
+      } else if (this.currentPreset === 'Acoustic Piano') {
+        // Subtle natural hall acoustic pad for real piano preset
+        const padVoice = this._createPadVoice(freq, now, { ...adsr, sustain: 0.25, release: 0.9 }, panOffset, holdDuration);
+        newVoices.push(padVoice);
+      }
     });
 
     this.activeVoices = newVoices;
@@ -193,8 +246,95 @@ class AudioManager {
     return chordData;
   }
 
+  /**
+   * Play an authentic individual piano note (e.g. 'C4', 'E4', 'G4' or MIDI 60, 64, 67)
+   */
+  playPianoNote(noteOrMidi, options = {}) {
+    const tAudioStart = performance.now();
+    if (!this.initialized) this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    if (!this.ctx) return null;
+
+    let midi = 60;
+    let freq = 261.63;
+    let noteName = typeof noteOrMidi === 'string' ? noteOrMidi : 'C4';
+
+    if (typeof noteOrMidi === 'number') {
+      midi = noteOrMidi;
+      freq = midiToFreq(midi);
+    } else if (typeof noteOrMidi === 'string') {
+      midi = noteToMidi(noteOrMidi);
+      freq = midiToFreq(midi);
+    }
+
+    const now = this.ctx.currentTime;
+    const holdDuration = options.duration || 1.1;
+    const adsr = this._getPresetADSR();
+    const panOffset = options.pan !== undefined ? options.pan : 0;
+
+    let voice;
+    if (this.instrumentsLoaded.piano) {
+      voice = this._createSamplePianoVoice(midi, freq, now, panOffset, holdDuration);
+    } else {
+      voice = this._createPianoVoice(freq, now, adsr, panOffset, holdDuration);
+    }
+
+    // Warm atmospheric pad overtone layer
+    const padVoice = this._createPadVoice(freq, now, { ...adsr, sustain: 0.2, release: 0.8 }, panOffset, holdDuration * 0.75);
+
+    this.activeVoices.push(voice, padVoice);
+    this.lastAudioTriggerMs = +(performance.now() - tAudioStart).toFixed(2);
+    return { midi, freq, note: noteName };
+  }
+
+  /**
+   * Festive Sleigh Bells Sound Effect for Jingle Bells
+   */
+  playSleighBells() {
+    if (!this.initialized) this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const bellFreqs = [2489, 2960, 3520, 4186, 4978];
+    bellFreqs.forEach((baseFreq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = 'triangle';
+      const jitter = (Math.random() * 40 - 20);
+      osc.frequency.setValueAtTime(baseFreq + jitter, now + i * 0.012);
+
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(baseFreq, now);
+      filter.Q.setValueAtTime(6.0, now);
+
+      gain.gain.setValueAtTime(0.0001, now + i * 0.012);
+      gain.gain.linearRampToValueAtTime(0.07, now + i * 0.012 + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.012 + 0.22);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(now + i * 0.012);
+      osc.stop(now + i * 0.012 + 0.25);
+    });
+  }
+
   _getPresetADSR() {
     switch (this.currentPreset) {
+      case 'Acoustic Piano':
+        return { attack: 0.01, decay: 0.25, sustain: 0.55, release: 1.0, filterFreq: 3200 };
+      case 'Acoustic Guitar':
+        return { attack: 0.008, decay: 0.35, sustain: 0.5, release: 0.9, filterFreq: 3400 };
+      case 'Nylon Guitar':
+        return { attack: 0.01, decay: 0.3, sustain: 0.45, release: 0.85, filterFreq: 3000 };
       case 'Warm Synth':
         return { attack: 0.06, decay: 0.35, sustain: 0.75, release: 1.2, filterFreq: 2200 };
       case 'Soft Electronic':
@@ -312,6 +452,198 @@ class AudioManager {
         }
       }
     };
+  }
+
+  /**
+   * Load and cache multi-sampled audio buffers (Tone.js Instrument samples)
+   */
+  async loadInstrumentSamples(type) {
+    if (!this.ctx) return;
+    if (this.instrumentsLoaded[type] || this.instrumentsLoading[type]) return;
+    this.instrumentsLoading[type] = true;
+
+    let sampleMap = null;
+    let targetBuffers = null;
+    if (type === 'piano') {
+      sampleMap = {
+        45: '/sounds/piano/A2.mp3',
+        48: '/sounds/piano/C3.mp3',
+        51: '/sounds/piano/Ds3.mp3',
+        54: '/sounds/piano/Fs3.mp3',
+        57: '/sounds/piano/A3.mp3',
+        60: '/sounds/piano/C4.mp3',
+        63: '/sounds/piano/Ds4.mp3',
+        66: '/sounds/piano/Fs4.mp3',
+        69: '/sounds/piano/A4.mp3',
+        72: '/sounds/piano/C5.mp3',
+        75: '/sounds/piano/Ds5.mp3',
+        78: '/sounds/piano/Fs5.mp3',
+        81: '/sounds/piano/A5.mp3',
+        84: '/sounds/piano/C6.mp3',
+      };
+      targetBuffers = this.instrumentBuffers.piano;
+    } else if (type === 'acousticGuitar') {
+      sampleMap = {
+        45: '/sounds/guitar-acoustic/A2.mp3',
+        48: '/sounds/guitar-acoustic/C3.mp3',
+        51: '/sounds/guitar-acoustic/Ds3.mp3',
+        54: '/sounds/guitar-acoustic/Fs3.mp3',
+        57: '/sounds/guitar-acoustic/A3.mp3',
+        60: '/sounds/guitar-acoustic/C4.mp3',
+        63: '/sounds/guitar-acoustic/Ds4.mp3',
+        66: '/sounds/guitar-acoustic/Fs4.mp3',
+        69: '/sounds/guitar-acoustic/A4.mp3',
+        72: '/sounds/guitar-acoustic/C5.mp3',
+      };
+      targetBuffers = this.instrumentBuffers.acousticGuitar;
+    } else if (type === 'nylonGuitar') {
+      sampleMap = {
+        38: '/sounds/guitar-nylon/D2.mp3',
+        42: '/sounds/guitar-nylon/Fs2.mp3',
+        45: '/sounds/guitar-nylon/A2.mp3',
+        49: '/sounds/guitar-nylon/Cs3.mp3',
+        52: '/sounds/guitar-nylon/E3.mp3',
+        57: '/sounds/guitar-nylon/A3.mp3',
+        61: '/sounds/guitar-nylon/Cs4.mp3',
+        66: '/sounds/guitar-nylon/Fs4.mp3',
+        69: '/sounds/guitar-nylon/A4.mp3',
+        73: '/sounds/guitar-nylon/Cs5.mp3',
+        76: '/sounds/guitar-nylon/E5.mp3',
+      };
+      targetBuffers = this.instrumentBuffers.nylonGuitar;
+    }
+
+    if (!sampleMap || !targetBuffers) {
+      this.instrumentsLoading[type] = false;
+      return;
+    }
+
+    const loadPromises = Object.entries(sampleMap).map(async ([midiStr, url]) => {
+      const midi = parseInt(midiStr, 10);
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const arrayBuf = await res.arrayBuffer();
+        const audioBuf = await this.ctx.decodeAudioData(arrayBuf);
+        targetBuffers[midi] = audioBuf;
+      } catch (err) {
+        // Fallback silently
+      }
+    });
+
+    await Promise.all(loadPromises);
+    const count = Object.keys(targetBuffers).length;
+    this.instrumentsLoaded[type] = count > 0;
+    this.instrumentsLoading[type] = false;
+
+    if (type === 'piano') {
+      this.isPianoSamplesLoaded = this.instrumentsLoaded.piano;
+      this.isPianoSamplesLoading = false;
+      this.pianoBuffers = targetBuffers;
+    }
+
+    if (this.instrumentsLoaded[type]) {
+      console.log(`Tone.js ${type} samples ready (${count} notes loaded)`);
+    }
+  }
+
+  async loadPianoSamples() {
+    return this.loadInstrumentSamples('piano');
+  }
+
+  async loadAcousticGuitarSamples() {
+    return this.loadInstrumentSamples('acousticGuitar');
+  }
+
+  async loadNylonGuitarSamples() {
+    return this.loadInstrumentSamples('nylonGuitar');
+  }
+
+  /**
+   * Generalized realistic sampled instrument voice using pitch-shifted sample buffers
+   */
+  _createSampledVoice(buffers, midi, freq, startTime, pan = 0, holdDuration = 1.6, releaseTime = 0.9, gainScale = 0.9) {
+    const availableMidis = Object.keys(buffers).map(Number);
+    if (availableMidis.length === 0) {
+      const adsr = this._getPresetADSR();
+      return this._createPianoVoice(freq, startTime, adsr, pan, holdDuration);
+    }
+
+    // Find closest anchor sample
+    let closestMidi = availableMidis[0];
+    let minDiff = Math.abs(midi - closestMidi);
+    for (const m of availableMidis) {
+      const diff = Math.abs(midi - m);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestMidi = m;
+      }
+    }
+
+    const sampleBuffer = buffers[closestMidi];
+    const semitoneDiff = midi - closestMidi;
+    const playbackRate = Math.pow(2, semitoneDiff / 12);
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = sampleBuffer;
+    source.playbackRate.setValueAtTime(playbackRate, startTime);
+
+    const voiceGain = this.ctx.createGain();
+    voiceGain.gain.setValueAtTime(0.0001, startTime);
+    voiceGain.gain.linearRampToValueAtTime(gainScale, startTime + 0.008);
+
+    // Natural instrument resonance release
+    const releaseStart = startTime + holdDuration;
+    const naturalStopTime = releaseStart + releaseTime;
+    voiceGain.gain.setValueAtTime(gainScale, releaseStart);
+    voiceGain.gain.exponentialRampToValueAtTime(0.0001, naturalStopTime);
+
+    let panner = null;
+    if (this.ctx.createStereoPanner) {
+      panner = this.ctx.createStereoPanner();
+      panner.pan.setValueAtTime(pan, startTime);
+    }
+
+    source.connect(voiceGain);
+    if (panner) {
+      voiceGain.connect(panner);
+      panner.connect(this.chordGain);
+    } else {
+      voiceGain.connect(this.chordGain);
+    }
+
+    source.start(startTime);
+    try {
+      source.stop(naturalStopTime + 0.05);
+    } catch (e) {}
+
+    let isStopped = false;
+    return {
+      nodes: [source],
+      gain: voiceGain,
+      releaseTime: releaseTime,
+      stop: (stopTime, fadeDuration = 0.25) => {
+        if (isStopped) return;
+        isStopped = true;
+        try {
+          voiceGain.gain.cancelScheduledValues(stopTime);
+          voiceGain.gain.setTargetAtTime(0.0001, stopTime, fadeDuration / 3);
+          source.stop(stopTime + fadeDuration + 0.05);
+        } catch (e) {}
+      }
+    };
+  }
+
+  _createSamplePianoVoice(midi, freq, startTime, pan = 0, holdDuration = 1.6) {
+    return this._createSampledVoice(this.instrumentBuffers.piano, midi, freq, startTime, pan, holdDuration, 0.9, 0.9);
+  }
+
+  _createSampleAcousticGuitarVoice(midi, freq, startTime, pan = 0, holdDuration = 1.6) {
+    return this._createSampledVoice(this.instrumentBuffers.acousticGuitar, midi, freq, startTime, pan, holdDuration, 0.8, 0.95);
+  }
+
+  _createSampleNylonGuitarVoice(midi, freq, startTime, pan = 0, holdDuration = 1.6) {
+    return this._createSampledVoice(this.instrumentBuffers.nylonGuitar, midi, freq, startTime, pan, holdDuration, 0.75, 0.95);
   }
 
   /**
@@ -925,6 +1257,15 @@ class AudioManager {
 
   setPreset(presetName) {
     this.currentPreset = presetName;
+    if (this.ctx) {
+      if (presetName === 'Acoustic Piano' && !this.instrumentsLoaded.piano) {
+        this.loadPianoSamples().catch(() => {});
+      } else if (presetName === 'Acoustic Guitar' && !this.instrumentsLoaded.acousticGuitar) {
+        this.loadAcousticGuitarSamples().catch(() => {});
+      } else if (presetName === 'Nylon Guitar' && !this.instrumentsLoaded.nylonGuitar) {
+        this.loadNylonGuitarSamples().catch(() => {});
+      }
+    }
   }
 }
 

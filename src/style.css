@@ -434,6 +434,18 @@ body {
   transform: translateY(-2px);
 }
 
+.mode-btn.jingle-bells {
+  border-color: #00ff88;
+  background: linear-gradient(90deg, rgba(0, 255, 136, 0.22) 0%, rgba(255, 215, 0, 0.14) 45%, rgba(18, 10, 42, 0.9) 100%);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.25);
+}
+
+.mode-btn.jingle-bells:hover {
+  border-color: #00ffaa;
+  box-shadow: 0 0 32px rgba(0, 255, 136, 0.6), 0 0 20px rgba(255, 215, 0, 0.4);
+  transform: translateY(-2px);
+}
+
 .home-util-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1756,3 +1768,801 @@ input:checked + .slider:before {
   color: var(--pink) !important;
   text-shadow: 0 0 6px rgba(255, 0, 127, 0.5);
 }
+
+/* ====================================================
+   JINGLE BELLS INTERACTIVE PIANO & SHEET MUSIC MODE
+==================================================== */
+.jingle-bells-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px 24px;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cyan) transparent;
+}
+
+.jingle-bells-screen::-webkit-scrollbar {
+  width: 5px;
+}
+.jingle-bells-screen::-webkit-scrollbar-thumb {
+  background: var(--cyan);
+  border-radius: 4px;
+}
+
+/* Top Header */
+.jingle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.jingle-header-center {
+  flex: 1;
+  text-align: left;
+}
+
+.jingle-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #00ffaa;
+  text-shadow: 0 0 16px rgba(0, 255, 170, 0.55);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jingle-subtitle {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+}
+
+.jingle-mode-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.mode-pill {
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.mode-pill.active {
+  background: linear-gradient(135deg, #00ffaa 0%, #0099ff 100%);
+  color: #050210;
+  border-color: #00ffaa;
+  box-shadow: 0 0 16px rgba(0, 255, 170, 0.5);
+}
+
+.mode-pill:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* 1. HERO GUIDANCE HUD (PETUNJUK UTAMA) */
+.jingle-hud-card {
+  background: linear-gradient(135deg, rgba(16, 26, 45, 0.85) 0%, rgba(12, 10, 32, 0.92) 100%);
+  border: 1.5px solid rgba(0, 255, 170, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  box-shadow: 0 0 25px rgba(0, 255, 170, 0.15), inset 0 0 20px rgba(0, 247, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jingle-hud-top-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1.1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.hud-kicker {
+  font-size: 9px;
+  font-family: var(--font-display);
+  letter-spacing: 1px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.hud-target-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-target-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hud-note-badge {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 18px rgba(255, 215, 0, 0.7);
+}
+
+.hud-solfege {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+.hud-lyric {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.hud-gesture-block, .hud-piano-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-gesture-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 255, 170, 0.15);
+  border: 1px solid rgba(0, 255, 170, 0.4);
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 12px rgba(0, 255, 170, 0.25);
+  animation: pulseGlow 1.8s infinite alternate;
+}
+
+.hud-emoji {
+  font-size: 18px;
+}
+
+.hud-gesture-name {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  color: #00ffaa;
+}
+
+.hud-piano-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #ffd700;
+}
+
+/* Status strip */
+.jingle-feedback-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.jingle-live-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffaa00;
+  box-shadow: 0 0 8px #ffaa00;
+  transition: all 0.2s ease;
+}
+
+.live-dot.matched {
+  background: #00ff88;
+  box-shadow: 0 0 12px #00ff88;
+}
+
+.live-dot.waiting {
+  background: #ffd700;
+  box-shadow: 0 0 10px #ffd700;
+}
+
+.live-text {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.jingle-progress-text {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+.jingle-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.jingle-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00ff88 0%, #00f7ff 50%, #ffd700 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 255, 170, 0.8);
+  transition: width 0.2s ease;
+}
+
+/* 2. INTERACTIVE SHEET MUSIC SCORE */
+.jingle-score-card {
+  background: rgba(14, 10, 30, 0.85);
+  border: 1px solid rgba(0, 247, 255, 0.25);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.score-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.score-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--cyan);
+}
+
+.btn-score-reset {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  font-size: 9.5px;
+  font-family: var(--font-display);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-score-reset:hover {
+  color: #fff;
+  border-color: var(--cyan);
+}
+
+.jingle-score-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(8, 6, 20, 0.7);
+  border-radius: 10px;
+  padding: 12px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* System (Staff Line) */
+.score-system {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.score-system:last-child {
+  border-bottom: none;
+}
+
+.system-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  padding: 0 4px;
+}
+
+/* Musical 5-Staff lines */
+.system-staff-wrapper {
+  position: relative;
+  height: 82px;
+  display: flex;
+  align-items: center;
+}
+
+.staff-lines-bg {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 0;
+  height: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.staff-line {
+  width: 100%;
+  height: 1px;
+  background: rgba(0, 247, 255, 0.35);
+  box-shadow: 0 0 3px rgba(0, 247, 255, 0.2);
+}
+
+/* Clef and time signature box */
+.staff-clef-box {
+  width: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  z-index: 2;
+}
+
+.treble-clef {
+  font-size: 34px;
+  color: var(--cyan);
+  line-height: 1;
+  text-shadow: 0 0 10px var(--cyan-glow);
+  transform: translateY(-2px);
+}
+
+.time-sig {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #fff;
+}
+
+/* Measures on system */
+.system-measures {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.score-measure {
+  flex: 1;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  position: relative;
+  border-right: 1.5px solid rgba(0, 247, 255, 0.4);
+  padding: 0 2px;
+}
+
+.score-measure:last-child {
+  border-right: 3px double rgba(0, 247, 255, 0.7);
+}
+
+.measure-chord-badge {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 8.5px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: rgba(255, 215, 0, 0.75);
+}
+
+/* Note on sheet music */
+.score-note-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  min-width: 22px;
+}
+
+.score-note-item:hover {
+  background: rgba(0, 247, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Note head container with staff height offset */
+.note-glyph-box {
+  position: relative;
+  width: 18px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pitch positions inside the 48px box */
+/* Line 1 = E4, Space 1 = F4, Line 2 = G4, below line 1 = D4, ledger line = C4 */
+.pitch-C4 { transform: translateY(18px); }
+.pitch-D4 { transform: translateY(12px); }
+.pitch-E4 { transform: translateY(6px); }
+.pitch-F4 { transform: translateY(0px); }
+.pitch-G4 { transform: translateY(-6px); }
+
+/* Ledger line for Middle C */
+.pitch-C4 .ledger-line {
+  position: absolute;
+  width: 18px;
+  height: 1.5px;
+  background: var(--cyan);
+  box-shadow: 0 0 4px var(--cyan);
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.notehead-circle {
+  width: 11px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  transform: rotate(-25deg);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+  position: relative;
+}
+
+.notehead-hollow {
+  background: transparent !important;
+  border: 2px solid #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}
+
+.note-stem {
+  position: absolute;
+  width: 1.5px;
+  height: 22px;
+  background: #fff;
+  right: 1px;
+  bottom: 4px;
+}
+
+.note-stem-none {
+  display: none;
+}
+
+/* Note text indicators */
+.note-top-cue {
+  font-family: var(--font-display);
+  font-size: 7.5px;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.note-lyric-cue {
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+/* States on Sheet Music */
+.score-note-item.active {
+  background: rgba(0, 255, 170, 0.18);
+  border: 1px solid #00ffaa;
+  box-shadow: 0 0 16px rgba(0, 255, 170, 0.5);
+  animation: noteBounce 0.7s infinite alternate ease-in-out;
+}
+
+.score-note-item.active .notehead-circle {
+  background: #ffd700 !important;
+  box-shadow: 0 0 15px #ffd700;
+}
+.score-note-item.active .note-lyric-cue {
+  color: #00ffaa;
+  font-weight: 900;
+  text-shadow: 0 0 8px #00ffaa;
+}
+
+.score-note-item.active .note-top-cue {
+  color: #ffd700;
+  font-weight: 900;
+}
+
+.score-note-item.done {
+  opacity: 0.6;
+}
+
+.score-note-item.done .notehead-circle {
+  background: #00ff88;
+  box-shadow: 0 0 6px #00ff88;
+}
+
+.score-note-item.done .note-lyric-cue {
+  color: #00ff88;
+}
+
+/* Active Note Pointer Arrow */
+.active-pointer {
+  position: absolute;
+  top: -12px;
+  font-size: 9px;
+  color: #ffd700;
+  animation: bounceDown 0.6s infinite alternate;
+}
+
+@keyframes bounceDown {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+@keyframes noteBounce {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 8px rgba(0, 255, 170, 0.3); }
+  100% { box-shadow: 0 0 20px rgba(0, 255, 170, 0.8); }
+}
+
+/* 3. INTERACTIVE PIANO KEYBOARD */
+.jingle-piano-card {
+  background: rgba(10, 6, 24, 0.88);
+  border: 1.5px solid rgba(0, 247, 255, 0.3);
+  border-radius: var(--radius-md);
+  padding: 10px 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.piano-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--cyan);
+}
+
+.piano-hint-text {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+}
+
+.jingle-piano-keyboard {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 110px;
+  background: #050210;
+  border-radius: 8px;
+  padding: 4px;
+  user-select: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 0, 0, 0.9);
+}
+
+.piano-white-key {
+  flex: 1;
+  height: 100%;
+  background: linear-gradient(180deg, #ffffff 0%, #e8e8ea 80%, #d0d0d5 100%);
+  border: 1px solid #222;
+  border-radius: 0 0 5px 5px;
+  margin: 0 1px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.piano-white-key:active, .piano-white-key.pressed {
+  background: linear-gradient(180deg, #00ffaa 0%, #00cc88 100%) !important;
+  transform: translateY(2px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.piano-white-key.target-key {
+  background: linear-gradient(180deg, #fff 0%, #fff7cc 70%, #ffe066 100%);
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), inset 0 0 10px rgba(255, 215, 0, 0.5);
+  animation: keyPulse 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes keyPulse {
+  0% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); }
+  100% { box-shadow: 0 0 28px rgba(255, 215, 0, 0.95); }
+}
+
+.key-note-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 900;
+  color: #111;
+  pointer-events: none;
+}
+
+.key-finger-badge {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #555;
+  pointer-events: none;
+  margin-top: 1px;
+}
+
+.piano-white-key.target-key .key-note-label {
+  color: #b38600;
+  font-size: 11px;
+}
+
+.piano-white-key.target-key .key-finger-badge {
+  color: #008855;
+  font-weight: 900;
+}
+
+/* Black keys */
+.piano-black-key {
+  position: absolute;
+  width: 6.8%;
+  height: 60%;
+  background: linear-gradient(180deg, #2a2a2f 0%, #111115 80%, #000000 100%);
+  border: 1px solid #000;
+  border-radius: 0 0 4px 4px;
+  z-index: 3;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+  transition: all 0.12s ease;
+}
+
+.piano-black-key:active {
+  background: #333;
+  transform: translateY(2px);
+}
+
+/* Precise positioning of black keys relative to white keys */
+.bkey-Cs4 { left: 9.5%; }
+.bkey-Ds4 { left: 22.0%; }
+.bkey-Fs4 { left: 47.0%; }
+.bkey-Gs4 { left: 59.5%; }
+.bkey-As4 { left: 72.0%; }
+
+/* 4. CAMERA VIEWPORT & QUICK BUTTONS */
+.jingle-camera-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jingle-camera-viewport {
+  height: 200px;
+  min-height: 200px;
+}
+
+.jingle-quick-buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+.jingle-fbtn {
+  background: var(--bg-card);
+  border: 1px solid rgba(0, 247, 255, 0.25);
+  border-radius: 10px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.jingle-fbtn:hover, .jingle-fbtn:active {
+  background: rgba(0, 247, 255, 0.15);
+  border-color: var(--cyan);
+  transform: translateY(-2px);
+}
+
+.jingle-fbtn.active {
+  background: linear-gradient(135deg, rgba(0, 255, 170, 0.25) 0%, rgba(255, 215, 0, 0.15) 100%);
+  border: 1.5px solid #00ffaa;
+  box-shadow: 0 0 15px rgba(0, 255, 170, 0.4);
+}
+
+.jf-emoji {
+  font-size: 16px;
+}
+
+.jf-label {
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.jingle-fbtn.active .jf-label {
+  color: #00ffaa;
+}
+
+/* 5. CELEBRATION MODAL */
+.jingle-complete-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(4, 2, 12, 0.88);
+  backdrop-filter: blur(16px);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.jingle-complete-card {
+  width: 100%;
+  max-width: 360px;
+  background: linear-gradient(135deg, rgba(22, 14, 44, 0.95) 0%, rgba(10, 6, 24, 0.98) 100%);
+  border: 2px solid gold;
+  box-shadow: 0 0 45px rgba(255, 215, 0, 0.45);
+  border-radius: var(--radius-lg);
+  padding: 22px 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+

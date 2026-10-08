@@ -7,6 +7,7 @@ import { scoreManager } from '../services/ScoreManager.js';
 import { adaptiveDifficulty } from '../services/AdaptiveDifficulty.js';
 import { settingsManager } from '../services/SettingsManager.js';
 import { rhythmEngine } from '../services/RhythmEngine.js';
+import { jingleBellsService } from '../services/JingleBellsService.js';
 import confetti from 'canvas-confetti';
 
 export const GAME_STATES = {
@@ -18,6 +19,7 @@ export const GAME_STATES = {
   FREE_SYNTH: 'FREE_SYNTH',
   GAMEPLAY_PHASE: 'GAMEPLAY_PHASE',
   RESULT_PHASE: 'RESULT_PHASE',
+  JINGLE_BELLS: 'JINGLE_BELLS',
 };
 
 export const GAME_MODES = {
@@ -47,9 +49,12 @@ export class GameEngine {
 
   setState(newState, payload = {}) {
     this._cleanup();
-    if (newState !== GAME_STATES.GAMEPLAY_PHASE && newState !== GAME_STATES.FREE_SYNTH) {
+    if (newState !== GAME_STATES.GAMEPLAY_PHASE && newState !== GAME_STATES.FREE_SYNTH && newState !== GAME_STATES.JINGLE_BELLS) {
       chordEngine.stop();
       rhythmEngine.stop();
+    }
+    if (this.currentState === GAME_STATES.JINGLE_BELLS && newState !== GAME_STATES.JINGLE_BELLS) {
+      jingleBellsService.stop();
     }
     this.currentState = newState;
     if (this.onStateChange) {
@@ -59,6 +64,7 @@ export class GameEngine {
 
   _cleanup() {
     rhythmEngine.stop();
+    jingleBellsService.stop();
   }
 
   /**
@@ -250,6 +256,8 @@ export class GameEngine {
   handleLiveTracking(gestureEvent) {
     if (this.currentState === GAME_STATES.GAMEPLAY_PHASE) {
       rhythmEngine.evaluateLiveTracking(gestureEvent);
+    } else if (this.currentState === GAME_STATES.JINGLE_BELLS) {
+      jingleBellsService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
     }
   }
 
@@ -257,6 +265,11 @@ export class GameEngine {
    * Called when a gesture is confirmed from the camera or virtual control / keyboard
    */
   handleGestureConfirmed(gestureEvent) {
+    if (this.currentState === GAME_STATES.JINGLE_BELLS) {
+      jingleBellsService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
+      return;
+    }
+
     if (this.currentState === GAME_STATES.FREE_SYNTH) {
       // In Free Synth, any gesture directly triggers its mapped chord!
       const chord = chordMappingService.getChord(gestureEvent.totalFingers, gestureEvent.gestureType, 10);
