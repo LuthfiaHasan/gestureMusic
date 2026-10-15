@@ -1743,3 +1743,60 @@
   color: #fff;
 }
 
+/* Floating Random Instrument Toast */
+.instrument-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(20, 10, 42, 0.96) 0%, rgba(10, 4, 24, 0.98) 100%);
+  border: 1.5px solid var(--cyan);
+  box-shadow: 0 0 35px rgba(0, 247, 255, 0.5);
+  border-radius: 999px;
+  padding: 10px 24px;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideDownToast 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  font-family: var(--font-display);
+}
+
+.instrument-toast-emoji {
+  font-size: 26px;
+  filter: drop-shadow(0 0 10px rgba(0, 247, 255, 0.7));
+}
+
+.instrument-toast-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.instrument-toast-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+
+.instrument-toast-name {
+  font-size: 14.5px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+@keyframes slideDownToast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+

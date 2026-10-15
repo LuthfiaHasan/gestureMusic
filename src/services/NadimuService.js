@@ -293,38 +293,86 @@ export const NADIMU_SEGMENTS = [
   {
     id: 1,
     cycle: 0,
+    startMeasureIndex: 2,
+    measureNum: 3,
+    startChord: 'Em',
+    fingerCount: 3,
+    title: 'Bait 1 Part 2: Maafkan Hidup (Em)',
+    startSec: 6.15,
+    lyricHint: "Maafkan, hidup memang ingin kau lebih kuat… ✨",
+    desc: '🤟 3 Jari (Em) • Alunan Lembut Penuh Makna',
+  },
+  {
+    id: 2,
+    cycle: 0,
     startMeasureIndex: 4,
     measureNum: 5,
     startChord: 'Dm',
     fingerCount: 2,
-    title: 'Bait 2 & Rindu (D Minor)',
-    startSec: 12.3,
+    title: 'Bait 2: Andaikan Saat Itu (Dm)',
+    startSec: 12.31,
     lyricHint: 'Andaikan saat itu datang kami tak ada…',
     desc: '✌️ 2 Jari (Dm) • Alunan Pesan Kasih Sayang',
   },
   {
-    id: 2,
+    id: 3,
+    cycle: 0,
+    startMeasureIndex: 6,
+    measureNum: 7,
+    startChord: 'C',
+    fingerCount: 1,
+    title: 'Bait 2 Part 2: Nyanyianku di Sini (C)',
+    startSec: 18.46,
+    lyricHint: 'Aku ingin kamu mendengar nyanyianku di sini… 🕊️',
+    desc: '☝️ 1 Jari (C) • Pesan Tulus dari Hati',
+  },
+  {
+    id: 4,
     cycle: 0,
     startMeasureIndex: 8,
     measureNum: 9,
     startChord: 'F',
     fingerCount: 2,
     title: 'Reff Utama Jumbo (F Major)',
-    startSec: 24.6,
+    startSec: 24.62,
     lyricHint: 'Reff: Sedikit demi sedikit engkau akan…',
     desc: '✌️ 2 Jari (F) • Melodi Reff Utama Mengalun',
   },
   {
-    id: 3,
-    cycle: 1,
+    id: 5,
+    cycle: 0,
+    startMeasureIndex: 10,
+    measureNum: 11,
+    startChord: 'Em',
+    fingerCount: 3,
+    title: 'Reff Part 2: Luapkanlah Menangis (Em)',
+    startSec: 30.77,
+    lyricHint: 'Luapkanlah bila menangis, anakku ingatlah…',
+    desc: '🤟 3 Jari (Em) • Pelukan Hangat Kasih Orang Tua',
+  },
+  {
+    id: 6,
+    cycle: 0,
     startMeasureIndex: 12,
     measureNum: 13,
     startChord: 'Dm',
     fingerCount: 2,
-    title: 'Klimaks & Nadimu (Dm / C)',
-    startSec: 36.9,
-    lyricHint: 'Lelah tak akan tersia, selalu ada di nadimu… ✨',
-    desc: '✌️ 2 Jari (Dm) • Puncak Emosional Terindah',
+    title: 'Klimaks: Lelah Tak Akan Tersia (Dm)',
+    startSec: 36.92,
+    lyricHint: 'Lelah tak akan tersia, usah kau takut…',
+    desc: '✌️ 2 Jari (Dm) • Puncak Semangat Perjuangan',
+  },
+  {
+    id: 7,
+    cycle: 0,
+    startMeasureIndex: 14,
+    measureNum: 15,
+    startChord: 'F',
+    fingerCount: 2,
+    title: 'Resolusi: Selalu Ada di Nadimu (F / C)',
+    startSec: 43.08,
+    lyricHint: 'Doaku slalu bersamamu, selalu ada di nadimu… ✨',
+    desc: '✌️ 2 Jari (F) • Puncak Emosional Terindah Jumbo',
   },
 ];
 
@@ -345,13 +393,13 @@ export class NadimuService {
     this.backingVolume = 0.85;
     this.playerVolume = 0.50;
 
-    // 30-Second Random Session Mode
+    // 45-Second Random Session Mode
     this.sessionMode = '30S_RANDOM';
-    this.sessionDurationSec = 30.0;
+    this.sessionDurationSec = 45.0;
     this.sessionStartSec = 0.0;
     this.currentSegment = NADIMU_SEGMENTS[0];
     this.sessionElapsedSec = 0.0;
-    this.sessionRemainingSec = 30.0;
+    this.sessionRemainingSec = 45.0;
 
     // Timeline state
     this.isPlaying = false;
@@ -532,13 +580,32 @@ export class NadimuService {
     this.pause();
 
     const standardScore = this.getStandardizedScore();
+    const accuracy = standardScore.accuracyPct;
+
+    // Grade Determination (S+, S, A, B, C)
+    let grade = 'B';
+    if (accuracy >= 98 && this.missHits === 0) grade = 'S+';
+    else if (accuracy >= 90) grade = 'S';
+    else if (accuracy >= 80) grade = 'A';
+    else if (accuracy >= 65) grade = 'B';
+    else grade = 'C';
+
+    // Stars Rating (1 - 4 Stars)
+    let stars = 1;
+    if (accuracy >= 90 && this.missHits === 0) stars = 4;
+    else if (accuracy >= 85) stars = 4;
+    else if (accuracy >= 70) stars = 3;
+    else if (accuracy >= 50) stars = 2;
+    else stars = 1;
+
     this.gameResult = {
       isVictory: true,
       reason: 'SONG_COMPLETED',
       score: this.score,
       standardScore: standardScore.standardScore,
       accuracyPct: standardScore.accuracyPct,
-      grade: standardScore.grade,
+      grade,
+      stars,
       maxCombo: this.maxCombo,
       perfectHits: this.perfectHits,
       greatHits: this.greatHits,
@@ -580,17 +647,39 @@ export class NadimuService {
   play() {
     if (this.isPlaying) return;
     this.isPlaying = true;
+    this.isFinished = false;
+    this.isGameOver = false;
 
     if (!this.audioEl) {
       this._initAudio();
     }
 
-    if (this.audioEl) {
-      if (this.sessionMode === '30S_RANDOM') {
-        if (Math.abs(this.audioEl.currentTime - (this.sessionStartSec + this.sessionElapsedSec)) > 0.5) {
-          this.audioEl.currentTime = this.sessionStartSec + this.sessionElapsedSec;
+    audioManager.init();
+    audioManager.resume();
+
+    // In 45s Random mode, ensure audio starts with a gentle lead-in so the first tile glides down smoothly from above
+    if (this.sessionMode === '30S_RANDOM' && this.audioEl) {
+      const cur = this.audioEl.currentTime;
+      const leadIn = Math.min(2.0, this.sessionStartSec);
+      const actualStart = Math.max(0, this.sessionStartSec - leadIn);
+
+      if (this.sessionRemainingSec <= 0.2 || this.sessionElapsedSec === 0 || cur < actualStart - 1.0 || cur >= this.sessionStartSec + this.sessionDurationSec) {
+        try {
+          this.audioEl.currentTime = actualStart;
+        } catch (e) {}
+        this.sessionElapsedSec = 0;
+        this.sessionRemainingSec = this.sessionDurationSec;
+        if (this.tilesEngine) {
+          this.tilesEngine._audioAnchorTime = actualStart;
+          this.tilesEngine._audioAnchorPerf = performance.now();
+          this.tilesEngine._lastRawAudioTime = actualStart;
+          this.tilesEngine._smoothSongTime = actualStart;
         }
       }
+      this.audioEl.playbackRate = 1.0;
+    }
+
+    if (this.audioEl) {
       this.audioEl.play().catch(e => {
         console.warn('Audio play prevented, user interaction required:', e);
       });
@@ -610,7 +699,10 @@ export class NadimuService {
   pause() {
     this.isPlaying = false;
     if (this.audioEl) {
-      this.audioEl.pause();
+      try {
+        this.audioEl.playbackRate = 1.0;
+        this.audioEl.pause();
+      } catch (e) {}
     }
     if (this.animFrameId) {
       cancelAnimationFrame(this.animFrameId);
@@ -626,7 +718,7 @@ export class NadimuService {
 
   stop() {
     this.pause();
-    this.currentMeasureIndex = 0;
+    this.currentMeasureIndex = this.currentSegment ? (this.currentSegment.startMeasureIndex || 0) : 0;
     this.sessionElapsedSec = 0.0;
     this.sessionRemainingSec = this.sessionDurationSec;
     this.score = 0;
@@ -643,7 +735,10 @@ export class NadimuService {
     this.playedMeasureIndices.clear();
 
     if (this.audioEl) {
-      this.audioEl.currentTime = this.sessionMode === '30S_RANDOM' ? this.sessionStartSec : 0;
+      try {
+        this.audioEl.playbackRate = 1.0;
+        this.audioEl.currentTime = this.sessionMode === '30S_RANDOM' ? this.sessionStartSec : 0;
+      } catch (e) {}
     }
 
     if (this.tilesEngine) {
@@ -651,8 +746,133 @@ export class NadimuService {
     }
 
     if (this.onMeasureChanged) {
-      this.onMeasureChanged(this.getCurrentMeasure(), 0);
+      this.onMeasureChanged(this.getCurrentMeasure(), this.currentMeasureIndex);
     }
+    if (this.onStateChanged) {
+      this.onStateChanged();
+    }
+  }
+
+  reset() {
+    this.stop();
+    if (this.tilesEngine) {
+      this.tilesEngine.reset();
+      const start = (this.sessionMode === '30S_RANDOM') ? this.sessionStartSec : 0;
+      const end = start + (this.sessionMode === '30S_RANDOM' ? this.sessionDurationSec + 2.0 : 300);
+      this.tilesEngine.tiles.forEach(t => {
+        if (t.timeSec < start - 0.2) {
+          t.status = 'PAST';
+          t.hitRating = null;
+        } else if (t.timeSec <= end) {
+          t.status = 'PENDING';
+          t.hitRating = null;
+        } else {
+          t.status = 'PENDING';
+          t.hitRating = null;
+        }
+      });
+      this.tilesEngine._lastReportedAudioTime = -1;
+      this.tilesEngine._smoothSongTime = start;
+      if (this.tilesEngine.draw) this.tilesEngine.draw();
+    }
+    this.score = 0;
+    this.combo = 0;
+    this.maxCombo = 0;
+    this.perfectHits = 0;
+    this.greatHits = 0;
+    this.goodHits = 0;
+    this.missHits = 0;
+    this.lives = this.maxLives;
+    this.isGameOver = false;
+    this.isFinished = false;
+    this.gameResult = null;
+    this.sessionElapsedSec = 0.0;
+    this.sessionRemainingSec = this.sessionDurationSec;
+    if (this.onMeasureChanged) {
+      this.onMeasureChanged(this.getCurrentMeasure(), this.currentMeasureIndex);
+    }
+    if (this.onStateChanged) {
+      this.onStateChanged();
+    }
+  }
+
+  finish() {
+    this.triggerSongFinished();
+  }
+
+  triggerChord(measureIndex, isUserAction = false) {
+    if (measureIndex < 0 || measureIndex >= this.measures.length) return null;
+    const measure = this.measures[measureIndex];
+    const now = performance.now();
+
+    if (isUserAction && now - this.lastTriggerTime < 250) {
+      return null;
+    }
+    this.lastTriggerTime = now;
+    this.playedMeasureIndices.add(measureIndex);
+
+    // Play pure acoustic grand piano chord
+    audioManager.init();
+    audioManager.resume();
+    audioManager.loadPianoSamples().catch(() => {});
+
+    const sweetVoicings = {
+      'C': ['C4', 'E4', 'G4', 'C5'],
+      'F': ['C4', 'F4', 'A4', 'C5'],
+      'Em': ['B3', 'E4', 'G4', 'B4'],
+      'G': ['B3', 'D4', 'G4', 'B4'],
+      'Dm': ['A3', 'D4', 'F4', 'A4'],
+      'Am': ['C4', 'E4', 'A4', 'C5'],
+    };
+    const voicing = sweetVoicings[measure.chord] || (measure.melodyNotes && measure.melodyNotes.slice(0, 3)) || ['C4', 'E4', 'G4'];
+    audioManager.playKomangMelodyNote(voicing, {
+      duration: 2.2,
+      gainScale: this.playerVolume || 0.48,
+      isPerfect: true,
+      preset: 'Acoustic Piano',
+    });
+
+    let rating = 'PERFECT';
+    let points = 1000;
+
+    if (this.audioEl) {
+      const adjustedSec = Math.max(0, this.audioEl.currentTime - this.audioOffsetSec);
+      const cycleSec = adjustedSec % this.cycleDurationSec;
+      const measureProgress = (cycleSec % this.measureDurationSec) / this.measureDurationSec;
+
+      if (measureProgress <= 0.35 || measureProgress >= 0.85) {
+        rating = 'PERFECT';
+        points = 1000;
+        this.perfectHits++;
+      } else if (measureProgress <= 0.60) {
+        rating = 'GREAT';
+        points = 600;
+        this.greatHits++;
+      } else {
+        rating = 'GOOD';
+        points = 300;
+        this.goodHits++;
+      }
+    }
+
+    this.combo++;
+    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+    this.score += points;
+    this.evaluatedMeasures.add(measureIndex);
+
+    if (this.onChordHit) {
+      this.onChordHit({
+        measure,
+        measureIndex,
+        rating,
+        points,
+        combo: this.combo,
+        score: this.score,
+        lives: this.lives,
+        isUserAction,
+      });
+    }
+    return { measure, rating, points };
   }
 
   jumpToMeasure(idx) {
@@ -698,21 +918,34 @@ export class NadimuService {
   }
 
   _startLoop() {
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+
     const loop = (timestamp) => {
       if (!this.isPlaying) return;
 
       let songTime = 0;
-      if (this.audioEl && !this.audioEl.paused) {
-        songTime = this.audioEl.currentTime;
+      if (this.tilesEngine && this.viewMode === 'TILES') {
+        songTime = this.tilesEngine.getCurrentSongTime();
+      } else if (this.audioEl && !this.audioEl.paused) {
+        songTime = Math.max(0, this.audioEl.currentTime - this.audioOffsetSec);
       }
 
-      // Check 30-Second timer countdown
+      // Check 45-Second timer countdown with Gradual Speed Acceleration
       if (this.sessionMode === '30S_RANDOM') {
         const elapsed = Math.max(0, songTime - this.sessionStartSec);
         this.sessionElapsedSec = elapsed;
         this.sessionRemainingSec = Math.max(0, this.sessionDurationSec - elapsed);
 
-        if (this.sessionRemainingSec <= 0) {
+        if (elapsed >= this.sessionDurationSec && songTime >= this.sessionStartSec) {
+          if (this.audioEl) {
+            try {
+              this.audioEl.playbackRate = 1.0;
+              this.audioEl.pause();
+            } catch (e) {}
+          }
           this.triggerSongFinished();
           return;
         }
@@ -732,11 +965,15 @@ export class NadimuService {
       if (this.onTimelineTick) {
         this.onTimelineTick({
           songTime,
+          currentTimeSec: songTime,
           measureIndex: this.currentMeasureIndex,
           measure: this.getCurrentMeasure(),
           sessionRemainingSec: this.sessionRemainingSec,
           sessionElapsedSec: this.sessionElapsedSec,
           sessionDurationSec: this.sessionDurationSec,
+          totalDurationSec: (this.audioEl && this.audioEl.duration) ? this.audioEl.duration : 283,
+          is30sSession: this.sessionMode === '30S_RANDOM',
+          sessionProgress: this.sessionDurationSec > 0 ? (this.sessionElapsedSec / this.sessionDurationSec) : 0,
           score: this.score,
           combo: this.combo,
           lives: this.lives,
@@ -750,17 +987,24 @@ export class NadimuService {
   }
 
   /**
-   * Sound synthesis when chord is triggered
+   * Sound synthesis when chord is triggered - enforces pure, majestic piano sound (no guitars)!
    */
-  playChordNotes(chordName) {
+  playChordNotes(chordName, melodyNotes = null, lane = 0, isPerfect = true) {
     try {
       audioManager.init();
-      const m = this.getCurrentMeasure();
-      const keys = m?.keys || ['C4', 'E4', 'G4'];
-      keys.forEach((note, i) => {
-        setTimeout(() => {
-          audioManager.playNote(note, 0.45, this.playerVolume);
-        }, i * 35);
+      audioManager.resume();
+      const keys = (melodyNotes && melodyNotes.length > 0) ? melodyNotes : ['G4', 'C5', 'E5'];
+      // Ensure Nadimu always plays beautiful pure piano, never guitar!
+      let preset = audioManager.currentPreset;
+      if (!preset || preset.toLowerCase().includes('guitar')) {
+        preset = 'Acoustic Piano';
+      }
+      audioManager.playKomangMelodyNote(keys, {
+        duration: 1.6,
+        gainScale: this.playerVolume || 0.48,
+        isPerfect: isPerfect,
+        lane: lane,
+        preset: 'Acoustic Piano',
       });
     } catch (e) {}
   }

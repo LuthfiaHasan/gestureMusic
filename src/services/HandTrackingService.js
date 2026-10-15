@@ -121,11 +121,19 @@ export class HandTrackingService {
         return;
       }
 
+      const now = performance.now();
+      if (!this._lastDetectTime) this._lastDetectTime = 0;
+      if (now - this._lastDetectTime < 38) {
+        this.animationFrameId = requestAnimationFrame(processFrame);
+        return;
+      }
+
       const currentTime = videoElement.currentTime;
       if (currentTime !== this.lastVideoTime && videoElement.readyState >= 2) {
         this.lastVideoTime = currentTime;
+        this._lastDetectTime = now;
         this.isDetecting = true;
-        const startTime = performance.now();
+        const startTime = now;
 
         try {
           // 3. Downscale camera frame to fast 320x240 offscreen canvas (Requirement 6)

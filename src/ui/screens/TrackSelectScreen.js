@@ -3,6 +3,8 @@
 
 import { COMPETITION_TRACKS } from '../../services/CompetitionLeaderboardService.js';
 import { gameEngine, GAME_STATES } from '../../game/GameEngine.js';
+import { settingsManager } from '../../services/SettingsManager.js';
+import { audioManager } from '../../audio/AudioManager.js';
 
 export class TrackSelectScreen {
   static render() {
@@ -101,6 +103,11 @@ export class TrackSelectScreen {
   }
 
   static startTrack(trackId, app) {
+    if (trackId === 'KOMANG' || trackId === 'NADIMU') {
+      settingsManager.update('soundPreset', 'Acoustic Piano');
+      audioManager.setPreset('Acoustic Piano');
+      audioManager.loadPianoSamples().catch(() => {});
+    }
     switch (trackId) {
       case 'KOMANG':
         gameEngine.setState(GAME_STATES.KOMANG);

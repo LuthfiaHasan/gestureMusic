@@ -360,7 +360,7 @@ export class KomangTilesEngine {
 
       const lanePreviewNotes = ['G4', 'F#4', 'A4', 'C5'];
       const previewNote = lanePreviewNotes[laneIndex] || 'G4';
-      audioManager.playKomangMelodyNote(previewNote, { duration: 1.1, lane: laneIndex, isPerfect: false });
+      audioManager.playKomangMelodyNote(previewNote, { duration: 1.1, lane: laneIndex, isPerfect: false, preset: 'Acoustic Piano' });
     }
 
     // Camera gesture input without an active tile nearby returns cleanly without strobing or noise
@@ -392,6 +392,7 @@ export class KomangTilesEngine {
       duration: 1.6,
       isPerfect: rating === 'PERFECT',
       lane: tile.lane,
+      preset: 'Acoustic Piano',
     });
 
     // 2. Spawn Particle Burst & Toast
@@ -509,11 +510,56 @@ export class KomangTilesEngine {
     return ms / 1000;
   }
 
+  /**
+   * Computes the integrated distance metric S(t) for butter-smooth, non-stuttering acceleration.
+   * Speed starts calm and slow (1.0x), and accelerates smoothly up to 1.85x over the 45s session.
+   * Because velocity dS/dt > 0 is strictly monotonic and uniform across the highway,
+   * tiles NEVER stutter, jerk, or jump!
+   */
+  _getIntegratedSongTime(t) {
+    if (!this.komangService || this.komangService.sessionMode !== '30S_RANDOM') {
+      return t;
+    }
+    const start = this.komangService.sessionStartSec;
+    const dur = this.komangService.sessionDurationSec || 45.0;
+    const maxBoost = 0.85; // Accelerates from 1.0x to 1.85x smoothly
+
+    if (t <= start) {
+      return t;
+    }
+
+    const u = Math.min(dur, t - start);
+    // Integral of (1 + maxBoost * (x / dur)) dx from 0 to u:
+    // = u + (maxBoost / (2 * dur)) * (u * u)
+    const integralInSession = u + (maxBoost / (2 * dur)) * (u * u);
+
+    if (t > start + dur) {
+      const extra = t - (start + dur);
+      return start + integralInSession + extra * (1.0 + maxBoost);
+    }
+
+    return start + integralInSession;
+  }
+
+  getSpeedMultiplier(curTime = this._getCurrentSongTime()) {
+    if (!this.komangService || this.komangService.sessionMode !== '30S_RANDOM') {
+      return 1.0;
+    }
+    const start = this.komangService.sessionStartSec;
+    const dur = this.komangService.sessionDurationSec || 45.0;
+    const u = curTime - start;
+    if (u <= 0) return 1.0;
+    const progress = Math.min(1.0, u / dur);
+    return 1.0 + progress * 0.85;
+  }
+
   update(timestamp) {
     const curTime = this._getCurrentSongTime();
     const laneWidth = this.width / 4;
     const hitY = this.height * this.hitLineRatio;
     const missThresholdSec = 0.50; // Lebih tenang dan tidak gampang terlewat
+
+    this.speed = this.getSpeedMultiplier(curTime);
 
     // Check for missed tiles that scrolled past hit line
     for (let i = 0; i < this.tiles.length; i++) {
@@ -679,24 +725,26 @@ export class KomangTilesEngine {
     ctx.lineTo(w, h);
     ctx.stroke();
 
+    const S_now = this._getIntegratedSongTime(curTime);
+    this.speed = this.getSpeedMultiplier(curTime);
+
+    // Visual distance between bars in the same lane (uniform, elegant dimensions)
+    const measureDistance = (this.measureDurationSec / this.baseFallDurationSec) * hitY;
+    const tileHeight = Math.max(110, Math.min(190, Math.round(measureDistance - 24)));
+
     // 3. Draw Falling Piano Tiles
     for (let i = 0; i < this.tiles.length; i++) {
       const tile = this.tiles[i];
-      const timeUntilHit = tile.timeSec - curTime;
+      const S_tile = this._getIntegratedSongTime(tile.timeSec);
+      const deltaS = S_tile - S_now;
 
       // Only draw tiles that are within visible horizon
-      if (timeUntilHit < -0.45) continue;
-      if (timeUntilHit > this.fallDurationSec) break; // Future tiles are beyond top horizon, stop early!
+      if (deltaS < -0.45) continue;
+      if (deltaS > this.baseFallDurationSec + 0.35) break; // Future tiles are beyond top horizon, stop early!
 
-      // Calculate Y position
-      // At timeUntilHit = fallDurationSec -> y = 0
-      // At timeUntilHit = 0 -> y = hitY
-      const progress = 1.0 - (timeUntilHit / this.fallDurationSec);
+      // Calculate Y position smoothly without any denominator jitter
+      const progress = 1.0 - (deltaS / this.baseFallDurationSec);
       const tileY = progress * hitY;
-      // Jarak visual antar-bar di jalur yang sama (1.846 detik tempo lagu)
-      const measureDistance = (this.measureDurationSec / this.fallDurationSec) * hitY;
-      // Panjang ubin megah maksimal tanpa saling bertumpuk (ada celah bersih 24px antar-ubin berturut-turut!)
-      const tileHeight = Math.max(120, Math.round(measureDistance - 24));
       const topY = tileY - tileHeight;
 
       const lx = tile.lane * laneWidth + 4;
@@ -1011,6 +1059,26 @@ export class KomangTilesEngine {
       ctx.fillStyle = `rgba(255, 20, 60, ${this.redVignetteAlpha * 0.4})`;
       ctx.fillRect(0, 0, w, h);
       this.redVignetteAlpha *= 0.88;
+    }
+
+    // Dynamic Speed HUD Badge on Highway
+    if (this.speed && this.speed > 1.02) {
+      ctx.save();
+      const badgeText = `⚡ SPEED ${this.speed.toFixed(1)}x`;
+      ctx.font = '900 11px Orbitron, sans-serif';
+      const textW = ctx.measureText(badgeText).width;
+      const bx = w - textW - 20;
+      const by = 16;
+      ctx.fillStyle = 'rgba(10, 5, 25, 0.75)';
+      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, true, false);
+      ctx.strokeStyle = this.speed >= 1.8 ? '#ff2d75' : (this.speed >= 1.4 ? '#ffd700' : '#00f7ff');
+      ctx.lineWidth = 1;
+      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, false, true);
+      ctx.fillStyle = this.speed >= 1.8 ? '#ff2d75' : (this.speed >= 1.4 ? '#ffd700' : '#00f7ff');
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeText, bx, by);
+      ctx.restore();
     }
 
     ctx.restore();

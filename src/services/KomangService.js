@@ -393,13 +393,13 @@ export class KomangService {
     this.backingVolume = 0.82;
     this.playerVolume = 0.50;
 
-    // 30-Second Random Session Mode
-    this.sessionMode = '30S_RANDOM'; // '30S_RANDOM' (30 Detik per main) or 'FULL_SONG'
-    this.sessionDurationSec = 30.0;
+    // 45-Second Random Session Mode
+    this.sessionMode = '30S_RANDOM'; // '30S_RANDOM' (45 Detik per main) or 'FULL_SONG'
+    this.sessionDurationSec = 45.0;
     this.sessionStartSec = 0.0;
     this.currentSegment = KOMANG_SEGMENTS[0];
     this.sessionElapsedSec = 0.0;
-    this.sessionRemainingSec = 30.0;
+    this.sessionRemainingSec = 45.0;
 
     // Timeline state
     this.isPlaying = false;
@@ -670,7 +670,7 @@ export class KomangService {
     this.isGameOver = false;
     this.isPlaying = true;
 
-    // In 30s Random mode, ensure audio starts with a gentle lead-in so the first tile glides down from above
+    // In 45s Random mode, ensure audio starts with a gentle lead-in so the first tile glides down from above
     if (this.sessionMode === '30S_RANDOM' && this.audioEl) {
       const cur = this.audioEl.currentTime;
       const leadIn = Math.min(1.85, this.sessionStartSec);
@@ -688,6 +688,7 @@ export class KomangService {
           this.tilesEngine._smoothSongTime = actualStart;
         }
       }
+      this.audioEl.playbackRate = 1.0;
     }
 
     if (this.tilesEngine) {
@@ -718,6 +719,7 @@ export class KomangService {
     }
     if (this.audioEl) {
       try {
+        this.audioEl.playbackRate = 1.0;
         this.audioEl.pause();
       } catch (e) {}
     }
@@ -741,6 +743,7 @@ export class KomangService {
     }
     if (this.audioEl) {
       try {
+        this.audioEl.playbackRate = 1.0;
         this.audioEl.pause();
         this.audioEl.currentTime = (this.sessionMode === '30S_RANDOM') ? this.sessionStartSec : 0;
       } catch (e) {}
@@ -822,16 +825,18 @@ export class KomangService {
         currentTimeSec = smoothTime;
         totalDurationSec = this.audioEl.duration || 240;
 
-        // 30-Second Random Session Check
+        // 45-Second Random Session Check with Gradual Speed Acceleration
         if (this.sessionMode === '30S_RANDOM') {
           const elapsed = Math.max(0, currentTimeSec - this.sessionStartSec);
           this.sessionElapsedSec = elapsed;
           this.sessionRemainingSec = Math.max(0, this.sessionDurationSec - elapsed);
 
+
           if (elapsed >= this.sessionDurationSec) {
-            // Exact 30 Seconds reached! Hard-stop audio immediately so it never continues past 30 seconds!
+            // Exact 45 Seconds reached! Hard-stop audio immediately
             if (this.audioEl) {
               try {
+                this.audioEl.playbackRate = 1.0;
                 this.audioEl.pause();
               } catch (e) {}
             }
@@ -975,6 +980,7 @@ export class KomangService {
       duration: 2.2,
       gainScale: 0.38,
       isPerfect: true,
+      preset: 'Acoustic Piano',
     });
 
     // 2. Evaluate timing rating in PLAY_ALONG mode
@@ -1080,7 +1086,7 @@ export class KomangService {
         'Cm': ['G4', 'C5', 'Eb5'],
       };
       const notes = sweetVoicings[measure.chord] || ['G4', 'B4', 'D5'];
-      audioManager.playKomangMelodyNote(notes, { duration: 1.6, gainScale: 0.38 });
+      audioManager.playKomangMelodyNote(notes, { duration: 1.6, gainScale: 0.38, preset: 'Acoustic Piano' });
 
       if (this.mode === 'PLAY_ALONG' && this.audioEl) {
         // Seek audio to this measure start in the cycle

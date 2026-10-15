@@ -2,6 +2,16 @@
 
 import { audioManager } from '../audio/AudioManager.js';
 
+export const AVAILABLE_INSTRUMENT_PRESETS = [
+  { id: 'Dreamy Piano', name: 'Dreamy Piano', emoji: '🎹', desc: 'Lembut, hangat, dan kaya reverb' },
+  { id: 'Acoustic Piano', name: 'Steinway Acoustic Piano', emoji: '🎹', desc: 'Jernih, elegan, akustik natural' },
+  { id: 'Acoustic Guitar', name: 'Steel Acoustic Guitar', emoji: '🎸', desc: 'Petikan dawai baja cerah & renyah' },
+  { id: 'Nylon Guitar', name: 'Nylon Classical Guitar', emoji: '🎸', desc: 'Petikan nilon klasik lembut & syahdu' },
+  { id: 'Warm Synth', name: 'Warm Analog Synth', emoji: '🎛️', desc: 'Lead analog tebal nuansa synthwave' },
+  { id: 'Soft Electronic', name: 'Soft Electronic Bell', emoji: '🔔', desc: 'Kloningan elektrik berkilau & modern' },
+  { id: 'Ambient', name: 'Ambient Ethereal Pad', emoji: '🌌', desc: 'Swell atmosferik luas & menenangkan' },
+];
+
 export class SettingsManager {
   constructor() {
     this.defaults = {
@@ -10,7 +20,7 @@ export class SettingsManager {
       padVolume: 0.35,
       sfxVolume: 0.8,
       reverbAmount: 0.4,
-      soundPreset: 'Dreamy Piano',
+      soundPreset: 'Acoustic Piano',
       hapticEnabled: true,
       cameraMirrored: true,
       viewportMode: 'mobile-frame', // 'mobile-frame' or 'fullscreen'
@@ -59,6 +69,28 @@ export class SettingsManager {
     if (this.onSettingsChanged) {
       this.onSettingsChanged(this.settings);
     }
+  }
+
+  /**
+   * Randomize instrument sound preset every time play/main is clicked
+   */
+  pickRandomPreset(showToast = true, isPianoOnly = false) {
+    const current = this.settings.soundPreset;
+    let pool = AVAILABLE_INSTRUMENT_PRESETS;
+    if (isPianoOnly) {
+      // Exclude guitar instruments for peaceful piano songs like Nadimu!
+      pool = AVAILABLE_INSTRUMENT_PRESETS.filter(p => !p.id.toLowerCase().includes('guitar'));
+    }
+    const filteredPool = pool.filter(p => p.id !== current);
+    const candidateList = filteredPool.length > 0 ? filteredPool : pool;
+    const picked = candidateList[Math.floor(Math.random() * candidateList.length)] || pool[0];
+    this.update('soundPreset', picked.id);
+    audioManager.setPreset(picked.id);
+
+    if (showToast && typeof window !== 'undefined' && window.app && window.app.showInstrumentToast) {
+      window.app.showInstrumentToast(picked);
+    }
+    return picked;
   }
 
   triggerHaptic(type = 'good') {
