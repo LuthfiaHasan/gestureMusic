@@ -516,14 +516,14 @@ body {
   pointer-events: none;
 }
 
-#camera-video {
+.camera-viewport #camera-video {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0; /* Raw feed is hidden; #camera-canvas renders Zoom-style composite */
+  opacity: 0; /* Raw feed is hidden in camera-viewport; #camera-canvas renders Zoom-style composite */
   pointer-events: none;
   z-index: 1;
 }
@@ -539,7 +539,7 @@ body {
   border-radius: inherit;
 }
 
-#camera-video.mirrored {
+.camera-viewport #camera-video.mirrored {
   transform: scaleX(-1);
 }
 

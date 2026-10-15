@@ -3,6 +3,7 @@
 // High-Fidelity 10-Finger Motion Audio Synchronization Game Engine
 
 import '../style.css';
+import { cameraService } from './CameraService.js';
 import { handTrackingService } from './HandTrackingService.js';
 import { jatuhSukaSyncService, JATUH_SUKA_SEQUENCE } from './JatuhSukaAudioMotionService.js';
 import { taragakPulangSyncService, TARAGAK_PULANG_SEQUENCE } from './TaragakPulangSyncService.js';
@@ -464,7 +465,7 @@ class GestureMusicGameEngine {
                 <span>HAND TRACKING ACTIVE</span>
               </div>
               <button class="btn-stop-virtual" id="btn-stop-virtual" style="display: none;">🛑 Hentikan Mode Virtual</button>
-              <video id="camera-video" autoplay playsinline muted></video>
+              <video id="camera-video" autoplay playsinline muted style="opacity: 1 !important; display: block !important;"></video>
               <canvas id="tracking-canvas"></canvas>
               <div class="camera-gate-card" id="camera-gate-card" style="${this.isCameraActive ? 'display:none;' : 'display:flex;'}">
                 <div class="gate-modal-content">
@@ -792,13 +793,39 @@ class GestureMusicGameEngine {
 
       if (this.isSimulating) this.stopSimulation();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } },
-        audio: false,
-      });
+      let stream = null;
+      if (cameraService.stream && cameraService.stream.active && cameraService.stream.getVideoTracks().some(t => t.readyState === 'live')) {
+        stream = cameraService.stream;
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 30, max: 60 }
+          },
+          audio: false,
+        });
+        cameraService.stream = stream;
+        cameraService.isReady = true;
+        cameraService.isStreaming = true;
+      }
 
       this.stream = stream;
       video.srcObject = stream;
+      video.setAttribute('playsinline', '');
+      video.muted = true;
+      video.style.opacity = '1';
+      video.style.display = 'block';
+
+      if (this.isMirrored) {
+        video.classList.add('mirrored');
+        canvas.classList.add('mirrored');
+      } else {
+        video.classList.remove('mirrored');
+        canvas.classList.remove('mirrored');
+      }
+
       await video.play();
 
       this.isCameraActive = true;
@@ -819,9 +846,15 @@ class GestureMusicGameEngine {
       if (statusLbl) statusLbl.innerText = 'Buka Kamera';
       if (gateCard) gateCard.style.display = 'flex';
       if (gateHint) {
-        if (err.name === 'NotAllowedError') gateHint.innerText = '⚠️ Izin webcam ditolak browser. Izinkan webcam atau klik tombol Uji Mode Virtual di bawah!';
-        else if (err.name === 'NotFoundError') gateHint.innerText = '⚠️ Kamera tidak ditemukan. Silakan gunakan tombol Uji Mode Virtual di bawah!';
-        else gateHint.innerText = `⚠️ Webcam belum aktif (${err.message || 'sibuk'}). Anda bisa menggunakan Mode Virtual!`;
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          gateHint.innerText = '⚠️ Izin webcam belum diaktifkan browser. Klik "BUKA KAMERA SEKARANG" dan pilih "Allow", atau klik Uji Mode Virtual!';
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          gateHint.innerText = '⚠️ Kamera tidak ditemukan di perangkat ini. Silakan gunakan tombol Uji Mode Virtual di bawah!';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError' || (err.message && err.message.includes('Device in use'))) {
+          gateHint.innerText = '⚠️ Kamera sedang digunakan oleh aplikasi lain (seperti Zoom, Teams, OBS). Tutup aplikasi tersebut lalu klik Buka Kamera!';
+        } else {
+          gateHint.innerText = `⚠️ Webcam belum aktif (${err.message || 'sibuk'}). Anda bisa menggunakan tombol Uji Mode Virtual di bawah!`;
+        }
       }
       if (!isUserAction) {
         console.warn('Autostart camera note:', err.message);
@@ -834,6 +867,7 @@ class GestureMusicGameEngine {
       try { this.stream.getTracks().forEach(t => t.stop()); } catch(e) {}
       this.stream = null;
     }
+    cameraService.stop();
     this.isCameraActive = false;
     handTrackingService.stopTracking();
 
