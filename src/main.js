@@ -1,6 +1,7 @@
 // main.js - Main Application Orchestrator for Gesture Synth
 
 import './style.css';
+import './ui/styles/motion_sync_game.css';
 import { audioManager } from './audio/AudioManager.js';
 import { chordEngine } from './audio/ChordEngine.js';
 import { chordMappingService } from './services/ChordMappingService.js';
