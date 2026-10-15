@@ -8,16 +8,10 @@ export class ParticleSystem {
     this.notes = ['♪', '♫', '♬', '♩', '✦', '✧'];
     this.animationId = null;
     this.pulseGlow = 0;
-    this.isEcoMode = false;
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this._initParticles();
-  }
-
-  setEcoMode(enabled) {
-    this.isEcoMode = !!enabled;
-    this._initParticles(this.isEcoMode ? 12 : 35);
   }
 
   resize() {
@@ -26,12 +20,12 @@ export class ParticleSystem {
     this.canvas.height = this.canvas.parentElement ? this.canvas.parentElement.clientHeight : window.innerHeight;
   }
 
-  _initParticles(count = (this.isEcoMode ? 12 : 35)) {
+  _initParticles(count = 35) {
     this.particles = [];
     for (let i = 0; i < count; i++) {
       this.particles.push({
-        x: Math.random() * (this.canvas.width || 800),
-        y: Math.random() * (this.canvas.height || 600),
+        x: Math.random() * this.canvas.width,
+        y: Math.random() * this.canvas.height,
         size: Math.random() * 2.5 + 1.2,
         speedX: (Math.random() - 0.5) * 0.4,
         speedY: -Math.random() * 0.6 - 0.2, // slow rise
@@ -95,6 +89,8 @@ export class ParticleSystem {
       if (p.x > w + 20) p.x = -10;
 
       this.ctx.save();
+      this.ctx.shadowBlur = 8;
+      this.ctx.shadowColor = p.color;
 
       if (p.symbol) {
         this.ctx.font = `${Math.floor(p.size * 5 + 9)}px 'Outfit', sans-serif`;
@@ -102,17 +98,9 @@ export class ParticleSystem {
         this.ctx.globalAlpha = p.alpha;
         this.ctx.fillText(p.symbol, p.x, p.y);
       } else {
-        // High-performance soft outer glow without CPU shadowBlur
-        this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, p.size * 2.2, 0, Math.PI * 2);
-        this.ctx.fillStyle = p.color;
-        this.ctx.globalAlpha = p.alpha * 0.28;
-        this.ctx.fill();
-
-        // Bright inner core
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillStyle = p.color;
         this.ctx.globalAlpha = p.alpha;
         this.ctx.fill();
       }

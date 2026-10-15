@@ -7,16 +7,12 @@ import { scoreManager } from '../services/ScoreManager.js';
 import { adaptiveDifficulty } from '../services/AdaptiveDifficulty.js';
 import { settingsManager } from '../services/SettingsManager.js';
 import { rhythmEngine } from '../services/RhythmEngine.js';
-import { jingleBellsService } from '../services/JingleBellsService.js';
-import { komangService } from '../services/KomangService.js';
-import { nadimuService } from '../services/NadimuService.js';
+import { taragakPulangService } from '../services/TaragakPulangService.js';
+import { jatuhSukaSyncService } from '../services/JatuhSukaAudioMotionService.js';
 import confetti from 'canvas-confetti';
-
-import { competitionLeaderboardService } from '../services/CompetitionLeaderboardService.js';
 
 export const GAME_STATES = {
   HOME: 'HOME',
-  TRACK_SELECT: 'TRACK_SELECT',
   LEVEL_SELECT: 'LEVEL_SELECT',
   CALIBRATION: 'CALIBRATION',
   HOW_TO_PLAY: 'HOW_TO_PLAY',
@@ -24,18 +20,14 @@ export const GAME_STATES = {
   FREE_SYNTH: 'FREE_SYNTH',
   GAMEPLAY_PHASE: 'GAMEPLAY_PHASE',
   RESULT_PHASE: 'RESULT_PHASE',
-  JINGLE_BELLS: 'JINGLE_BELLS',
-  KOMANG: 'KOMANG',
-  NADIMU: 'NADIMU',
-  MIDI_IMPORT: 'MIDI_IMPORT',
-  LEADERBOARD: 'LEADERBOARD',
+  TARAGAK_PULANG: 'TARAGAK_PULANG',
+  JATUH_SUKA: 'JATUH_SUKA',
 };
 
 export const GAME_MODES = {
   CLASSIC: 'CLASSIC',
   TIME_ATTACK: 'TIME_ATTACK',
   ENDLESS: 'ENDLESS',
-  MIDI: 'MIDI',
 };
 
 export class GameEngine {
@@ -59,18 +51,15 @@ export class GameEngine {
 
   setState(newState, payload = {}) {
     this._cleanup();
-    if (newState !== GAME_STATES.GAMEPLAY_PHASE && newState !== GAME_STATES.FREE_SYNTH && newState !== GAME_STATES.JINGLE_BELLS) {
+    if (newState !== GAME_STATES.GAMEPLAY_PHASE && newState !== GAME_STATES.FREE_SYNTH && newState !== GAME_STATES.TARAGAK_PULANG && newState !== GAME_STATES.JATUH_SUKA) {
       chordEngine.stop();
       rhythmEngine.stop();
     }
-    if (this.currentState === GAME_STATES.JINGLE_BELLS && newState !== GAME_STATES.JINGLE_BELLS) {
-      jingleBellsService.stop();
+    if (this.currentState === GAME_STATES.TARAGAK_PULANG && newState !== GAME_STATES.TARAGAK_PULANG) {
+      taragakPulangService.stop();
     }
-    if (this.currentState === GAME_STATES.KOMANG && newState !== GAME_STATES.KOMANG) {
-      komangService.stop();
-    }
-    if (this.currentState === GAME_STATES.NADIMU && newState !== GAME_STATES.NADIMU) {
-      nadimuService.stop();
+    if (this.currentState === GAME_STATES.JATUH_SUKA && newState !== GAME_STATES.JATUH_SUKA) {
+      jatuhSukaSyncService.stop();
     }
     this.currentState = newState;
     if (this.onStateChange) {
@@ -80,61 +69,8 @@ export class GameEngine {
 
   _cleanup() {
     rhythmEngine.stop();
-    jingleBellsService.stop();
-    if (komangService) komangService.stop();
-    if (nadimuService) nadimuService.stop();
-  }
-
-  /**
-   * Pause active gameplay session
-   */
-  pause() {
-    if (this.currentState === GAME_STATES.GAMEPLAY_PHASE) {
-      rhythmEngine.pause();
-    } else if (this.currentState === GAME_STATES.KOMANG) {
-      komangService.pause();
-    } else if (this.currentState === GAME_STATES.NADIMU) {
-      nadimuService.pause();
-    }
-  }
-
-  /**
-   * Resume active gameplay session
-   */
-  resume() {
-    if (this.currentState === GAME_STATES.GAMEPLAY_PHASE) {
-      rhythmEngine.resume();
-    } else if (this.currentState === GAME_STATES.KOMANG) {
-      komangService.play();
-    } else if (this.currentState === GAME_STATES.NADIMU) {
-      nadimuService.play();
-    }
-  }
-
-  /**
-   * Toggle pause state
-   */
-  togglePause() {
-    if (this.currentState === GAME_STATES.GAMEPLAY_PHASE) {
-      return rhythmEngine.togglePause();
-    } else if (this.currentState === GAME_STATES.KOMANG) {
-      if (komangService.isPlaying) {
-        komangService.pause();
-        return true;
-      } else {
-        komangService.play();
-        return false;
-      }
-    } else if (this.currentState === GAME_STATES.NADIMU) {
-      if (nadimuService.isPlaying) {
-        nadimuService.pause();
-        return true;
-      } else {
-        nadimuService.play();
-        return false;
-      }
-    }
-    return false;
+    taragakPulangService.stop();
+    jatuhSukaSyncService.stop();
   }
 
   /**
@@ -174,50 +110,6 @@ export class GameEngine {
     });
 
     // Start the music & rhythm timeline
-    rhythmEngine.start();
-  }
-
-  /**
-   * Start a custom round imported from a MIDI file
-   */
-  startMidiRound(midiData) {
-    this.currentMode = GAME_MODES.MIDI;
-    this.currentLevel = 1;
-    this.endlessLives = 3;
-    this.endlessStreak = 0;
-    scoreManager.resetRound();
-    chordEngine.stop();
-
-    const phrase = midiData.phrase;
-    this.currentPhrase = phrase;
-
-    const config = {
-      level: 1,
-      title: midiData.title || phrase.title || 'Custom MIDI Track',
-      subtitle: `${midiData.noteCount || 0} Notes • ${midiData.durationFormatted || '0:00'}`,
-      bpm: midiData.bpm || phrase.tempo || 120,
-      durationBeats: 4,
-      lookaheadBeats: 3.5,
-      allowedChords: phrase.allowedChords || ['C', 'G', 'Am', 'F'],
-      allowedFingers: phrase.allowedFingers || [1, 5, 0, 4],
-      timingWindows: { perfect: 180, great: 450, good: 850, bad: 1600 },
-      difficultyLabel: 'CUSTOM MIDI',
-    };
-
-    const setupInfo = rhythmEngine.setup(this.currentPhrase, config, this.currentMode);
-    this._bindRhythmEngine(config);
-
-    this.setState(GAME_STATES.GAMEPLAY_PHASE, {
-      phrase: this.currentPhrase,
-      config,
-      setupInfo,
-      mode: this.currentMode,
-      currentLevel: 1,
-      lives: this.endlessLives,
-      streak: this.endlessStreak,
-      midiData,
-    });
-
     rhythmEngine.start();
   }
 
@@ -320,30 +212,6 @@ export class GameEngine {
       scoreManager.recordLevelScore(this.currentLevel, summary.scorePct);
     }
 
-    // Record game run into local run history & mode records
-    scoreManager.recordGameRun(this.currentMode, {
-      ...summary,
-      level: this.currentLevel,
-    });
-
-    // Create official Competition Leaderboard Pending Session for QR Code Prize Claim!
-    const trackId = this.currentLevel === 4 ? 'CYBER_GROOVE' : (this.currentMode === GAME_MODES.ENDLESS ? 'ENDLESS' : 'NEON_DAWN');
-    const compSession = competitionLeaderboardService.createPendingSession({
-      songId: trackId,
-      songTitle: `⭐ Level ${this.currentLevel}: Neon Dawn`,
-      songBadge: `⭐ LEVEL ${this.currentLevel}`,
-      totalNotes: summary.totalNotes,
-      perfectCount: summary.perfectCount,
-      greatCount: summary.greatCount,
-      goodCount: summary.goodCount,
-      badCount: summary.badCount,
-      missCount: summary.missCount,
-      maxCombo: summary.maxCombo,
-      chordAccuracyPct: summary.chordAccuracy,
-      scorePct: summary.scorePct,
-    });
-    summary.compSession = compSession;
-
     const isPassed = summary.scorePct >= 70;
     const isGrandFinale = (this.currentMode === GAME_MODES.CLASSIC && this.currentLevel === 8 && isPassed);
 
@@ -394,12 +262,8 @@ export class GameEngine {
   handleLiveTracking(gestureEvent) {
     if (this.currentState === GAME_STATES.GAMEPLAY_PHASE) {
       rhythmEngine.evaluateLiveTracking(gestureEvent);
-    } else if (this.currentState === GAME_STATES.JINGLE_BELLS) {
-      jingleBellsService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
-    } else if (this.currentState === GAME_STATES.KOMANG) {
-      komangService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
-    } else if (this.currentState === GAME_STATES.NADIMU) {
-      nadimuService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
+    } else if (this.currentState === GAME_STATES.TARAGAK_PULANG) {
+      taragakPulangService.evaluateGesture(gestureEvent.totalFingers);
     }
   }
 
@@ -407,18 +271,8 @@ export class GameEngine {
    * Called when a gesture is confirmed from the camera or virtual control / keyboard
    */
   handleGestureConfirmed(gestureEvent) {
-    if (this.currentState === GAME_STATES.JINGLE_BELLS) {
-      jingleBellsService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
-      return;
-    }
-
-    if (this.currentState === GAME_STATES.KOMANG) {
-      komangService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
-      return;
-    }
-
-    if (this.currentState === GAME_STATES.NADIMU) {
-      nadimuService.evaluateGesture(gestureEvent.totalFingers, gestureEvent.hasHand);
+    if (this.currentState === GAME_STATES.TARAGAK_PULANG) {
+      taragakPulangService.evaluateGesture(gestureEvent.totalFingers);
       return;
     }
 

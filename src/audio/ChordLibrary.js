@@ -45,7 +45,6 @@ export const ROOT_NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 export const SPECIAL_VOICINGS = {
   'C': { rootMidi: 60, intervals: [0, 4, 7, 12], displayNotes: 'C4 - E4 - G4 - C5' },
   'D': { rootMidi: 62, intervals: [0, 4, 7, 12], displayNotes: 'D4 - F#4 - A4 - D5' },
-  'D/F#': { rootMidi: 54, intervals: [0, 8, 12, 17], displayNotes: 'F#3 - D4 - F#4 - A4' },
   'E': { rootMidi: 64, intervals: [0, 4, 7, 12], displayNotes: 'E4 - G#4 - B4 - E5' },
   'F': { rootMidi: 53, intervals: [0, 7, 12, 16], displayNotes: 'F3 - C4 - F4 - A4' }, // Rich spread voicing
   'G': { rootMidi: 55, intervals: [0, 7, 12, 16], displayNotes: 'G3 - D4 - G4 - B4' },
@@ -54,7 +53,7 @@ export const SPECIAL_VOICINGS = {
   
   'Am': { rootMidi: 57, intervals: [0, 7, 12, 15], displayNotes: 'A3 - E4 - A4 - C5' },
   'Bm': { rootMidi: 59, intervals: [0, 7, 12, 15], displayNotes: 'B3 - F#4 - B4 - D5' },
-  'Cm': { rootMidi: 48, intervals: [0, 12, 15, 19, 24], displayNotes: 'C3 - C4 - Eb4 - G4 - C5' },
+  'Cm': { rootMidi: 60, intervals: [0, 3, 7, 12], displayNotes: 'C4 - Eb4 - G4 - C5' },
   'Dm': { rootMidi: 62, intervals: [0, 3, 7, 12], displayNotes: 'D4 - F4 - A4 - D5' },
   'Em': { rootMidi: 52, intervals: [0, 7, 12, 15], displayNotes: 'E3 - B3 - E4 - G4' },
   'Fm': { rootMidi: 53, intervals: [0, 7, 12, 15], displayNotes: 'F3 - C4 - F4 - Ab4' },

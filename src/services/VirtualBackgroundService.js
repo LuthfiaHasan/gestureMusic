@@ -13,17 +13,13 @@ export class VirtualBackgroundService {
     this.isModelLoaded = false;
     this.isLoading = false;
     this.isEnabled = true; // Default ON: Zoom-style virtual background
-    this.isEcoMode = false;
     this.hasValidMask = false;
-    this.latestConfidenceData = null;
 
     // Background Image
-    this.bgImage = (typeof Image !== 'undefined') ? new Image() : null;
+    this.bgImage = new Image();
     this.bgImageLoaded = false;
     this.bgImageSrc = '/images/cyber_ai_bg.jpg';
-    if (this.bgImage) {
-      this._preloadBgImage();
-    }
+    this._preloadBgImage();
 
     // Offscreen buffers for fast mask & cutout compositing
     this.maskCanvas = null;
@@ -106,30 +102,15 @@ export class VirtualBackgroundService {
     }
   }
 
-  setEcoMode(enabled) {
-    this.isEcoMode = !!enabled;
-    if (this.isEcoMode) {
-      this.hasValidMask = false;
-      this.latestConfidenceData = null;
-    }
-  }
-
   /**
-   * Process video frame to update segmentation mask (async / non-blocking with intelligent throttling)
+   * Process video frame to update segmentation mask (async / non-blocking)
    */
   updateSegmentation(videoElement, timestamp) {
-    if (this.isEcoMode || !this.isEnabled || !this.isModelLoaded || !this.segmenter) return;
+    if (!this.isEnabled || !this.isModelLoaded || !this.segmenter) return;
     if (this.isSegmenting || !videoElement || videoElement.paused || videoElement.ended) return;
-
-    // Throttle segmentation inference to ~15 FPS (every 65ms) to save 70% CPU/GPU overhead
-    const now = performance.now();
-    if (!this._lastSegmentMs) this._lastSegmentMs = 0;
-    if (now - this._lastSegmentMs < 65) return;
-
     if (videoElement.currentTime === this.lastProcessedTime || videoElement.readyState < 2) return;
 
     this.lastProcessedTime = videoElement.currentTime;
-    this._lastSegmentMs = now;
     this.isSegmenting = true;
 
     try {
@@ -143,15 +124,6 @@ export class VirtualBackgroundService {
         const conf = mask.getAsFloat32Array();
         const mw = mask.width;
         const mh = mask.height;
-
-        this.maskWidth = mw;
-        this.maskHeight = mh;
-
-        // Store latest confidence data for anti-background hand validation
-        if (!this.latestConfidenceData || this.latestConfidenceData.length !== conf.length) {
-          this.latestConfidenceData = new Float32Array(conf.length);
-        }
-        this.latestConfidenceData.set(conf);
 
         if (this.maskCanvas.width !== mw || this.maskCanvas.height !== mh) {
           this.maskCanvas.width = mw;
@@ -184,49 +156,6 @@ export class VirtualBackgroundService {
   }
 
   /**
-   * Check if a hand's landmarks belong to the foreground player.
-   * Tests wrist (0), middle MCP (9, center of palm), index MCP (5), and pinky MCP (17).
-   * @param {Array<{x: number, y: number}>} landmarks
-   * @param {number} threshold - Minimum confidence required for foreground (default 0.28)
-   * @returns {boolean}
-   */
-  isHandInForeground(landmarks, threshold = 0.28) {
-    if (!this.isEnabled || !this.hasValidMask || !this.latestConfidenceData) {
-      return true; // Virtual background not active or mask not ready, allow hand
-    }
-    if (!landmarks || landmarks.length < 10) return false;
-
-    // Check key palm/wrist points: wrist (0), middle MCP (9), index MCP (5), pinky MCP (17)
-    const pts = [landmarks[0], landmarks[9], landmarks[5], landmarks[17]];
-    let maxConf = 0;
-    const mw = this.maskWidth;
-    const mh = this.maskHeight;
-    const confData = this.latestConfidenceData;
-
-    for (let i = 0; i < pts.length; i++) {
-      const pt = pts[i];
-      if (!pt) continue;
-      const px = Math.min(mw - 1, Math.max(0, Math.floor(pt.x * mw)));
-      const py = Math.min(mh - 1, Math.max(0, Math.floor(pt.y * mh)));
-      const val = confData[py * mw + px];
-      if (val > maxConf) maxConf = val;
-    }
-
-    // If neither the wrist nor palm points reach the foreground threshold,
-    // this hand is physically located in the masked-out background!
-    return maxConf >= threshold;
-  }
-
-  getConfidenceAt(normX, normY) {
-    if (!this.isEnabled || !this.hasValidMask || !this.latestConfidenceData) return 1.0;
-    const mw = this.maskWidth;
-    const mh = this.maskHeight;
-    const px = Math.min(mw - 1, Math.max(0, Math.floor(normX * mw)));
-    const py = Math.min(mh - 1, Math.max(0, Math.floor(normY * mh)));
-    return this.latestConfidenceData[py * mw + px] || 0;
-  }
-
-  /**
    * Render composite frame onto the target camera canvas
    * @param {HTMLCanvasElement} canvas - Target display canvas
    * @param {HTMLVideoElement} video - Source webcam video
@@ -239,9 +168,9 @@ export class VirtualBackgroundService {
     const cw = canvas.width;
     const ch = canvas.height;
 
-    // Fallback: If virtual background is disabled or model hasn't generated a mask yet, or in Eco Mode:
+    // Fallback: If virtual background is disabled or model hasn't generated a mask yet,
     // ALWAYS render 100% solid camera video feed so the person is NEVER invisible!
-    if (this.isEcoMode || !this.isEnabled || !this.isModelLoaded || !this.hasValidMask) {
+    if (!this.isEnabled || !this.isModelLoaded || !this.hasValidMask) {
       ctx.save();
       if (isMirrored) {
         ctx.translate(cw, 0);
