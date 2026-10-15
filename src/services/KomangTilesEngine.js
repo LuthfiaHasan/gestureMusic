@@ -11,8 +11,8 @@ export const KOMANG_LANES = [
     chord: 'G',
     fingerCount: 1,
     emoji: '☝️',
-    color: '#00f7ff',
-    glowColor: 'rgba(0, 247, 255, 0.45)',
+    color: '#14b3d4',
+    glowColor: 'rgba(20, 179, 212, 0.45)',
     name: 'G (Do)',
     keyHint: '1 / D',
   },
@@ -21,8 +21,8 @@ export const KOMANG_LANES = [
     chord: 'D/F#',
     fingerCount: 2,
     emoji: '✌️',
-    color: '#a855f7',
-    glowColor: 'rgba(168, 85, 247, 0.45)',
+    color: '#3b82f6',
+    glowColor: 'rgba(59, 130, 246, 0.45)',
     name: 'D/F# (Transisi)',
     keyHint: '2 / F',
   },
@@ -31,8 +31,8 @@ export const KOMANG_LANES = [
     chord: 'Am',
     fingerCount: 3,
     emoji: '🤟',
-    color: '#ffd700',
-    glowColor: 'rgba(255, 215, 0, 0.45)',
+    color: '#fbb040',
+    glowColor: 'rgba(251, 176, 64, 0.45)',
     name: 'Am (Lembut)',
     keyHint: '3 / J',
   },
@@ -41,8 +41,8 @@ export const KOMANG_LANES = [
     chord: 'Cm',
     fingerCount: 4,
     emoji: '🖐️',
-    color: '#ff2d75',
-    glowColor: 'rgba(255, 45, 117, 0.45)',
+    color: '#10b981',
+    glowColor: 'rgba(16, 185, 129, 0.45)',
     name: 'Cm (Syahdu)',
     keyHint: '4 / K',
   },
@@ -137,6 +137,7 @@ export class KomangTilesEngine {
     this.resize();
     this._generateTileSchedule();
     this._bindEvents();
+    this.draw(); // Immediate initial render so highway is never blank!
   }
 
   resize() {
@@ -219,6 +220,13 @@ export class KomangTilesEngine {
     // Click / Touch hit on lanes
     const handlePointerDown = (e) => {
       e.preventDefault();
+      if (this.komangService && !this.komangService.isPlaying) {
+        if (this.komangService.sessionMode === '30S_RANDOM') {
+          this.komangService.start30sSession().catch(() => {});
+        } else {
+          this.komangService.playFullSong().catch(() => {});
+        }
+      }
       const rect = this.canvas.getBoundingClientRect();
       const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : rect.left);
       const x = clientX - rect.left;
@@ -640,11 +648,11 @@ export class KomangTilesEngine {
       this.screenShakeTime--;
     }
 
-    // Deep neon highway gradient
+    // Deep Flash Tech corporate navy highway gradient
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, 'rgba(8, 4, 18, 0.95)');
-    bgGrad.addColorStop(0.7, 'rgba(16, 8, 32, 0.96)');
-    bgGrad.addColorStop(1, 'rgba(28, 12, 48, 0.98)');
+    bgGrad.addColorStop(0, 'rgba(4, 14, 34, 0.98)');
+    bgGrad.addColorStop(0.7, 'rgba(7, 24, 56, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(10, 38, 85, 0.98)');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
@@ -758,7 +766,7 @@ export class KomangTilesEngine {
       // Tile Text & Info
       if (tileHeight >= 36) {
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 20px Orbitron, sans-serif';
+        ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
@@ -792,35 +800,35 @@ export class KomangTilesEngine {
     // 4. Draw Hit Zone / Elongated Grand Piano Keys at hitY
     ctx.save();
 
-    // A. Piano Fallboard / Header Bar above the keys (Wooden Cyber Trim)
+    // A. Piano Fallboard / Header Bar above the keys (Flash Tech Navy Trim)
     const headerH = 10;
     const fallboardGrad = ctx.createLinearGradient(0, hitY - headerH, 0, hitY);
-    fallboardGrad.addColorStop(0, 'rgba(10, 4, 20, 0.98)');
-    fallboardGrad.addColorStop(0.5, 'rgba(34, 16, 54, 0.95)');
-    fallboardGrad.addColorStop(1, 'rgba(14, 6, 26, 1)');
+    fallboardGrad.addColorStop(0, 'rgba(6, 21, 45, 0.98)');
+    fallboardGrad.addColorStop(0.5, 'rgba(11, 40, 85, 0.95)');
+    fallboardGrad.addColorStop(1, 'rgba(6, 21, 45, 1)');
     ctx.fillStyle = fallboardGrad;
     ctx.fillRect(0, hitY - headerH, w, headerH);
 
-    // B. Acoustic Grand Piano Red Velvet Felt Damper Strip
-    ctx.fillStyle = '#b91c1c'; // Crimson red felt damper
+    // B. Acoustic Grand Piano Damper Strip (Corporate Blue with Cyan Stitch)
+    ctx.fillStyle = '#0b5fa5';
     ctx.fillRect(0, hitY - 3, w, 4);
-    // Gold felt stitch accent line
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.7)';
+    // Cyan felt stitch accent line
+    ctx.strokeStyle = 'rgba(20, 179, 212, 0.7)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, hitY - 1);
     ctx.lineTo(w, hitY - 1);
     ctx.stroke();
 
-    // C. Glowing Receptor Neon Line (Zero-Blur GPU Bloom)
-    ctx.strokeStyle = 'rgba(0, 247, 255, 0.35)';
+    // C. Glowing Receptor Neon Line (Flash Tech Cyan)
+    ctx.strokeStyle = 'rgba(20, 179, 212, 0.35)';
     ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(0, hitY);
     ctx.lineTo(w, hitY);
     ctx.stroke();
 
-    ctx.strokeStyle = '#00f7ff';
+    ctx.strokeStyle = '#14b3d4';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(0, hitY);
@@ -850,58 +858,48 @@ export class KomangTilesEngine {
         this._roundRect(ctx, lx, keyTop + keyH - 4, lWidth, 6, 4, true, false);
       }
 
-      // Grand Piano Key Body Gradient
+      // Grand Piano Key Body Gradient (Deep Corporate Flash Tech Glass - Zero Glitch, Pristine Clarity)
       const keyGrad = ctx.createLinearGradient(lx, keyTop, lx, keyTop + keyH);
       if (isActive) {
-        // Active key lights up brilliantly with neon illumination!
+        // Active key lights up with electric neon illumination
         keyGrad.addColorStop(0, '#ffffff');
         keyGrad.addColorStop(0.18, lane.color);
-        keyGrad.addColorStop(0.72, lane.color);
-        keyGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
+        keyGrad.addColorStop(0.75, 'rgba(11, 95, 165, 0.95)');
+        keyGrad.addColorStop(1, 'rgba(6, 21, 45, 0.98)');
       } else {
-        // Luxury Ivory/Pearl Piano Key with Cyber Glass Sheen
-        keyGrad.addColorStop(0, 'rgba(240, 244, 255, 0.95)'); // Polished ivory key head
-        keyGrad.addColorStop(0.10, 'rgba(215, 225, 248, 0.88)');
-        keyGrad.addColorStop(0.40, 'rgba(32, 18, 54, 0.92)'); // Deep reflective key body
-        keyGrad.addColorStop(0.80, 'rgba(18, 10, 30, 0.98)');
-        keyGrad.addColorStop(1, 'rgba(10, 5, 20, 1)'); // Dark weighted key base
+        // Deep Flash Tech Navy Glossy Key - No foggy white glare!
+        keyGrad.addColorStop(0, 'rgba(16, 44, 96, 0.96)'); // Sleek indigo navy head
+        keyGrad.addColorStop(0.20, 'rgba(10, 28, 64, 0.96)');
+        keyGrad.addColorStop(0.65, 'rgba(7, 20, 48, 0.98)');
+        keyGrad.addColorStop(1, 'rgba(4, 12, 30, 1)'); // Grounded dark navy base
       }
 
       ctx.fillStyle = keyGrad;
       this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, true, false);
 
-      // Ivory Vertical Reflection Strip (Authentic Grand Piano key luster)
-      if (!isActive) {
-        const shineGrad = ctx.createLinearGradient(lx + 4, 0, lx + 18, 0);
-        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
-        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = shineGrad;
-        this._roundRect(ctx, lx + 4, keyTop + 6, 12, keyH - 16, 2, true, false);
-      }
-
-      // 3D Bevel: Left Edge Highlight & Right Edge Shadow
+      // Clean 3D Bevel Highlights (Crisp, subtle edges)
       ctx.lineWidth = 1;
-      // Left highlight
-      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.35)';
+      // Top-left subtle highlight
+      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.18)';
       ctx.beginPath();
       ctx.moveTo(lx + 2, keyTop + 4);
       ctx.lineTo(lx + 2, keyTop + keyH - 4);
       ctx.stroke();
 
       // Right shadow
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.beginPath();
       ctx.moveTo(lx + lWidth - 2, keyTop + 4);
       ctx.lineTo(lx + lWidth - 2, keyTop + keyH - 4);
       ctx.stroke();
 
-      // Outer Key Border & Neon Underglow (Zero-Blur Dual Pass)
+      // Outer Key Border with Lane Color Accent
       if (isActive) {
-        ctx.strokeStyle = lane.glowColor || 'rgba(0, 247, 255, 0.45)';
-        ctx.lineWidth = 6;
+        ctx.strokeStyle = lane.glowColor || 'rgba(20, 179, 212, 0.5)';
+        ctx.lineWidth = 4;
         this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 2;
         this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
       } else {
         ctx.strokeStyle = lane.color;
@@ -909,54 +907,54 @@ export class KomangTilesEngine {
         this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
       }
 
-      // Bottom Keycap Lip (Weighted Hammer Edge)
-      ctx.fillStyle = isActive ? lane.color : 'rgba(0, 0, 0, 0.5)';
-      this._roundRect(ctx, lx + 2, keyTop + keyH - 6, lWidth - 4, 4, 2, true, false);
+      // Bottom Keycap Lip
+      ctx.fillStyle = isActive ? lane.color : 'rgba(0, 0, 0, 0.45)';
+      this._roundRect(ctx, lx + 2, keyTop + keyH - 5, lWidth - 4, 3, 2, true, false);
 
-      // --- KEY LABELS & NOTATION (Balanced hierarchy across elongated key) ---
+      // --- KEY LABELS & NOTATION (Harmonious, pristine hierarchy) ---
       const centerX = lx + lWidth / 2;
 
-      // 1. Top Target Cue Dot
+      // 1. Top Target Accent Pill (clean modern indicator instead of floating dot)
+      const pillW = 32;
+      const pillH = 4;
       ctx.fillStyle = isActive ? '#ffffff' : lane.color;
-      ctx.beginPath();
-      ctx.arc(centerX, keyTop + 14, 4, 0, Math.PI * 2);
-      ctx.fill();
+      this._roundRect(ctx, centerX - pillW / 2, keyTop + 10, pillW, pillH, 2, true, false);
 
       // 2. Large Bold Chord Name
-      ctx.fillStyle = isActive ? '#000000' : '#ffffff';
-      ctx.font = 'bold 20px Orbitron, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(lane.chord, centerX, keyTop + keyH * 0.25);
+      ctx.fillText(lane.chord, centerX, keyTop + keyH * 0.26);
 
-      // 3. Gesture Badge with Finger Count & Emoji
+      // 3. Gesture Pill Badge with Finger Count & Emoji
       const badgeY = keyTop + keyH * 0.50;
-      const badgeW = lWidth - 18;
+      const badgeW = lWidth - 16;
       const badgeH = 26;
 
-      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.55)';
+      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.4)' : 'rgba(4, 14, 34, 0.65)';
       this._roundRect(ctx, centerX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6, true, false);
 
-      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.6)' : lane.color;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = isActive ? '#ffffff' : lane.color;
+      ctx.lineWidth = 1.2;
       this._roundRect(ctx, centerX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6, false, true);
 
-      ctx.fillStyle = isActive ? '#000000' : lane.color;
+      ctx.fillStyle = isActive ? '#ffffff' : lane.color;
       ctx.font = 'bold 12.5px Outfit, sans-serif';
       ctx.fillText(`${lane.emoji} ${lane.fingerCount} JARI`, centerX, badgeY);
 
-      // 4. Subtitle / Harmonic Role
-      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.75)' : 'rgba(255, 255, 255, 0.75)';
-      ctx.font = '600 11px Outfit, sans-serif';
+      // 4. Harmonic Role Subtitle
+      ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(220, 232, 255, 0.85)';
+      ctx.font = '600 11.5px Outfit, sans-serif';
       const roleText = lane.name.split(' ')[1] || lane.name;
       ctx.fillText(roleText, centerX, keyTop + keyH * 0.72);
 
-      // 5. Key Shortcut Hint Pill at Bottom Lip
+      // 5. Key Shortcut Hint at Bottom
       const keyHintY = keyTop + keyH * 0.88;
-      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.12)';
-      this._roundRect(ctx, centerX - 26, keyHintY - 9, 52, 18, 4, true, false);
+      ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.08)';
+      this._roundRect(ctx, centerX - 24, keyHintY - 9, 48, 18, 4, true, false);
 
-      ctx.fillStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.85)';
+      ctx.fillStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.75)';
       ctx.font = 'bold 10px Outfit, sans-serif';
       ctx.fillText(`[${lane.keyHint}]`, centerX, keyHintY);
 
@@ -1006,11 +1004,32 @@ export class KomangTilesEngine {
       ctx.restore();
     }
 
-    // Red Vignette Flash on Miss
-    if (this.redVignetteAlpha > 0.01) {
-      ctx.fillStyle = `rgba(255, 20, 60, ${this.redVignetteAlpha * 0.4})`;
-      ctx.fillRect(0, 0, w, h);
-      this.redVignetteAlpha *= 0.88;
+    // Idle Prompt Overlay
+    if (!this.isRunning && curTime <= 0.1) {
+      ctx.save();
+      const badgeW = Math.min(340, w * 0.85);
+      const badgeH = 50;
+      const bx = (w - badgeW) / 2;
+      const by = hitY * 0.42;
+
+      ctx.fillStyle = 'rgba(6, 21, 45, 0.92)';
+      this._roundRect(ctx, bx, by, badgeW, badgeH, 12, true, false);
+
+      ctx.strokeStyle = 'rgba(20, 179, 212, 0.5)';
+      ctx.lineWidth = 1.5;
+      this._roundRect(ctx, bx, by, badgeW, badgeH, 12, false, true);
+
+      ctx.fillStyle = '#14b3d4';
+      ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('▶️ KLIK "MAIN 30s" ATAU SENTUH TUTS', w / 2, by + 18);
+
+      ctx.fillStyle = '#bfd9ee';
+      ctx.font = '500 11px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Tunjukkan gestur tangan di depan kamera 📷', w / 2, by + 34);
+
+      ctx.restore();
     }
 
     ctx.restore();

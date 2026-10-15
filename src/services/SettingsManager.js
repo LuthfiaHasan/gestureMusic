@@ -13,7 +13,7 @@ export class SettingsManager {
       soundPreset: 'Dreamy Piano',
       hapticEnabled: true,
       cameraMirrored: true,
-      viewportMode: 'mobile-frame', // 'mobile-frame' or 'fullscreen'
+      viewportMode: 'fullscreen', // native fullscreen web layout
       showVirtualControls: true, // allows on-screen fallback buttons
       stabilityDurationMs: 250,
       ecoMode: false, // Low Performance / Eco Mode for smooth FPS on lower-tier hardware
@@ -32,8 +32,10 @@ export class SettingsManager {
       if (stored) {
         this.settings = { ...this.defaults, ...JSON.parse(stored) };
       }
+      this.settings.viewportMode = 'fullscreen';
     } catch (e) {
       this.settings = { ...this.defaults };
+      this.settings.viewportMode = 'fullscreen';
     }
     this.apply();
   }

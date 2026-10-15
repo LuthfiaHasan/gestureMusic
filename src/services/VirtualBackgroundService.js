@@ -20,7 +20,7 @@ export class VirtualBackgroundService {
     // Background Image
     this.bgImage = (typeof Image !== 'undefined') ? new Image() : null;
     this.bgImageLoaded = false;
-    this.bgImageSrc = '/images/cyber_ai_bg.jpg';
+    this.bgImageSrc = '/images/background.jpg';
     if (this.bgImage) {
       this._preloadBgImage();
     }
@@ -121,10 +121,10 @@ export class VirtualBackgroundService {
     if (this.isEcoMode || !this.isEnabled || !this.isModelLoaded || !this.segmenter) return;
     if (this.isSegmenting || !videoElement || videoElement.paused || videoElement.ended) return;
 
-    // Throttle segmentation inference to ~15 FPS (every 65ms) to save 70% CPU/GPU overhead
+    // Throttle segmentation inference to ~30 FPS (every 30ms) for responsive, fluid movement
     const now = performance.now();
     if (!this._lastSegmentMs) this._lastSegmentMs = 0;
-    if (now - this._lastSegmentMs < 65) return;
+    if (now - this._lastSegmentMs < 30) return;
 
     if (videoElement.currentTime === this.lastProcessedTime || videoElement.readyState < 2) return;
 
@@ -162,12 +162,16 @@ export class VirtualBackgroundService {
         const imgData = this.maskCtx.createImageData(mw, mh);
         const data32 = new Uint32Array(imgData.data.buffer);
 
+        // Continuous smooth Hermite sigmoidal alpha mapping
+        // Low threshold (0.16) ensures hands, fingers and hijab edges are NEVER clipped or full of holes ("bolong-bolong")
+        // and smoothly feathers up to 100% solid opacity by 0.52!
         for (let i = 0; i < conf.length; i++) {
           const v = conf[i];
-          if (v > 0.35) {
-            // Smooth anti-aliased edge between 0.35 and 0.65 probability
-            const alpha = v >= 0.65 ? 255 : Math.round(((v - 0.35) / 0.3) * 255);
-            // Alpha is highest byte in 32-bit little-endian
+          if (v > 0.16) {
+            const t = Math.min(1, Math.max(0, (v - 0.16) / 0.36));
+            // Cubic Hermite smoothstep for silky transitions
+            const smooth = t * t * (3 - 2 * t);
+            const alpha = Math.round(smooth * 255);
             data32[i] = (alpha << 24) | 0x00FFFFFF;
           } else {
             data32[i] = 0x00000000;
@@ -185,19 +189,18 @@ export class VirtualBackgroundService {
 
   /**
    * Check if a hand's landmarks belong to the foreground player.
-   * Tests wrist (0), middle MCP (9, center of palm), index MCP (5), and pinky MCP (17).
+   * Tests wrist (0), middle MCP (9), index MCP (5), pinky MCP (17), and thumb CMC (1).
    * @param {Array<{x: number, y: number}>} landmarks
-   * @param {number} threshold - Minimum confidence required for foreground (default 0.28)
+   * @param {number} threshold - Minimum confidence required for foreground (default 0.10)
    * @returns {boolean}
    */
-  isHandInForeground(landmarks, threshold = 0.28) {
+  isHandInForeground(landmarks, threshold = 0.10) {
     if (!this.isEnabled || !this.hasValidMask || !this.latestConfidenceData) {
       return true; // Virtual background not active or mask not ready, allow hand
     }
-    if (!landmarks || landmarks.length < 10) return false;
+    if (!landmarks || landmarks.length < 5) return false;
 
-    // Check key palm/wrist points: wrist (0), middle MCP (9), index MCP (5), pinky MCP (17)
-    const pts = [landmarks[0], landmarks[9], landmarks[5], landmarks[17]];
+    const pts = [landmarks[0], landmarks[9], landmarks[5], landmarks[17], landmarks[1]];
     let maxConf = 0;
     const mw = this.maskWidth;
     const mh = this.maskHeight;
@@ -212,8 +215,6 @@ export class VirtualBackgroundService {
       if (val > maxConf) maxConf = val;
     }
 
-    // If neither the wrist nor palm points reach the foreground threshold,
-    // this hand is physically located in the masked-out background!
     return maxConf >= threshold;
   }
 
@@ -239,27 +240,42 @@ export class VirtualBackgroundService {
     const cw = canvas.width;
     const ch = canvas.height;
 
-    // Fallback: If virtual background is disabled or model hasn't generated a mask yet, or in Eco Mode:
-    // ALWAYS render 100% solid camera video feed so the person is NEVER invisible!
+    // Calculate EXACT cover-crop coordinates for raw video
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    const videoAspect = vw / vh;
+    const targetAspect = cw / ch;
+
+    let sx = 0, sy = 0, sw = vw, sh = vh;
+    if (videoAspect > targetAspect) {
+      sw = vh * targetAspect;
+      sx = (vw - sw) / 2;
+    } else {
+      sh = vw / targetAspect;
+      sy = (vh - sh) / 2;
+    }
+
+    // Fallback or Normal Mode: If virtual background is disabled or model hasn't generated a mask yet:
+    // ALWAYS render 100% solid, crisp, crystal-clear camera video with perfect cover-fit
     if (this.isEcoMode || !this.isEnabled || !this.isModelLoaded || !this.hasValidMask) {
       ctx.save();
       if (isMirrored) {
         ctx.translate(cw, 0);
         ctx.scale(-1, 1);
       }
-      this._drawVideoCover(ctx, video, cw, ch);
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
       ctx.restore();
       return;
     }
 
-    // 1. Draw Framed Cyber AI Background (properly scaled to avoid over-zooming)
-    if (this.bgImageLoaded && this.bgImage.naturalWidth > 0) {
+    // 1. Draw Clean Flash Tech Background Image (/images/background.jpg)
+    if (this.bgImageLoaded && this.bgImage) {
       this._drawFramedBackground(ctx, this.bgImage, cw, ch);
     } else {
-      // Clean sci-fi fallback gradient
-      const grad = ctx.createRadialGradient(cw / 2, ch / 2, 20, cw / 2, ch / 2, ch);
-      grad.addColorStop(0, '#100624');
-      grad.addColorStop(1, '#05020c');
+      const grad = ctx.createRadialGradient(cw / 2, ch * 0.4, 15, cw / 2, ch * 0.5, cw * 0.85);
+      grad.addColorStop(0, '#0c3570');
+      grad.addColorStop(0.55, '#071f45');
+      grad.addColorStop(1, '#030b18');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, cw, ch);
     }
@@ -280,27 +296,40 @@ export class VirtualBackgroundService {
       pCtx.translate(cw, 0);
       pCtx.scale(-1, 1);
     }
-    this._drawVideoCover(pCtx, video, cw, ch);
+    pCtx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
     pCtx.restore();
 
-    // Apply segmentation mask with the EXACT SAME MIRROR TRANSFORM!
-    pCtx.globalCompositeOperation = 'destination-in';
+    // Apply segmentation mask with the EXACT MATCHING CROP AND MIRROR TRANSFORM!
+    // This eliminates the 40% horizontal squish that sliced the user's head, shoulders, and hand.
+    const mw = this.maskWidth;
+    const mh = this.maskHeight;
+    const msx = (sx / vw) * mw;
+    const msy = (sy / vh) * mh;
+    const msw = (sw / vw) * mw;
+    const msh = (sh / vh) * mh;
+
     pCtx.save();
+    pCtx.globalCompositeOperation = 'destination-in';
     if (isMirrored) {
       pCtx.translate(cw, 0);
       pCtx.scale(-1, 1);
     }
-    pCtx.drawImage(this.maskCanvas, 0, 0, cw, ch);
+    pCtx.imageSmoothingEnabled = true;
+    pCtx.imageSmoothingQuality = 'high';
+    // Gentle 2.5px blur for silky-smooth feathered studio edges (no pixelation or jagged steps!)
+    pCtx.filter = 'blur(2.5px)';
+    pCtx.drawImage(this.maskCanvas, msx, msy, msw, msh, 0, 0, cw, ch);
+    pCtx.filter = 'none';
     pCtx.restore();
     pCtx.globalCompositeOperation = 'source-over';
 
-    // 3. Composite solid person over Cyber AI background
+    // 3. Composite silky-smooth person over the Flash Tech background!
     ctx.drawImage(this.personCanvas, 0, 0);
 
-    // 4. Subtle sci-fi ambient vignette around edges for arcade polish
+    // 4. Subtle sci-fi ambient vignette around edges
     const vignette = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.45, cw / 2, ch / 2, cw * 0.78);
     vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    vignette.addColorStop(1, 'rgba(5, 2, 12, 0.4)');
+    vignette.addColorStop(1, 'rgba(5, 2, 12, 0.35)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, cw, ch);
   }

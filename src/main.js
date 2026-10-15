@@ -62,10 +62,14 @@ class App {
   }
 
   async init() {
-    // 1. Start background particles
+    // 1. Setup background particles (disabled on Home screen as requested)
     if (this.bgCanvas) {
       this.particleSystem = new ParticleSystem(this.bgCanvas);
-      this.particleSystem.start();
+      if (gameEngine.currentState !== GAME_STATES.HOME) {
+        this.particleSystem.start();
+      } else {
+        this.bgCanvas.style.display = 'none';
+      }
     }
 
     // 2. Wire game engine callbacks
@@ -191,10 +195,10 @@ class App {
       display: flex; align-items: center; justify-content: center; padding: 20px;
     `;
     modal.innerHTML = `
-      <div style="background: linear-gradient(135deg, rgba(20, 10, 38, 0.98), rgba(35, 15, 60, 0.98)); border: 2px solid #00f7ff; box-shadow: 0 0 35px rgba(0, 247, 255, 0.4); border-radius: 18px; padding: 24px; max-width: 420px; width: 100%; text-align: center; color: #fff; font-family: Outfit, sans-serif;">
+      <div style="background: linear-gradient(135deg, rgba(10, 42, 102, 0.98), rgba(6, 21, 45, 0.98)); border: 1.5px solid #14b3d4; box-shadow: 0 0 35px rgba(11, 95, 165, 0.4); border-radius: 18px; padding: 24px; max-width: 420px; width: 100%; text-align: center; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-          <h3 style="margin:0; font-family: Orbitron, sans-serif; font-size: 17px; color: #00f7ff;">📱 SCAN DENGAN KAMERA HP</h3>
-          <button id="btn-close-qr-modal" style="background:none; border:none; color:#ff007f; font-size:24px; cursor:pointer; font-weight:bold; line-height:1;">✕</button>
+          <h3 style="margin:0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 16px; color: #14b3d4;">📱 SCAN DENGAN KAMERA HP</h3>
+          <button id="btn-close-qr-modal" style="background:none; border:none; color:#fbb040; font-size:24px; cursor:pointer; font-weight:bold; line-height:1;">✕</button>
         </div>
         <p style="font-size: 13px; color: #d0c8e8; margin-bottom: 14px; line-height: 1.4;">
           Buka <strong>Kamera bawaan HP</strong> Anda, arahkan ke QR Code di bawah untuk membuka game langsung di HP:
@@ -350,14 +354,32 @@ class App {
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const isTvSong = gameEngine.currentState === GAME_STATES.KOMANG || gameEngine.currentState === GAME_STATES.NADIMU;
+      const isHome = gameEngine.currentState === GAME_STATES.HOME;
+      const isFullscreenActive = this.isFullscreen || isTvSong || isHome;
+
+      // Handle background particle canvas: Disabled on Home screen (bagian awal)
+      if (this.bgCanvas) {
+        if (isHome) {
+          this.bgCanvas.style.display = 'none';
+          if (this.particleSystem) this.particleSystem.stop();
+        } else {
+          this.bgCanvas.style.display = 'block';
+          if (this.particleSystem) {
+            this.particleSystem.resize();
+            this.particleSystem.start();
+          }
+        }
+      }
 
       this.appEl.innerHTML = `
-        <button class="viewport-toggle-btn" id="btn-toggle-viewport">
-          ${this.isFullscreen ? '📱 Phone Frame' : '🖥️ Fullscreen'}
-        </button>
+        ${isHome ? '' : `
+          <button class="viewport-toggle-btn" id="btn-toggle-viewport">
+            ${this.isFullscreen ? '📱 Phone Frame' : '🖥️ Fullscreen'}
+          </button>
+        `}
 
-        <div class="phone-shell ${(this.isFullscreen || isTvSong) ? 'fullscreen-mode tv-mode' : ''}">
-          ${isTvSong ? '' : `
+        <div class="phone-shell ${isFullscreenActive ? 'fullscreen-mode tv-mode home-fullscreen-shell' : ''}">
+          ${isFullscreenActive ? '' : `
             <div class="phone-status-bar">
               <span>${timeStr}</span>
               <div class="notch-pill"></div>
@@ -365,13 +387,13 @@ class App {
             </div>
           `}
 
-          <div class="screen-container ${isTvSong ? 'tv-screen-container' : ''}" id="screen-viewport">
+          <div class="screen-container ${(isTvSong || isHome) ? 'tv-screen-container home-screen-container' : ''}" id="screen-viewport">
             ${this._getScreenTemplate()}
           </div>
         </div>
       `;
 
-      // Rebind Viewport Toggle Button
+      // Rebind Viewport Toggle Button (if present)
       const toggleBtn = document.getElementById('btn-toggle-viewport');
       if (toggleBtn) {
         toggleBtn.onclick = () => {
@@ -463,6 +485,7 @@ class App {
       this._clearAutoAdvance();
       this._setupHomeWaveform();
       this._stopCameraAndTracking();
+      this._initMascotInteraction();
     } else if (state === GAME_STATES.TRACK_SELECT) {
       this._clearAutoAdvance();
       this._stopCameraAndTracking();
@@ -546,115 +569,106 @@ class App {
 
   _templateHome() {
     return `
-      <div class="home-screen">
-        <div>
-          <div class="logo-badge">✦ Interactive Motion Synthesizer ✦</div>
-          <h1 class="game-title">GESTURE SYNTH</h1>
-          <p class="game-tagline">"Move Your Hands. Make Music."</p>
-
-          <div class="visualizer-container">
-            <canvas id="home-waveform-canvas"></canvas>
-          </div>
-
-          <div class="stats-row">
-            <div class="stat-card">
-              <span class="stat-label">Best Score</span>
-              <span class="stat-value">${scoreManager.bestScore.toLocaleString()}%</span>
+      <div class="home-screen vibrant-home home-split-layout">
+        <div class="home-main-split">
+          <!-- KOLOM KIRI (50%): ANIMASI MASKOT FLIX BEBAS & MEGAH -->
+          <div class="home-mascot-panel" id="mascot-interactive-box" title="Klik maskot Flix untuk tips & suara seru!">
+            <div class="mascot-speech-bubble" id="mascot-speech-bubble">
+              <div class="bubble-header">
+                <span class="bubble-name-badge">⚡ FLIX</span>
+                <span class="bubble-tap-hint">💡 Sentuh Aku!</span>
+              </div>
+              <p class="bubble-message" id="mascot-bubble-text">Hai! 👋 Aku <strong>Flix</strong>! Yuk mainkan musik dengan gerakan tanganmu di depan kamera!</p>
             </div>
-            <div class="stat-card">
-              <span class="stat-label">Max Combo</span>
-              <span class="stat-value">x${scoreManager.bestCombo}</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-label">Highest Lv</span>
-              <span class="stat-value">Lv ${scoreManager.highestLevel}</span>
+            <div class="mascot-stage-platform">
+              <div class="mascot-stage-glow"></div>
+              <span class="felix-sparkle note1">♪</span>
+              <span class="felix-sparkle note2">♫</span>
+              <span class="felix-sparkle note3">♬</span>
+              <img src="/images/maskot_transparent.png" alt="Flix - Maskot Flash Tech" class="mascot-hero-img" id="mascot-hero-img" />
+              <div class="mascot-floor-shadow"></div>
             </div>
           </div>
-        </div>
 
-        <div class="mode-cards-grid">
-          <!-- Featured Competition Track Selection & Prize Leaderboard -->
-          <button class="mode-btn track-select" id="btn-home-tracks" style="background:linear-gradient(135deg, rgba(255, 45, 117, 0.28) 0%, rgba(0, 247, 255, 0.24) 100%); border:1.5px solid var(--cyan); box-shadow:0 0 25px rgba(0,247,255,0.4); grid-column: span 2;">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title" style="color:#fff; font-size:13.5px; font-weight:900;">🎵 PILIH LAGU & TANTANGAN HADIAH (LEADERBOARD)</span>
-              <span class="mode-btn-desc" style="color:var(--cyan); font-weight:700;">Komang, Jingle Bells & Pop • 1 Papan Peringkat Setara (100k Pts) • Scan QR Rebut Hadiah!</span>
+          <!-- KOLOM KANAN: GAMBAR 2 & GAMBAR 3 (HEADLINE, STATS, PLAY BANNER, NAV) -->
+          <section class="home-controls-panel">
+            <!-- BAGIAN GAMBAR 2: Headline & Quick Stats -->
+            <div class="home-headline-card">
+              <div class="brand-headline-wrapper">
+                <img src="/images/FLASH%20TECH.png" alt="Flash Tech Indonesia" class="brand-headline-logo" />
+              </div>
+              
+              <div class="game-badge-clean">
+                <span class="badge-dot"></span>
+                <span>GAME RITME MUSIK SENSOR TANGAN</span>
+              </div>
+
+              <h1 class="game-title-clean">GESTURE SYNTH</h1>
+              <p class="game-tagline-clean">Gerakkan jari & telapak tangan di depan kamera untuk menghasilkan harmoni nada musik yang indah!</p>
+
+              <div class="visualizer-container-clean">
+                <canvas id="home-waveform-canvas"></canvas>
+              </div>
+
+              <div class="stats-row-clean">
+                <div class="stat-card-clean">
+                  <span class="stat-icon-wrap trophy">🏆</span>
+                  <div class="stat-meta">
+                    <span class="stat-label">Skor Terbaik</span>
+                    <span class="stat-val">${scoreManager.bestScore.toLocaleString()}%</span>
+                  </div>
+                </div>
+                <div class="stat-card-clean">
+                  <span class="stat-icon-wrap fire">🔥</span>
+                  <div class="stat-meta">
+                    <span class="stat-label">Rekor Kombo</span>
+                    <span class="stat-val">x${scoreManager.bestCombo}</span>
+                  </div>
+                </div>
+                <div class="stat-card-clean">
+                  <span class="stat-icon-wrap star">⭐</span>
+                  <div class="stat-meta">
+                    <span class="stat-label">Level Tertinggi</span>
+                    <span class="stat-val">Lv ${scoreManager.highestLevel}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <span style="font-size:24px;">🏆</span>
-          </button>
 
-          <button class="mode-btn classic" id="btn-home-play">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title">▶ CLASSIC CAMPAIGN</span>
-              <span class="mode-btn-desc">8 Levels • Indonesian Pop Phrases • Event Progression</span>
+            <!-- BAGIAN GAMBAR 3: Featured Action Banner (Pilih Lagu & Papan Skor) -->
+            <div class="home-main-action-wrap">
+              <button class="vibrant-card hero-competition-card" id="btn-home-tracks">
+                <div class="hero-card-left">
+                  <div class="hero-card-tag">🏆 TANTANGAN UTAMA BERHADIAH</div>
+                  <div class="hero-card-title">PILIH LAGU & PAPAN SKOR JUARA</div>
+                  <div class="hero-card-desc">Mainkan lagu pilihan (Komang, Jingle Bells & Pop) • 1 Papan Peringkat Terpadu (100.000 Pts) • Scan QR Rebut Hadiah!</div>
+                </div>
+                <div class="hero-card-action">
+                  <span>PILIH LAGU</span>
+                  <span class="action-arrow">→</span>
+                </div>
+              </button>
             </div>
-            <span style="font-size:16px;">⭐</span>
-          </button>
 
-          <button class="mode-btn time-attack" id="btn-home-timeattack">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title">⚡ TIME ATTACK</span>
-              <span class="mode-btn-desc">High BPM • Tight Timing • Rapid Harmonic Sprint</span>
+            <!-- BAGIAN GAMBAR 3: Bottom Navigation Bar -->
+            <div class="home-bottom-nav">
+              <button class="nav-pill-btn" id="btn-home-leaderboard">
+                <span class="nav-icon">🏆</span> <span>PAPAN SKOR</span>
+              </button>
+              <button class="nav-pill-btn" id="btn-home-levels">
+                <span class="nav-icon">🗺️</span> <span>CAMPAIGN</span>
+              </button>
+              <button class="nav-pill-btn" id="btn-home-calibration">
+                <span class="nav-icon">🎯</span> <span>KALIBRASI</span>
+              </button>
+              <button class="nav-pill-btn" id="btn-home-how">
+                <span class="nav-icon">📖</span> <span>CARA MAIN</span>
+              </button>
+              <button class="nav-pill-btn" id="btn-home-settings">
+                <span class="nav-icon">⚙️</span> <span>PENGATURAN</span>
+              </button>
             </div>
-            <span style="font-size:16px;">⏱️</span>
-          </button>
-
-          <button class="mode-btn endless" id="btn-home-endless">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title">♾️ ENDLESS GROOVE</span>
-              <span class="mode-btn-desc">Non-Stop Pop Following • 3 Lives • Ramping BPM</span>
-            </div>
-            <span style="font-size:16px;">🔥</span>
-          </button>
-
-          <button class="mode-btn free-synth" id="btn-home-free">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title">🎹 FREE SYNTH STUDIO</span>
-              <span class="mode-btn-desc">Open Jam • Direct Chord Sounds • Audio Presets</span>
-            </div>
-            <span style="font-size:16px;">🎵</span>
-          </button>
-
-          <button class="mode-btn jingle-bells" id="btn-home-jingle">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title">🔔 JINGLE BELLS PIANO</span>
-              <span class="mode-btn-desc">Tutorial & Lagu • Petunjuk Not & Gesture • Partitur Asli</span>
-            </div>
-            <span style="font-size:18px;">🎄</span>
-          </button>
-
-          <button class="mode-btn komang-song" id="btn-home-komang">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title">🌺 KOMANG - RAIM LAODE</span>
-              <span class="mode-btn-desc">Play-Along Backing Track • Tempo 130 BPM • Partitur G Major</span>
-            </div>
-            <span style="font-size:18px;">✨</span>
-          </button>
-
-          <button class="mode-btn midi-song" id="btn-home-midi" style="border-color:var(--cyan);background:linear-gradient(135deg, rgba(0, 247, 255, 0.12), rgba(18, 10, 38, 0.75));">
-            <div class="mode-btn-left">
-              <span class="mode-btn-title">🎼 IMPORT LAGU MIDI</span>
-              <span class="mode-btn-desc">Unggah File MIDI Sendiri • Deteksi Akor Otomatis • Mainkan Ritme</span>
-            </div>
-            <span style="font-size:18px;">🎹</span>
-          </button>
-        </div>
-
-        <div class="home-util-grid">
-          <button class="btn-secondary" id="btn-home-leaderboard" style="padding:10px 8px;font-size:11px;">
-            <span>🏆</span> PAPAN SKOR
-          </button>
-          <button class="btn-secondary" id="btn-home-levels" style="padding:10px 8px;font-size:11px;">
-            <span>🎚️</span> CAMPAIGN LEVELS
-          </button>
-          <button class="btn-secondary" id="btn-home-calibration" style="padding:10px 8px;font-size:11px;">
-            <span>🎯</span> CALIBRATE HAND
-          </button>
-          <button class="btn-secondary" id="btn-home-how" style="padding:10px 8px;font-size:11px;">
-            <span>📖</span> HOW TO PLAY
-          </button>
-          <button class="btn-secondary" id="btn-home-settings" style="padding:10px 8px;font-size:11px;">
-            <span>⚙️</span> SETTINGS
-          </button>
+          </section>
         </div>
       </div>
     `;
@@ -990,7 +1004,7 @@ class App {
     return `
       <div class="jingle-bells-screen">
         <div class="jingle-header">
-          <button class="btn-icon-back" id="btn-back-home">‹</button>
+          <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Pilih Lagu">‹</button>
           <div class="jingle-header-center">
             <div class="jingle-title">
               <span>🔔</span> JINGLE BELLS PIANO
@@ -1558,7 +1572,7 @@ class App {
           result
         );
 
-        // 2. Draw skeleton ONLY for validated active player hands
+        // 2. Draw skeleton ONLY for validated active player hands (passing videoEl for exact cover-fit mapping)
         handTrackingService.drawLandmarks(
           ctx,
           canvasEl.width,
@@ -1566,7 +1580,8 @@ class App {
           gestureResult.validLandmarks || [],
           gestureResult.validHandedness || [],
           cameraService.isMirrored,
-          gestureResult.activeFingersPerHand
+          gestureResult.activeFingersPerHand,
+          videoEl
         );
 
         // 3. Update UI displays
@@ -1782,6 +1797,47 @@ class App {
     if (this.waveformVisualizer) this.waveformVisualizer.stop();
     this.waveformVisualizer = new WaveformVisualizer(canvas, audioManager.analyser);
     this.waveformVisualizer.start();
+  }
+
+  _initMascotInteraction() {
+    const mascotBox = document.getElementById('mascot-interactive-box');
+    const mascotImg = document.getElementById('mascot-hero-img');
+    const bubbleText = document.getElementById('mascot-bubble-text');
+    if (!mascotBox || !mascotImg || !bubbleText) return;
+
+    const MASCOT_TIPS = [
+      "Hai! 👋 Aku Flix! Ayo mainkan musik hanya dengan gerakan tanganmu di depan kamera!",
+      "Lagu 'Komang' paling asyik lho! Coba pilih mode 30 Detik untuk main kilat! ⏱️",
+      "Tips Rahasia dari Flix: 1 Jari = G, 2 Jari = D/F#, 3 Jari = Am, 4 Jari = Cm! 👍",
+      "Kalau tanganmu pegal, kamu juga bisa ketuk tuts piano langsung di layar lho! 🎹",
+      "Mau main santai tanpa takut kehabisan nyawa? Ada tombol 'Lanjutkan Santai' di modal akhir! 🛡️",
+      "Semakin panjang streak combo kamu, skor dan multiplier kamu bakal melesat tinggi! 🔥",
+      "Keren! Kamu bisa tantang teman-temanmu rebut posisi teratas di Papan Skor! 🏆"
+    ];
+
+    let tipIdx = 0;
+
+    mascotBox.onclick = () => {
+      try {
+        audioManager.init();
+        audioManager.playGoodHit();
+      } catch (e) {}
+
+      // Trigger pop jump animation
+      mascotImg.classList.remove('mascot-pop');
+      void mascotImg.offsetWidth; // force reflow
+      mascotImg.classList.add('mascot-pop');
+
+      // Next tip with quick fade transition
+      tipIdx = (tipIdx + 1) % MASCOT_TIPS.length;
+      bubbleText.style.opacity = '0';
+      bubbleText.style.transform = 'translateY(4px)';
+      setTimeout(() => {
+        bubbleText.innerText = MASCOT_TIPS[tipIdx];
+        bubbleText.style.opacity = '1';
+        bubbleText.style.transform = 'translateY(0)';
+      }, 140);
+    };
   }
 
   _setupSynthWaveform() {
@@ -2161,7 +2217,7 @@ class App {
           <span>↺</span> MAINKAN LAGI
         </button>
         <button class="btn-secondary" id="btn-jingle-home" style="width:100%;">
-          <span>🏠</span> KEMBALI KE HOME
+          <span>🎵</span> PILIH LAGU LAIN
         </button>
       </div>
     `;
@@ -2253,7 +2309,7 @@ class App {
         <!-- TOP HEADER: TV Friendly, Sleek Synthwave Bar -->
         <div class="komang-header">
           <div style="display:flex; align-items:center; gap:12px;">
-            <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Menu">‹</button>
+            <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Pilih Lagu">‹</button>
             <div>
               <div class="komang-title">
                 <span class="komang-logo-pulse">🌺</span> KOMANG — RAIM LAODE
@@ -2271,38 +2327,38 @@ class App {
             <!-- 30S RANDOM vs FULL SONG Switcher -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${komangService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-komang-mode-30s" title="Main cepat 30 detik dari bagian acak lagu Komang">
-                🎲 30s RANDOM
+                🎲 30s
               </button>
               <button class="komang-view-btn ${komangService.sessionMode === 'FULL_SONG' ? 'active' : ''}" id="btn-komang-mode-full" title="Main lagu penuh dari awal sampai akhir">
-                🎵 LAGU PENUH
+                🎵 Penuh
               </button>
             </div>
 
             <!-- PIANO TILES vs PARTITUR View Toggle -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${isTilesView ? 'active' : ''}" id="btn-komang-view-tiles">
-                🎹 PIANO TILES (RITME)
+                🎹 Tiles
               </button>
               <button class="komang-view-btn ${!isTilesView ? 'active' : ''}" id="btn-komang-view-sheet">
-                🎼 PARTITUR LENGKAP
+                🎼 Partitur
               </button>
             </div>
 
             <!-- Audio Modes -->
             <div class="jingle-mode-pills">
-              <button class="mode-pill ${isPlayAlong ? 'active' : ''}" id="btn-komang-mode-playalong">🎵 MP3 KARAOKE</button>
-              <button class="mode-pill ${isGuide ? 'active' : ''}" id="btn-komang-mode-guide">🎓 BELAJAR</button>
+              <button class="mode-pill ${isPlayAlong ? 'active' : ''}" id="btn-komang-mode-playalong">🎵 MP3</button>
+              <button class="mode-pill ${isGuide ? 'active' : ''}" id="btn-komang-mode-guide">🎓 Belajar</button>
               <button class="mode-pill ${isTempo ? 'active' : ''}" id="btn-komang-mode-tempo">⏱️ 130 BPM</button>
             </div>
 
             <!-- No-Fail / Challenge Mode Toggle Button -->
-            <button class="mode-pill ${komangService.isNoFail ? 'active' : ''}" id="btn-komang-nofail-toggle" title="Klik untuk beralih antara Mode Santai (Tanpa Kalah) atau Mode Tantangan">
-              ${komangService.isNoFail ? '🛡️ MODE SANTAI (BEBAS)' : '🎮 5 NYAWA (TANTANGAN)'}
+            <button class="mode-pill ${komangService.isNoFail ? 'active' : ''}" id="btn-komang-nofail-toggle" title="Klik untuk beralih antara Mode Santai atau Tantangan">
+              ${komangService.isNoFail ? '🛡️ Santai' : '🎮 5 Nyawa'}
             </button>
 
             <!-- TV Fullscreen Button -->
-            <button class="btn-tv-fullscreen" id="btn-komang-fullscreen-tv" title="Tampilkan Fullscreen 16:9 di TV">
-              🖥️ TV FULLSCREEN
+            <button class="btn-tv-fullscreen" id="btn-komang-fullscreen-tv" title="Tampilkan Fullscreen">
+              🖥️ TV
             </button>
           </div>
         </div>
@@ -2363,16 +2419,8 @@ class App {
             <!-- Audio Backing Player Card -->
             <div class="komang-player-card">
               <div class="komang-transport-row">
-                <button class="komang-btn-play" id="btn-komang-play-pause">
-                  <span id="komang-play-label">${isPlaying ? '⏸️ JEDA' : (komangService.sessionMode === '30S_RANDOM' ? '▶️ MAIN 30s' : '▶️ PUTAR LAGU')}</span>
-                </button>
-                <button class="btn-score-reset" id="btn-komang-random-segment" title="Pilih bagian 30 detik acak lain dari lagu Komang">
-                  🎲 Acak 30s
-                </button>
-                <button class="btn-score-reset" id="btn-komang-reset">
-                  ↺ Ulang
-                </button>
-                <span class="komang-time-badge" id="komang-time-display">${komangService.sessionMode === '30S_RANDOM' ? '⏱️ SISA: 30s' : '0:00 / 4:30'}</span>
+                <span style="font-size:10.5px; font-weight:800; color:var(--ice-blue); letter-spacing:0.5px; font-family:var(--font-display);">🎚️ PENGATURAN SUARA & SYNC</span>
+                <span class="komang-time-badge" style="font-size:10px;">G Major • 130 BPM</span>
               </div>
 
               <div class="komang-progress-bar" id="komang-progress-bar">
@@ -2393,6 +2441,38 @@ class App {
                   <span>🎹 Piano:</span>
                   <input type="range" class="komang-vol-slider" id="komang-vol-player" min="0" max="1" step="0.05" value="${komangService.playerVolume}">
                 </div>
+              </div>
+            </div>
+
+            <!-- 4. PANDUAN PINTASAN & INPUT (Mengisi kolom kiri secara seimbang & informatif) -->
+            <div class="komang-controls-card">
+              <div class="controls-card-header">
+                <span>🎮</span> PANDUAN PINTASAN & INPUT
+              </div>
+              <div class="controls-guide-grid">
+                <div class="cguide-item">
+                  <span class="cguide-key">1 / D</span>
+                  <span class="cguide-desc">☝️ G (1 Jari)</span>
+                </div>
+                <div class="cguide-item">
+                  <span class="cguide-key">2 / F</span>
+                  <span class="cguide-desc">✌️ D/F# (2 Jari)</span>
+                </div>
+                <div class="cguide-item">
+                  <span class="cguide-key">3 / J</span>
+                  <span class="cguide-desc">🤟 Am (3 Jari)</span>
+                </div>
+                <div class="cguide-item">
+                  <span class="cguide-key">4 / K</span>
+                  <span class="cguide-desc">🖐️ Cm (4 Jari)</span>
+                </div>
+              </div>
+              <div class="controls-tips-row">
+                <span>⌨️ Ketuk Tuts</span>
+                <span>•</span>
+                <span>📹 Kamera 1-5 Jari</span>
+                <span>•</span>
+                <span>⏸️ Esc: Jeda</span>
               </div>
             </div>
           </div>
@@ -2442,13 +2522,16 @@ class App {
             `}
           </div>
 
-          <!-- 3. RIGHT COLUMN: LIVE CAMERA VIEWPORT & BOTTOM CORNER HAND GUIDE -->
+          <!-- 3. RIGHT COLUMN: LIVE CAMERA & HERO PLAY CONTROLS -->
           <div class="komang-right-col">
             <!-- Camera Viewport with Hand Skeleton Tracking -->
             <div class="camera-viewport komang-camera-box">
               <video id="camera-video" autoplay playsinline muted></video>
               <canvas id="camera-canvas"></canvas>
               <canvas id="tracking-canvas"></canvas>
+              <button class="btn-camera-bg-toggle ${virtualBackgroundService.isEnabled ? 'active' : ''}" id="btn-camera-bg-toggle" type="button" title="Ganti Mode Latar Kamera (Flash Tech / Asli)">
+                ${virtualBackgroundService.isEnabled ? '✨ Latar: Flash Tech' : '📷 Latar: Asli'}
+              </button>
               <div class="camera-guide-frame"></div>
               <div class="camera-guidance-pill" id="komang-guidance-pill">
                 TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}
@@ -2462,35 +2545,26 @@ class App {
               <span class="live-text" id="komang-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari ${curMeasure.emoji}</span>
             </div>
 
-            <!-- GAMBAR TANGAN DI POJOK BAWAH SEBAGAI PETUNJUKNYA -->
-            <div class="komang-hand-guide-card" id="komang-hand-guide-card">
-              <div class="hand-guide-header">
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:16px;">🖐️</span>
-                  <span class="hand-guide-title">PETUNJUK GESTUR TANGAN</span>
+            <!-- PROMINENT HERO PLAY ACTION CARD (Sangat Terlihat & Jelas) -->
+            <div class="komang-hero-cta-card">
+              <button class="komang-hero-play-btn ${isPlaying ? 'playing' : ''}" id="btn-komang-play-pause">
+                <span class="hero-play-icon">${isPlaying ? '⏸️' : '▶️'}</span>
+                <div class="hero-play-info">
+                  <span class="hero-play-main" id="komang-play-label">${isPlaying ? 'JEDA PERMAINAN' : (komangService.sessionMode === '30S_RANDOM' ? 'MAIN 30 DETIK' : 'PUTAR LAGU PENUH')}</span>
+                  <span class="hero-play-sub">${isPlaying ? 'Klik untuk berhenti sejenak' : 'Ketuk tombol atau langsung gunakan kamera'}</span>
                 </div>
-                <span class="hand-guide-badge" id="komang-hand-target-badge">
-                  ${curMeasure.emoji} ${curMeasure.fingerCount} JARI
+              </button>
+
+              <div class="hero-cta-quick-actions">
+                <button class="btn-hero-util" id="btn-komang-random-segment" title="Ganti bagian 30s acak">
+                  🎲 Acak Bagian
+                </button>
+                <button class="btn-hero-util" id="btn-komang-reset" title="Ulang dari awal bagian ini">
+                  ↺ Ulang
+                </button>
+                <span class="hero-time-badge" id="komang-time-display">
+                  ${komangService.sessionMode === '30S_RANDOM' ? '⏱️ SISA: 30s' : '0:00 / 4:30'}
                 </span>
-              </div>
-
-              <!-- Canvas Gambar Tangan Petunjuk -->
-              <div class="hand-guide-canvas-box">
-                <canvas id="komang-hand-guide-canvas" width="280" height="220"></canvas>
-              </div>
-
-              <!-- Label dan Penjelasan Petunjuk Bawah -->
-              <div class="hand-guide-footer">
-                <div class="hand-guide-chord-name" id="komang-guide-chord-name">
-                  AKOR: <strong>${curMeasure.chord}</strong> (${curMeasure.label})
-                </div>
-                <div class="hand-guide-mini-legend">
-                  <span class="guide-tag ${curMeasure.fingerCount === 1 ? 'active' : ''}">1F: G</span>
-                  <span class="guide-tag ${curMeasure.fingerCount === 2 ? 'active' : ''}">2F: D/F#</span>
-                  <span class="guide-tag ${curMeasure.fingerCount === 3 ? 'active' : ''}">3F: Am</span>
-                  <span class="guide-tag ${curMeasure.fingerCount === 4 ? 'active' : ''}">4F: Cm</span>
-                  <span class="guide-tag wildcard-tag" style="color:#ffd700; border-color:rgba(255,215,0,0.5);" title="Buka 5 Jari untuk memukul nada apa pun!">🖐️ 5F: WILDCARD ✨</span>
-                </div>
               </div>
             </div>
 
@@ -2508,8 +2582,8 @@ class App {
               <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-fingers="4" data-chord="Cm">
                 <span>🖐️ 4: Cm</span>
               </button>
-              <button class="komang-fbtn wildcard-fbtn" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas (Pukul Jalur Aktif)">
-                <span>🖐️ 5: SAKTI ✨</span>
+              <button class="komang-fbtn wildcard-fbtn ${curMeasure.fingerCount === 5 ? 'active' : ''}" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas (Pukul Jalur Aktif)">
+                <span>✨ 5: SAKTI</span>
               </button>
             </div>
           </div>
@@ -2527,6 +2601,8 @@ class App {
       komangService.setTilesEngine(komangTilesEngine);
       if (komangService.isPlaying) {
         komangTilesEngine.start();
+      } else {
+        komangTilesEngine.draw();
       }
     }
 
@@ -2571,7 +2647,15 @@ class App {
     komangService.onAudioStateChanged = (isPlaying) => {
       const label = document.getElementById('komang-play-label');
       if (label) {
-        label.innerText = isPlaying ? '⏸️ JEDA' : '▶️ PUTAR LAGU';
+        label.innerText = isPlaying ? 'JEDA PERMAINAN' : (komangService.sessionMode === '30S_RANDOM' ? 'MAIN 30 DETIK' : 'PUTAR LAGU PENUH');
+      }
+      const icon = document.querySelector('#btn-komang-play-pause .hero-play-icon');
+      if (icon) {
+        icon.innerText = isPlaying ? '⏸️' : '▶️';
+      }
+      const heroBtn = document.getElementById('btn-komang-play-pause');
+      if (heroBtn) {
+        heroBtn.classList.toggle('playing', isPlaying);
       }
       if (isPlaying && komangTilesEngine) {
         komangTilesEngine.start();
@@ -2602,13 +2686,13 @@ class App {
     const badge = document.getElementById('komang-hand-target-badge');
     if (badge) {
       badge.innerText = `${m.emoji} ${m.fingerCount} JARI`;
-      badge.style.color = matched ? '#00ffaa' : '#ff7eb3';
+      badge.style.color = matched ? '#00e5a3' : '#fbb040';
     }
 
     // Guide chord name
     const chordNameEl = document.getElementById('komang-guide-chord-name');
     if (chordNameEl) {
-      chordNameEl.innerHTML = `AKOR: <strong style="color:${matched ? '#00ffaa' : '#ff94c2'};">${m.chord}</strong> (${m.label}) ${matched ? '✔ COCOK!' : ''}`;
+      chordNameEl.innerHTML = `AKOR: <strong style="color:${matched ? '#00e5a3' : '#fbb040'};">${m.chord}</strong> (${m.label}) ${matched ? '✔ COCOK!' : ''}`;
     }
 
     // Update tags in mini legend
@@ -2822,16 +2906,25 @@ class App {
         <h2 class="modal-title-gameover">LAGU TERHENTI</h2>
         <p class="modal-subtitle-gameover">Kehabisan Nyawa di Bar ${result.barReached || 1} / ${result.totalMeasures || 16}</p>
 
-        <!-- Penjelasan Mengapa Nyawa Berkurang & Cara Mengaturnya -->
-        <div style="background:rgba(255,45,117,0.12); border:1px solid rgba(255,45,117,0.4); border-radius:12px; padding:12px 16px; margin:14px 0; text-align:left;">
-          <div style="font-size:12px; font-weight:800; color:#ff4d6d; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-            <span>⚠️</span> DI MANA SALAHNYA & MENGAPA NYAWA BERKURANG?
+        <!-- Mascot Encouragement -->
+        <div class="modal-mascot-row">
+          <img src="/images/maskot_transparent.png" alt="Flix" class="modal-mascot-avatar" />
+          <div class="modal-mascot-speech">
+            <span class="mascot-speech-name">Flix Menyemangati:</span>
+            <p class="mascot-speech-quote">"Jangan patah semangat! Balok nada terlewat saat meluncur. Coba lagi atau aktifkan <strong>MAIN SANTAI (NO-FAIL)</strong> ya! 👍"</p>
           </div>
-          <p style="font-size:11px; color:#cbd5e1; line-height:1.5; margin:0 0 6px 0;">
-            Nyawa berkurang saat <strong>ubin balok meluncur melewati garis putih bawah</strong> tanpa ditekan atau tanpa terdeteksi tangan di kamera (Total: <strong>${result.missHits || 5} ubin terlewat</strong>).
+        </div>
+
+        <!-- Penjelasan Ramah & Panduan Bermain -->
+        <div class="gameover-notice-card">
+          <div class="gameover-notice-header">
+            <span>ℹ️</span> <span>MENGAPA PERMAINAN BERHENTI?</span>
+          </div>
+          <p class="gameover-notice-desc">
+            Nyawa berkurang saat <strong>ubin balok meluncur melewati garis hit</strong> tanpa sempat tertekan atau terdeteksi oleh kamera tangan (Total: <strong>${result.missHits || 5} ubin terlewat</strong>).
           </p>
-          <div style="font-size:11px; color:#00ffaa; font-weight:700; display:flex; align-items:center; gap:6px;">
-            <span>🛡️</span> <span>Mau main bebas tanpa nyawa? Klik tombol hijau <strong>LANJUTKAN SANTAI</strong> di bawah, lagu tidak akan berhenti!</span>
+          <div class="gameover-notice-tip">
+            <span>🛡️</span> <span>Ingin bermain bebas tanpa rasa kalah? Gunakan mode <strong>MAIN SANTAI</strong> untuk latihan bebas tanpa nyawa!</span>
           </div>
         </div>
 
@@ -2849,23 +2942,23 @@ class App {
             <span class="mstat-val pink">x${result.maxCombo}</span>
           </div>
           <div class="mstat-box">
-            <span class="mstat-label">UBIN TERLEWAT (MISS)</span>
+            <span class="mstat-label">UBIN TERLEWAT</span>
             <span class="mstat-val red">${result.missHits}</span>
           </div>
         </div>
 
         <div class="modal-actions-row">
-          <button class="btn-modal-retry" id="btn-komang-random-next" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%); color:#000; font-weight:900;">
-            <span>🎲</span> COBA 30s LAIN (RANDOM)
-          </button>
-          <button class="btn-modal-retry" id="btn-komang-gameover-retry">
+          <button class="btn-modal-hero" id="btn-komang-gameover-retry">
             <span>↺</span> ULANG SEGMEN INI
           </button>
-          <button class="btn-modal-retry" id="btn-komang-gameover-nofail" style="background:linear-gradient(135deg, #00ffaa 0%, #00aa66 100%); color:#000;">
-            <span>▶</span> LANJUTKAN SANTAI (NO-FAIL)
+          <button class="btn-modal-secondary" id="btn-komang-random-next">
+            <span>🎲</span> COBA 30s LAIN
+          </button>
+          <button class="btn-modal-nofail" id="btn-komang-gameover-nofail">
+            <span>🛡️</span> MAIN SANTAI (NO-FAIL)
           </button>
           <button class="btn-modal-home" id="btn-komang-gameover-home">
-            <span>🏠</span> HOME MENU
+            <span>🎵</span> PILIH LAGU LAIN
           </button>
         </div>
       </div>
@@ -2923,6 +3016,15 @@ class App {
           </div>
         </div>
 
+        <!-- Mascot Celebration -->
+        <div class="modal-mascot-row victory">
+          <img src="/images/maskot_transparent.png" alt="Flix" class="modal-mascot-avatar mascot-victory-bounce" />
+          <div class="modal-mascot-speech victory">
+            <span class="mascot-speech-name">Flix Bangga Banget:</span>
+            <p class="mascot-speech-quote">"LUAR BIASA! 🌟 Permainan musik dan gerakan jarimu lincah banget! Kamu musisi berbakat!"</p>
+          </div>
+        </div>
+
         <div class="modal-stats-grid">
           <div class="mstat-box">
             <span class="mstat-label">TOTAL SKOR</span>
@@ -2974,7 +3076,7 @@ class App {
             <span>↺</span> ULANG SEGMEN INI
           </button>
           <button class="btn-modal-home" id="btn-komang-victory-home">
-            <span>🏠</span> HOME MENU
+            <span>🎵</span> PILIH LAGU LAIN
           </button>
         </div>
       </div>
@@ -3062,7 +3164,7 @@ class App {
         <!-- TOP HEADER: TV Friendly Bar -->
         <div class="komang-header">
           <div style="display:flex; align-items:center; gap:12px;">
-            <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Menu">‹</button>
+            <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Pilih Lagu">‹</button>
             <div>
               <div class="komang-title">
                 <span class="komang-logo-pulse">🎵</span> SELALU ADA DI NADIMU — OST JUMBO
@@ -3079,17 +3181,17 @@ class App {
             <!-- 30S vs Full Song switcher -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${nadimuService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-nadimu-mode-30s" title="Main cepat 30 detik bagian acak lagu Nadimu">
-                🎲 30s Random
+                🎲 30s
               </button>
               <button class="komang-view-btn ${nadimuService.sessionMode === 'FULL_SONG' ? 'active' : ''}" id="btn-nadimu-mode-full" title="Main lagu penuh dari awal sampai akhir">
-                🎵 Full Song
+                🎵 Penuh
               </button>
             </div>
 
             <!-- View Switcher (Tiles vs Sheet) -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${isTilesView ? 'active' : ''}" id="btn-nadimu-view-tiles">
-                🎮 Highway Ubin
+                🎹 Tiles
               </button>
               <button class="komang-view-btn ${!isTilesView ? 'active' : ''}" id="btn-nadimu-view-sheet">
                 🎼 Partitur
@@ -3098,8 +3200,8 @@ class App {
 
             <!-- Mode Santai vs Nyawa -->
             <div class="hud-pill-group">
-              <button class="mode-pill ${nadimuService.isNoFail ? 'active' : ''}" id="btn-nadimu-nofail-toggle" title="Klik untuk beralih antara Mode Santai (Tanpa Kalah) atau Mode Tantangan">
-                ${nadimuService.isNoFail ? '🛡️ MODE SANTAI (BEBAS)' : '🎮 5 NYAWA (TANTANGAN)'}
+              <button class="mode-pill ${nadimuService.isNoFail ? 'active' : ''}" id="btn-nadimu-nofail-toggle" title="Klik untuk beralih antara Mode Santai atau Tantangan">
+                ${nadimuService.isNoFail ? '🛡️ Santai' : '🎮 5 Nyawa'}
               </button>
             </div>
           </div>
@@ -3173,21 +3275,43 @@ class App {
             <!-- Player & Progress Card -->
             <div class="komang-player-card">
               <div class="komang-transport-row">
-                <button class="komang-btn-play" id="btn-nadimu-play-toggle" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%);">
-                  <span id="nadimu-play-label">${isPlaying ? '⏸️ JEDA' : (nadimuService.sessionMode === '30S_RANDOM' ? '▶️ MAIN 30s' : '▶️ PUTAR LAGU')}</span>
-                </button>
-                <button class="btn-secondary" id="btn-nadimu-random-segment" title="Pilih bagian lagu acak baru">
-                  <span>🎲</span> Ganti Bagian
-                </button>
-                <button class="btn-secondary" id="btn-nadimu-reset" title="Ulang dari awal bagian ini">
-                  <span>↺</span> Ulang
-                </button>
-                <div class="komang-time-badge" id="nadimu-time-display">
-                  ⏱️ SISA: 30s
-                </div>
+                <span style="font-size:10.5px; font-weight:800; color:var(--ice-blue); letter-spacing:0.5px; font-family:var(--font-display);">🎚️ PENGATURAN SUARA & SYNC</span>
+                <span class="komang-time-badge" style="font-size:10px;">C Major • 78 BPM</span>
               </div>
               <div class="komang-progress-bar" id="nadimu-progress-bar">
-                <div class="komang-progress-fill" id="nadimu-progress-fill" style="background:linear-gradient(90deg, #00f7ff, #00ffaa);"></div>
+                <div class="komang-progress-fill" id="nadimu-progress-fill" style="background:linear-gradient(90deg, #14b3d4, #fbb040);"></div>
+              </div>
+            </div>
+
+            <!-- 4. PANDUAN PINTASAN & INPUT (Nadimu) -->
+            <div class="komang-controls-card">
+              <div class="controls-card-header">
+                <span>🎮</span> PANDUAN PINTASAN & INPUT
+              </div>
+              <div class="controls-guide-grid">
+                <div class="cguide-item">
+                  <span class="cguide-key">1 / D</span>
+                  <span class="cguide-desc">☝️ C (1 Jari)</span>
+                </div>
+                <div class="cguide-item">
+                  <span class="cguide-key">2 / F</span>
+                  <span class="cguide-desc">✌️ F (2 Jari)</span>
+                </div>
+                <div class="cguide-item">
+                  <span class="cguide-key">3 / J</span>
+                  <span class="cguide-desc">🤟 Em (3 Jari)</span>
+                </div>
+                <div class="cguide-item">
+                  <span class="cguide-key">4 / K</span>
+                  <span class="cguide-desc">🖐️ G (4 Jari)</span>
+                </div>
+              </div>
+              <div class="controls-tips-row">
+                <span>⌨️ Ketuk Tuts</span>
+                <span>•</span>
+                <span>📹 Kamera 1-5 Jari</span>
+                <span>•</span>
+                <span>⏸️ Esc: Jeda</span>
               </div>
             </div>
 
@@ -3230,14 +3354,17 @@ class App {
             `}
           </div>
 
-          <!-- 3. RIGHT COLUMN: LIVE CAMERA VIEWPORT & HAND GUIDE -->
+          <!-- 3. RIGHT COLUMN: LIVE CAMERA & HERO PLAY CONTROLS -->
           <div class="komang-right-col">
             <div class="camera-viewport komang-camera-box">
               <video id="camera-video" autoplay playsinline muted></video>
               <canvas id="camera-canvas"></canvas>
               <canvas id="tracking-canvas"></canvas>
+              <button class="btn-camera-bg-toggle ${virtualBackgroundService.isEnabled ? 'active' : ''}" id="btn-camera-bg-toggle" type="button" title="Ganti Mode Latar Kamera (Flash Tech / Asli)">
+                ${virtualBackgroundService.isEnabled ? '✨ Latar: Flash Tech' : '📷 Latar: Asli'}
+              </button>
               <div class="camera-guide-frame"></div>
-              <div class="camera-guidance-pill" id="nadimu-guidance-pill" style="border-color:#00f7ff; color:#00f7ff;">
+              <div class="camera-guidance-pill" id="nadimu-guidance-pill" style="border-color:#14b3d4; color:#14b3d4;">
                 TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}
               </div>
               ${this._templateCameraOverlay()}
@@ -3248,33 +3375,26 @@ class App {
               <span class="live-text" id="nadimu-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari ${curMeasure.emoji}</span>
             </div>
 
-            <!-- Petunjuk Gestur Tangan Bawah -->
-            <div class="komang-hand-guide-card" id="nadimu-hand-guide-card">
-              <div class="hand-guide-header">
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:16px;">🖐️</span>
-                  <span class="hand-guide-title">PETUNJUK GESTUR TANGAN</span>
+            <!-- PROMINENT HERO PLAY ACTION CARD -->
+            <div class="komang-hero-cta-card">
+              <button class="komang-hero-play-btn ${isPlaying ? 'playing' : ''}" id="btn-nadimu-play-toggle">
+                <span class="hero-play-icon">${isPlaying ? '⏸️' : '▶️'}</span>
+                <div class="hero-play-info">
+                  <span class="hero-play-main" id="nadimu-play-label">${isPlaying ? 'JEDA PERMAINAN' : (nadimuService.sessionMode === '30S_RANDOM' ? 'MAIN 30 DETIK' : 'PUTAR LAGU PENUH')}</span>
+                  <span class="hero-play-sub">${isPlaying ? 'Klik untuk berhenti sejenak' : 'Ketuk tombol atau langsung gunakan kamera'}</span>
                 </div>
-                <span class="hand-guide-badge" id="nadimu-hand-target-badge" style="color:#00f7ff;">
-                  ${curMeasure.emoji} ${curMeasure.fingerCount} JARI
+              </button>
+
+              <div class="hero-cta-quick-actions">
+                <button class="btn-hero-util" id="btn-nadimu-random-segment" title="Pilih bagian lagu acak baru">
+                  🎲 Ganti Bagian
+                </button>
+                <button class="btn-hero-util" id="btn-nadimu-reset" title="Ulang dari awal bagian ini">
+                  ↺ Ulang
+                </button>
+                <span class="hero-time-badge" id="nadimu-time-display">
+                  ${nadimuService.sessionMode === '30S_RANDOM' ? '⏱️ SISA: 30s' : '0:00 / 4:10'}
                 </span>
-              </div>
-
-              <div class="hand-guide-canvas-box">
-                <canvas id="nadimu-hand-guide-canvas" width="280" height="220"></canvas>
-              </div>
-
-              <div class="hand-guide-footer">
-                <div class="hand-guide-chord-name" id="nadimu-guide-chord-name">
-                  AKOR: <strong>${curMeasure.chord}</strong> (${curMeasure.label})
-                </div>
-                <div class="hand-guide-mini-legend">
-                  <span class="guide-tag ${curMeasure.fingerCount === 1 ? 'active' : ''}">1F: C</span>
-                  <span class="guide-tag ${curMeasure.fingerCount === 2 ? 'active' : ''}">2F: F/Dm</span>
-                  <span class="guide-tag ${curMeasure.fingerCount === 3 ? 'active' : ''}">3F: Em/Am</span>
-                  <span class="guide-tag ${curMeasure.fingerCount === 4 ? 'active' : ''}">4F: G</span>
-                  <span class="guide-tag wildcard-tag" style="color:#ffd700; border-color:rgba(255,215,0,0.5);" title="Buka 5 Jari untuk memukul nada apa pun!">🖐️ 5F: WILDCARD ✨</span>
-                </div>
               </div>
             </div>
 
@@ -3292,8 +3412,8 @@ class App {
               <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-song="nadimu" data-fingers="4" data-chord="G">
                 <span>🖐️ 4: G</span>
               </button>
-              <button class="komang-fbtn wildcard-fbtn" data-song="nadimu" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas">
-                <span>🖐️ 5: SAKTI ✨</span>
+              <button class="komang-fbtn wildcard-fbtn ${curMeasure.fingerCount === 5 ? 'active' : ''}" data-song="nadimu" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas">
+                <span>✨ 5: SAKTI</span>
               </button>
             </div>
           </div>
@@ -3561,15 +3681,16 @@ class App {
         <h2 class="modal-title-gameover">LAGU TERHENTI</h2>
         <p class="modal-subtitle-gameover">Kehabisan Nyawa • Selalu Ada di Nadimu</p>
 
-        <div style="background:rgba(255,45,117,0.12); border:1px solid rgba(255,45,117,0.4); border-radius:12px; padding:12px 16px; margin:14px 0; text-align:left;">
-          <div style="font-size:12px; font-weight:800; color:#ff4d6d; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-            <span>⚠️</span> UBIN TERLEWAT
+        <!-- Penjelasan Ramah & Panduan Bermain -->
+        <div class="gameover-notice-card">
+          <div class="gameover-notice-header">
+            <span>ℹ️</span> <span>MENGAPA PERMAINAN BERHENTI?</span>
           </div>
-          <p style="font-size:11px; color:#cbd5e1; line-height:1.5; margin:0 0 6px 0;">
-            Nyawa habis karena ada ubin yang meluncur melewati garis hit tanpa terdeteksi (Total: <strong>${result.missHits || 5} ubin</strong>).
+          <p class="gameover-notice-desc">
+            Nyawa habis karena ada <strong>ubin balok yang meluncur melewati garis hit</strong> tanpa sempat tertekan atau terdeteksi oleh kamera (Total: <strong>${result.missHits || 5} ubin</strong>).
           </p>
-          <div style="font-size:11px; color:#00ffaa; font-weight:700;">
-            <span>🛡️</span> Ingin main tanpa rasa kalah? Gunakan tombol <strong>LANJUTKAN SANTAI</strong>!
+          <div class="gameover-notice-tip">
+            <span>🛡️</span> <span>Ingin bermain santai tanpa batasan nyawa? Gunakan tombol <strong>MAIN SANTAI</strong>!</span>
           </div>
         </div>
 
@@ -3593,17 +3714,17 @@ class App {
         </div>
 
         <div class="modal-actions-row">
-          <button class="btn-modal-retry" id="btn-nadimu-random-next" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%); color:#000; font-weight:900;">
-            <span>🎲</span> COBA 30s LAIN (RANDOM)
-          </button>
-          <button class="btn-modal-retry" id="btn-nadimu-gameover-retry">
+          <button class="btn-modal-hero" id="btn-nadimu-gameover-retry">
             <span>↺</span> ULANG SEGMEN INI
           </button>
-          <button class="btn-modal-retry" id="btn-nadimu-gameover-nofail" style="background:linear-gradient(135deg, #00ffaa 0%, #00aa66 100%); color:#000;">
-            <span>▶</span> LANJUTKAN SANTAI (NO-FAIL)
+          <button class="btn-modal-secondary" id="btn-nadimu-random-next">
+            <span>🎲</span> COBA 30s LAIN
+          </button>
+          <button class="btn-modal-nofail" id="btn-nadimu-gameover-nofail">
+            <span>🛡️</span> MAIN SANTAI (NO-FAIL)
           </button>
           <button class="btn-modal-home" id="btn-nadimu-gameover-home">
-            <span>🏠</span> HOME MENU
+            <span>🎵</span> PILIH LAGU LAIN
           </button>
         </div>
       </div>
@@ -3727,7 +3848,7 @@ class App {
             <span>↺</span> ULANG SEGMEN INI
           </button>
           <button class="btn-modal-home" id="btn-nadimu-victory-home">
-            <span>🏠</span> HOME MENU
+            <span>🎵</span> PILIH LAGU LAIN
           </button>
         </div>
       </div>
@@ -3766,6 +3887,16 @@ document.addEventListener('click', (e) => {
         }
       });
     }
+  }
+
+  // 0b. Virtual Background Toggle (Flash Tech / Kamera Asli)
+  else if (e.target.closest('#btn-camera-bg-toggle')) {
+    virtualBackgroundService.isEnabled = !virtualBackgroundService.isEnabled;
+    const btns = document.querySelectorAll('#btn-camera-bg-toggle');
+    btns.forEach(btn => {
+      btn.innerHTML = virtualBackgroundService.isEnabled ? '✨ Latar: Flash Tech' : '📷 Latar: Asli';
+      btn.classList.toggle('active', virtualBackgroundService.isEnabled);
+    });
   }
 
   // 1. Home Buttons
@@ -3842,14 +3973,34 @@ document.addEventListener('click', (e) => {
   } else if (e.target.closest('#btn-pause-quit')) {
     gameEngine.resume();
     gameEngine.finishRound(false);
-    gameEngine.setState(GAME_STATES.HOME);
+    if (gameEngine.previousState === GAME_STATES.TRACK_SELECT) {
+      gameEngine.setState(GAME_STATES.TRACK_SELECT);
+    } else {
+      gameEngine.setState(GAME_STATES.HOME);
+    }
   }
 
   // 2. Navigation Back
   else if (e.target.closest('#btn-back-home')) {
     jingleBellsService.stop();
     komangService.stop();
-    gameEngine.setState(GAME_STATES.HOME);
+    nadimuService.stop();
+
+    if (
+      gameEngine.currentState === GAME_STATES.KOMANG ||
+      gameEngine.currentState === GAME_STATES.NADIMU ||
+      gameEngine.currentState === GAME_STATES.JINGLE_BELLS
+    ) {
+      gameEngine.setState(GAME_STATES.TRACK_SELECT);
+    } else if (gameEngine.currentState === GAME_STATES.LEADERBOARD) {
+      if (gameEngine.previousState === GAME_STATES.TRACK_SELECT) {
+        gameEngine.setState(GAME_STATES.TRACK_SELECT);
+      } else {
+        gameEngine.setState(GAME_STATES.HOME);
+      }
+    } else {
+      gameEngine.setState(GAME_STATES.HOME);
+    }
   }
 
   // 3. Level Selection
@@ -3896,7 +4047,11 @@ document.addEventListener('click', (e) => {
     gameEngine.setState(GAME_STATES.FREE_SYNTH);
   } else if (e.target.closest('#btn-result-home')) {
     if (window.app) window.app._clearAutoAdvance();
-    gameEngine.setState(GAME_STATES.HOME);
+    if (gameEngine.previousState === GAME_STATES.TRACK_SELECT) {
+      gameEngine.setState(GAME_STATES.TRACK_SELECT);
+    } else {
+      gameEngine.setState(GAME_STATES.HOME);
+    }
   } else if (e.target.closest('#btn-result-leaderboard') || e.target.closest('#btn-result-open-lead')) {
     if (window.app) window.app._clearAutoAdvance();
     gameEngine.setState(GAME_STATES.LEADERBOARD);
@@ -3996,7 +4151,7 @@ document.addEventListener('click', (e) => {
     const modal = document.getElementById('jingle-complete-modal');
     if (modal) modal.remove();
     jingleBellsService.stop();
-    gameEngine.setState(GAME_STATES.HOME);
+    gameEngine.setState(GAME_STATES.TRACK_SELECT);
   }
 
   // 9. Komang Actions & Controls
@@ -4151,7 +4306,7 @@ document.addEventListener('click', (e) => {
     if (gModal) gModal.remove();
 
     nadimuService.stop();
-    gameEngine.setState(GAME_STATES.HOME);
+    gameEngine.setState(GAME_STATES.TRACK_SELECT);
   } else if (e.target.closest('#btn-nadimu-view-lead')) {
     const vModal = document.getElementById('nadimu-victory-backdrop');
     if (vModal) vModal.remove();
@@ -4190,7 +4345,7 @@ document.addEventListener('click', (e) => {
     const modal = document.getElementById('komang-complete-modal') || document.getElementById('komang-victory-backdrop') || document.getElementById('komang-gameover-backdrop');
     if (modal) modal.remove();
     komangService.stop();
-    gameEngine.setState(GAME_STATES.HOME);
+    gameEngine.setState(GAME_STATES.TRACK_SELECT);
   } else if (e.target.closest('#btn-komang-gameover-retry')) {
     const modal = document.getElementById('komang-gameover-backdrop');
     if (modal) modal.remove();

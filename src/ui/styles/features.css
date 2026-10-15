@@ -1377,10 +1377,13 @@
 }
 
 .fairness-banner {
-  background: linear-gradient(135deg, rgba(0, 247, 255, 0.12) 0%, rgba(255, 0, 127, 0.12) 100%);
-  border: 1px solid rgba(0, 247, 255, 0.35);
+  background: linear-gradient(135deg, rgba(0, 247, 255, 0.1) 0%, rgba(255, 0, 127, 0.1) 100%), rgba(8, 22, 54, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(0, 247, 255, 0.35);
   border-radius: var(--radius-md);
   padding: 12px 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .fairness-badge {
@@ -1388,7 +1391,10 @@
   font-size: 11px;
   font-weight: 800;
   color: var(--cyan);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .fairness-banner p {
@@ -1405,8 +1411,10 @@
 }
 
 .track-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 26, 62, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(56, 189, 248, 0.25);
   border-radius: var(--radius-md);
   padding: 14px;
   display: flex;
@@ -1415,6 +1423,7 @@
   gap: 10px;
   transition: all 0.25s ease;
   cursor: pointer;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
 }
 
 .track-card:hover {
@@ -1444,11 +1453,68 @@
 .track-card-top {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-.track-emoji {
-  font-size: 28px;
+.track-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.track-icon-badge.komang {
+  background: linear-gradient(135deg, rgba(255, 45, 117, 0.32) 0%, rgba(20, 179, 212, 0.22) 100%);
+  color: #ff5277;
+  border-color: rgba(255, 45, 117, 0.5);
+  box-shadow: 0 4px 18px rgba(255, 45, 117, 0.35);
+}
+
+.track-icon-badge.nadimu {
+  background: linear-gradient(135deg, rgba(20, 179, 212, 0.32) 0%, rgba(11, 95, 165, 0.32) 100%);
+  color: #14b3d4;
+  border-color: rgba(20, 179, 212, 0.5);
+  box-shadow: 0 4px 18px rgba(20, 179, 212, 0.35);
+}
+
+.track-icon-badge.jingle_bells {
+  background: linear-gradient(135deg, rgba(251, 176, 64, 0.32) 0%, rgba(245, 158, 11, 0.22) 100%);
+  color: #fbb040;
+  border-color: rgba(251, 176, 64, 0.5);
+  box-shadow: 0 4px 18px rgba(251, 176, 64, 0.35);
+}
+
+.track-icon-badge.neon_dawn {
+  background: linear-gradient(135deg, rgba(0, 229, 163, 0.32) 0%, rgba(14, 165, 233, 0.22) 100%);
+  color: #00e5a3;
+  border-color: rgba(0, 229, 163, 0.5);
+  box-shadow: 0 4px 18px rgba(0, 229, 163, 0.35);
+}
+
+.track-icon-badge.cyber_groove {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.32) 0%, rgba(139, 92, 246, 0.22) 100%);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35);
+}
+
+.track-icon-badge.endless {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.32) 0%, rgba(236, 72, 153, 0.22) 100%);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 4px 18px rgba(168, 85, 247, 0.35);
+}
+
+.track-card:hover .track-icon-badge {
+  transform: scale(1.08) rotate(2deg);
 }
 
 .track-title-row {
@@ -1502,9 +1568,20 @@
 
 .track-meta-row {
   display: flex;
-  gap: 8px;
-  font-size: 9.5px;
+  gap: 10px;
+  font-size: 10px;
   color: var(--text-muted);
+}
+
+.tmeta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tmeta-item svg {
+  flex-shrink: 0;
+  color: #38bdf8;
 }
 
 .btn-play-track {
@@ -1534,7 +1611,77 @@
 .track-select-footer-row {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  width: 100%;
+}
+
+/* Bottom Nav Buttons for Track Select & Leaderboard (Fixing unstyled default buttons) */
+.track-footer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, rgba(14, 45, 95, 0.8) 0%, rgba(6, 21, 45, 0.95) 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.4);
+  border-radius: var(--radius-pill);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.22s ease;
+  white-space: nowrap;
+}
+
+.track-footer-btn svg {
+  flex-shrink: 0;
+  color: #38bdf8;
+  transition: transform 0.2s ease;
+}
+
+.track-footer-btn.leaderboard-btn {
+  background: linear-gradient(135deg, rgba(251, 176, 64, 0.16) 0%, rgba(14, 59, 130, 0.75) 100%);
+  border-color: rgba(251, 176, 64, 0.55);
+  color: #fde047;
+}
+
+.track-footer-btn.leaderboard-btn svg {
+  color: #fbb040;
+}
+
+.track-footer-btn.leaderboard-btn:hover {
+  background: linear-gradient(135deg, rgba(251, 176, 64, 0.35) 0%, rgba(14, 59, 130, 0.95) 100%);
+  border-color: #fbb040;
+  box-shadow: 0 8px 25px rgba(251, 176, 64, 0.4), 0 0 20px rgba(251, 176, 64, 0.3);
+  transform: translateY(-2px);
+  color: #ffffff;
+}
+
+.track-footer-btn.leaderboard-btn:hover svg {
+  transform: scale(1.15) rotate(-6deg);
+}
+
+.track-footer-btn.home-btn:hover {
+  background: linear-gradient(135deg, rgba(20, 179, 212, 0.32) 0%, rgba(11, 95, 165, 0.95) 100%);
+  border-color: #38bdf8;
+  box-shadow: 0 8px 25px rgba(20, 179, 212, 0.45), 0 0 20px rgba(20, 179, 212, 0.3);
+  transform: translateY(-2px);
+  color: #ffffff;
+}
+
+.track-footer-btn.home-btn:hover svg {
+  transform: scale(1.15);
+}
+
+.track-footer-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
 /* ========================================================

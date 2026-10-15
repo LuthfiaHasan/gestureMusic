@@ -17,11 +17,11 @@ export class HandVisualizer {
 
     if (isTwoHands) {
       // Draw two hands side by side
-      this._renderSingleHand(ctx, w * 0.28, h * 0.55, w * 0.42, 5, '#00f7ff', true); // Left hand (5)
-      this._renderSingleHand(ctx, w * 0.72, h * 0.55, w * 0.42, leftCount, '#ff007f', false); // Right hand (remainder)
+      this._renderSingleHand(ctx, w * 0.28, h * 0.55, w * 0.42, 5, '#14b3d4', true); // Left hand (5)
+      this._renderSingleHand(ctx, w * 0.72, h * 0.55, w * 0.42, leftCount, '#fbb040', false); // Right hand (remainder)
     } else {
       // Draw single hand centered
-      const color = fingerCount === 0 ? '#a020f0' : '#00f7ff';
+      const color = fingerCount === 0 ? '#0b5fa5' : '#14b3d4';
       this._renderSingleHand(ctx, w * 0.5, h * 0.55, w * 0.7, fingerCount, color, false, shape);
     }
   }
@@ -35,7 +35,7 @@ export class HandVisualizer {
     ctx.scale(scale, scale);
 
     // Palm base
-    ctx.fillStyle = 'rgba(20, 15, 45, 0.7)';
+    ctx.fillStyle = 'rgba(10, 42, 102, 0.75)';
     ctx.strokeStyle = mainColor;
     ctx.lineWidth = 3;
 
@@ -145,7 +145,7 @@ export class HandVisualizer {
     // Active charging arc
     ctx.beginPath();
     ctx.arc(cx, cy, radius, startAngle, endAngle);
-    const color = isConfirmed ? '#00ff88' : '#00f7ff';
+    const color = isConfirmed ? '#00e5a3' : '#14b3d4';
     ctx.strokeStyle = color;
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
@@ -166,25 +166,31 @@ export class HandVisualizer {
     ctx.clearRect(0, 0, w, h);
 
     const cx = w * 0.5;
-    const cy = h * 0.54;
+    const cy = h * 0.55;
     const size = Math.min(w * 0.72, h * 0.68);
 
-    // Active color depends on match state
-    const targetColor = isMatched ? '#00ff88' : '#ff007f';
+    // Flash Tech Brand Theme: Cyan for target, Emerald for match, Amber for highlights
+    const targetColor = isMatched ? '#00e5a3' : '#14b3d4';
+    const accentGlow = isMatched ? 'rgba(0, 229, 163, 0.35)' : 'rgba(20, 179, 212, 0.28)';
 
-    // 1. Draw glowing match halo if matched
-    if (isMatched) {
-      ctx.save();
-      const radGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, size * 0.85);
-      radGrad.addColorStop(0, 'rgba(0, 255, 136, 0.28)');
-      radGrad.addColorStop(0.6, 'rgba(0, 247, 255, 0.15)');
-      radGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = radGrad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, size * 0.85, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    // 1. Subtle illuminated circular radar backdrop
+    ctx.save();
+    const bgRadGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, size * 0.95);
+    bgRadGrad.addColorStop(0, accentGlow);
+    bgRadGrad.addColorStop(0.5, 'rgba(10, 42, 102, 0.22)');
+    bgRadGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = bgRadGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.95, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Radar subtle ring
+    ctx.strokeStyle = isMatched ? 'rgba(0, 229, 163, 0.35)' : 'rgba(20, 179, 212, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.88, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
 
     // 2. Draw Hand Anatomy
     ctx.save();
@@ -193,9 +199,9 @@ export class HandVisualizer {
     ctx.scale(scale, scale);
 
     // Palm base
-    ctx.fillStyle = 'rgba(16, 10, 32, 0.88)';
+    ctx.fillStyle = 'rgba(7, 25, 60, 0.92)';
     ctx.strokeStyle = targetColor;
-    ctx.lineWidth = isMatched ? 4 : 3;
+    ctx.lineWidth = isMatched ? 3.5 : 2.5;
 
     ctx.beginPath();
     ctx.moveTo(-25, 45); // wrist left
@@ -209,15 +215,25 @@ export class HandVisualizer {
     ctx.fill();
     ctx.stroke();
 
+    // Palm chord label in center
+    ctx.save();
+    ctx.fillStyle = isMatched ? '#00e5a3' : '#fbb040';
+    ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(chordName, 0, 15);
+    ctx.restore();
+
     // Circuit palm accents
-    ctx.strokeStyle = isMatched ? 'rgba(0, 255, 136, 0.7)' : 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isMatched ? 'rgba(0, 229, 163, 0.7)' : 'rgba(20, 179, 212, 0.45)';
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(0, 40);
-    ctx.lineTo(0, 10);
-    ctx.lineTo(-12, -2);
-    ctx.moveTo(0, 10);
-    ctx.lineTo(12, -2);
+    ctx.moveTo(0, 42);
+    ctx.lineTo(0, 24);
+    ctx.moveTo(0, 5);
+    ctx.lineTo(-12, -6);
+    ctx.moveTo(0, 5);
+    ctx.lineTo(12, -6);
     ctx.stroke();
 
     // Finger open states based on targetFingers: [thumb, index, middle, ring, pinky]
@@ -245,10 +261,10 @@ export class HandVisualizer {
       ctx.rotate(f.angle);
 
       const fLen = f.open ? f.len : 18;
-      const fColor = f.open ? targetColor : 'rgba(90, 95, 130, 0.35)';
+      const fColor = f.open ? targetColor : 'rgba(90, 115, 150, 0.35)';
 
       ctx.strokeStyle = fColor;
-      ctx.lineWidth = f.open ? (isMatched ? 5 : 4) : 2.5;
+      ctx.lineWidth = f.open ? (isMatched ? 4.5 : 3.5) : 2;
 
       // Finger bone line
       ctx.beginPath();
@@ -274,7 +290,7 @@ export class HandVisualizer {
         if (f.num !== null) {
           ctx.save();
           ctx.rotate(-f.angle);
-          ctx.fillStyle = isMatched ? '#003318' : '#330018';
+          ctx.fillStyle = isMatched ? '#003318' : '#071f45';
           ctx.beginPath();
           ctx.arc(0, -fLen - 12, 9, 0, Math.PI * 2);
           ctx.fill();
@@ -283,7 +299,7 @@ export class HandVisualizer {
           ctx.stroke();
 
           ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 10px Orbitron, sans-serif';
+          ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(String(f.num), 0, -fLen - 12);
@@ -299,10 +315,10 @@ export class HandVisualizer {
     // 3. Match Status Banner in Canvas
     if (isMatched) {
       ctx.save();
-      ctx.fillStyle = 'rgba(0, 255, 136, 0.95)';
-      ctx.font = '900 13px Orbitron, sans-serif';
+      ctx.fillStyle = '#00e5a3';
+      ctx.font = '800 13px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('✔ COCOK!', w * 0.5, 20);
+      ctx.fillText('✔ GESTUR COCOK!', w * 0.5, 20);
       ctx.restore();
     }
   }

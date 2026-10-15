@@ -80,7 +80,7 @@ export class GestureRecognitionService {
       // Check 1: Virtual Background Masking
       // If virtual background is active, reject any hand situated in the replaced background
       if (typeof virtualBackgroundService?.isHandInForeground === 'function') {
-        if (!virtualBackgroundService.isHandInForeground(landmarks, 0.28)) {
+        if (!virtualBackgroundService.isHandInForeground(landmarks, 0.10)) {
           return;
         }
       }

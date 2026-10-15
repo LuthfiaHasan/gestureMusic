@@ -11,8 +11,8 @@ export const NADIMU_LANES = [
     chord: 'C',
     fingerCount: 1,
     emoji: '☝️',
-    color: '#00f7ff',
-    glowColor: 'rgba(0, 247, 255, 0.45)',
+    color: '#14b3d4',
+    glowColor: 'rgba(20, 179, 212, 0.45)',
     name: 'C (Do)',
     keyHint: '1 / D',
   },
@@ -21,8 +21,8 @@ export const NADIMU_LANES = [
     chord: 'F',
     fingerCount: 2,
     emoji: '✌️',
-    color: '#00ffaa',
-    glowColor: 'rgba(0, 255, 170, 0.45)',
+    color: '#3b82f6',
+    glowColor: 'rgba(59, 130, 246, 0.45)',
     name: 'F / Dm',
     keyHint: '2 / F',
   },
@@ -31,8 +31,8 @@ export const NADIMU_LANES = [
     chord: 'Em',
     fingerCount: 3,
     emoji: '🤟',
-    color: '#ff2d75',
-    glowColor: 'rgba(255, 45, 117, 0.45)',
+    color: '#fbb040',
+    glowColor: 'rgba(251, 176, 64, 0.45)',
     name: 'Em / Am',
     keyHint: '3 / J',
   },
@@ -41,8 +41,8 @@ export const NADIMU_LANES = [
     chord: 'G',
     fingerCount: 4,
     emoji: '🖐️',
-    color: '#ffd700',
-    glowColor: 'rgba(255, 215, 0, 0.45)',
+    color: '#10b981',
+    glowColor: 'rgba(16, 185, 129, 0.45)',
     name: 'G Dominan',
     keyHint: '4 / K',
   },
@@ -94,6 +94,7 @@ export class NadimuTilesEngine {
     this.resize();
     this._generateTileSchedule();
     this._bindEvents();
+    this._renderHighway(0);
   }
 
   setSpeed(multiplier = 1.0) {
@@ -611,12 +612,12 @@ export class NadimuTilesEngine {
 
     // Inner Chord & Gesture Text
     ctx.fillStyle = '#060a14';
-    ctx.font = '900 13px Orbitron, Outfit, sans-serif';
+    ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`${tile.emoji} ${tile.chord}`, x + w / 2, y + height / 2 - 4);
 
-    ctx.font = '700 9px Outfit, sans-serif';
+    ctx.font = '600 9.5px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = '#111827';
     ctx.fillText(tile.lyric ? tile.lyric.slice(0, 18) : `${tile.fingerCount} JARI`, x + w / 2, y + height / 2 + 10);
 
@@ -665,7 +666,7 @@ export class NadimuTilesEngine {
 
       // Key Labels
       ctx.fillStyle = isPressed ? '#ffffff' : lane.color;
-      ctx.font = '900 16px Orbitron, sans-serif';
+      ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`${lane.emoji} ${lane.name}`, kx + kw / 2, keyY + 36);
 
