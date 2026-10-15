@@ -3,6 +3,7 @@
 // 16 Measures, 4 Systems, 48 Notes, with Lyrics and Hand Gesture Finger Cues.
 
 import { audioManager } from '../audio/AudioManager.js';
+import { competitionLeaderboardService } from './CompetitionLeaderboardService.js';
 
 export const JINGLE_BELLS_NOTES = [
   // LINE 1 (SYSTEM 1: Measures 1 - 4)
@@ -309,11 +310,29 @@ export class JingleBellsService {
       audioManager.speakAnnouncer('Wonderful! Jingle Bells complete!');
     }, 400);
 
+    const compSession = competitionLeaderboardService.createPendingSession({
+      songId: 'JINGLE_BELLS',
+      songTitle: '🔔 Jingle Bells Piano',
+      songBadge: '🔔 JINGLE BELLS',
+      totalNotes: this.notes.length,
+      perfectCount: this.notes.length,
+      greatCount: 0,
+      goodCount: 0,
+      badCount: 0,
+      missCount: 0,
+      maxCombo: this.combo,
+      chordAccuracyPct: 100,
+      scorePct: 100,
+      stars: 5,
+      grade: 'S+',
+    });
+
     if (this.onSongFinished) {
       this.onSongFinished({
         totalNotes: this.notes.length,
         combo: this.combo,
         accuracy: 100,
+        compSession,
       });
     }
   }

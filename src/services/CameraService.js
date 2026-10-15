@@ -20,7 +20,12 @@ export class CameraService {
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       this.permissionState = 'denied';
-      this.errorMessage = 'Browser ini tidak mendukung Camera MediaDevices API.';
+      const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isHttps) {
+        this.errorMessage = 'Kamera di HP membutuhkan protokol aman (HTTPS). Karena saat ini dibuka lewat HTTP lokal, browser HP memblokir akses kamera demi keamanan privasi. Begitu website di-hosting (HTTPS) atau menggunakan tunnel HTTPS, kamera di HP akan langsung aktif!';
+      } else {
+        this.errorMessage = 'Browser ini tidak mendukung Camera MediaDevices API atau izin kamera diblokir.';
+      }
       throw new Error(this.errorMessage);
     }
 

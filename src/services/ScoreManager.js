@@ -223,16 +223,63 @@ export class ScoreManager {
   }
 
   loadRecords() {
+    // 1. Best Score %
     try {
-      this.bestScorePct = parseInt(localStorage.getItem('gs_best_score_pct') || '0', 10);
-      this.bestCombo = parseInt(localStorage.getItem('gs_best_combo') || '0', 10);
-      this.highestLevel = parseInt(localStorage.getItem('gs_highest_level') || '1', 10);
-      this.campaignScores = JSON.parse(localStorage.getItem('gs_campaign_scores') || '{}');
+      const val = parseInt(localStorage.getItem('gs_best_score_pct') || '0', 10);
+      this.bestScorePct = Number.isFinite(val) ? val : 0;
     } catch (e) {
       this.bestScorePct = 0;
+    }
+
+    // 2. Best Combo
+    try {
+      const val = parseInt(localStorage.getItem('gs_best_combo') || '0', 10);
+      this.bestCombo = Number.isFinite(val) ? val : 0;
+    } catch (e) {
       this.bestCombo = 0;
+    }
+
+    // 3. Highest Level
+    try {
+      const val = parseInt(localStorage.getItem('gs_highest_level') || '1', 10);
+      this.highestLevel = Number.isFinite(val) ? Math.min(8, Math.max(1, val)) : 1;
+    } catch (e) {
       this.highestLevel = 1;
+    }
+
+    // 4. Campaign Scores
+    try {
+      const raw = localStorage.getItem('gs_campaign_scores');
+      this.campaignScores = raw ? (JSON.parse(raw) || {}) : {};
+      if (typeof this.campaignScores !== 'object' || Array.isArray(this.campaignScores)) {
+        this.campaignScores = {};
+      }
+    } catch (e) {
       this.campaignScores = {};
+    }
+
+    // 5. Run History (Last 25 games)
+    try {
+      const raw = localStorage.getItem('gs_run_history');
+      this.runHistory = raw ? (JSON.parse(raw) || []) : [];
+      if (!Array.isArray(this.runHistory)) this.runHistory = [];
+    } catch (e) {
+      this.runHistory = [];
+    }
+
+    // 6. Mode Records
+    try {
+      const raw = localStorage.getItem('gs_mode_records');
+      this.modeRecords = raw ? (JSON.parse(raw) || {}) : {};
+    } catch (e) {
+      this.modeRecords = {};
+    }
+
+    // 7. Player Name
+    try {
+      this.playerName = localStorage.getItem('gs_player_name') || 'CYBER_PLAYER';
+    } catch (e) {
+      this.playerName = 'CYBER_PLAYER';
     }
   }
 
@@ -242,7 +289,61 @@ export class ScoreManager {
       localStorage.setItem('gs_best_combo', this.bestCombo.toString());
       localStorage.setItem('gs_highest_level', this.highestLevel.toString());
       localStorage.setItem('gs_campaign_scores', JSON.stringify(this.campaignScores));
-    } catch (e) {}
+      localStorage.setItem('gs_run_history', JSON.stringify(this.runHistory.slice(-25)));
+      localStorage.setItem('gs_mode_records', JSON.stringify(this.modeRecords));
+      localStorage.setItem('gs_player_name', this.playerName || 'CYBER_PLAYER');
+    } catch (e) {
+      console.warn('LocalStorage save records note:', e);
+    }
+  }
+
+  setPlayerName(name) {
+    if (name && typeof name === 'string') {
+      this.playerName = name.trim().slice(0, 16) || 'CYBER_PLAYER';
+      this.saveRecords();
+    }
+  }
+
+  recordGameRun(mode, summary) {
+    const runEntry = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
+      playerName: this.playerName || 'CYBER_PLAYER',
+      mode: mode || 'CLASSIC',
+      scorePct: summary.scorePct || 0,
+      scorePoints: summary.score || summary.scorePoints || 0,
+      combo: summary.maxCombo || summary.combo || 0,
+      stars: summary.stars || 1,
+      starLabel: summary.starLabel || 'GOOD',
+      level: summary.level || 1,
+      timestamp: Date.now(),
+      dateFormatted: new Date().toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    };
+
+    this.runHistory.push(runEntry);
+    if (this.runHistory.length > 25) {
+      this.runHistory.shift();
+    }
+
+    // Update mode high scores
+    if (!this.modeRecords[mode]) this.modeRecords[mode] = { bestScore: 0, bestCombo: 0 };
+    if (runEntry.scorePct > (this.modeRecords[mode].bestScore || 0)) {
+      this.modeRecords[mode].bestScore = runEntry.scorePct;
+    }
+    if (runEntry.combo > (this.modeRecords[mode].bestCombo || 0)) {
+      this.modeRecords[mode].bestCombo = runEntry.combo;
+    }
+
+    this.saveRecords();
+    return runEntry;
+  }
+
+  getLocalLeaderboard(mode = null) {
+    let list = [...this.runHistory];
+    if (mode) {
+      list = list.filter(r => r.mode === mode);
+    }
+    list.sort((a, b) => (b.scorePct || 0) - (a.scorePct || 0));
+    return list.slice(0, 10);
   }
 
   unlockLevel(level) {

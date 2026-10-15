@@ -18,6 +18,18 @@ import { ParticleSystem } from './ui/ParticleSystem.js';
 import { WaveformVisualizer } from './ui/WaveformVisualizer.js';
 import { HandVisualizer } from './ui/HandVisualizer.js';
 import { jingleBellsService, JINGLE_BELLS_NOTES, PIANO_KEYS } from './services/JingleBellsService.js';
+import { komangService, KOMANG_MEASURES, KOMANG_PIANO_KEYS, KOMANG_SEGMENTS } from './services/KomangService.js';
+import { komangTilesEngine, KOMANG_LANES } from './services/KomangTilesEngine.js';
+import { nadimuService, NADIMU_MEASURES, NADIMU_PIANO_KEYS, NADIMU_SEGMENTS } from './services/NadimuService.js';
+import { nadimuTilesEngine, NADIMU_LANES } from './services/NadimuTilesEngine.js';
+import { MidiImportScreen } from './ui/screens/MidiImportScreen.js';
+import { LeaderboardScreen } from './ui/screens/LeaderboardScreen.js';
+import { TrackSelectScreen } from './ui/screens/TrackSelectScreen.js';
+import { ClaimScoreScreen } from './ui/screens/ClaimScoreScreen.js';
+import { sessionTimerService } from './services/SessionTimerService.js';
+import { onlineLeaderboardService } from './services/OnlineLeaderboardService.js';
+import { competitionLeaderboardService, COMPETITION_TRACKS } from './services/CompetitionLeaderboardService.js';
+import { qrCodeService } from './services/QrCodeService.js';
 
 class App {
   constructor() {
@@ -64,19 +76,159 @@ class App {
       console.warn('Initial model load deferred:', err);
     });
 
-    // 4. Setup Global Keyboard Shortcuts for Testing (Keys 0-9 & - for 10)
+    // 4. Setup Global Keyboard Shortcuts for Testing & Pause (Keys 0-9, -, Esc/P)
     window.addEventListener('keydown', (e) => {
+      if (['input', 'textarea'].includes(document.activeElement?.tagName?.toLowerCase())) return;
+
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+        if (gameEngine.currentState === GAME_STATES.GAMEPLAY_PHASE) {
+          e.preventDefault();
+          gameEngine.togglePause();
+          return;
+        }
+      }
+
       let count = null;
       if (e.key >= '0' && e.key <= '9') count = parseInt(e.key, 10);
-      else if (e.key === '-' || e.key === '0' && e.shiftKey) count = 10;
+      else if (e.key === '-' || (e.key === '0' && e.shiftKey)) count = 10;
 
       if (count !== null) {
         this.triggerVirtualGesture(count);
       }
     });
 
-    // 5. Initial Render
+    // 5. Session Timer & Rest Reminders
+    sessionTimerService.onTick = (timeStr) => {
+      const el = document.getElementById('session-timer-display');
+      if (el) el.textContent = `⏱️ ${timeStr}`;
+    };
+    sessionTimerService.onRestReminder = (minutes) => {
+      this._showRestReminderToast(minutes);
+    };
+
+    // 6. Real-time Remote Leaderboard Submissions from Smartphone QR Scan!
+    competitionLeaderboardService.onNewScoreSubmitted = (entry) => {
+      this._showNewSubmissionToast(entry);
+      if (gameEngine.currentState === GAME_STATES.LEADERBOARD) {
+        this.render();
+      }
+    };
+
+    // 7. Hash Routing for Mobile QR Scan (#claim) or Navigation
+    window.addEventListener('hashchange', () => {
+      this.render();
+    });
+
+    // 8. Initial Render
     this.render();
+  }
+
+  _showNewSubmissionToast(entry) {
+    audioManager.init();
+    audioManager.playLevelComplete();
+    try {
+      confetti({
+        particleCount: 160,
+        spread: 90,
+        origin: { y: 0.6 }
+      });
+    } catch (e) {}
+
+    setTimeout(() => {
+      audioManager.speakAnnouncer(`Selamat kepada ${entry.playerName}! Skor berhasil masuk ke papan peringkat!`);
+    }, 350);
+
+    let toast = document.getElementById('lead-submission-toast');
+    if (toast) toast.remove();
+
+    toast = document.createElement('div');
+    toast.id = 'lead-submission-toast';
+    toast.className = 'lead-submission-toast';
+    toast.innerHTML = `
+      <div class="lead-toast-icon">🎉</div>
+      <div>
+        <div class="lead-toast-title">SKOR BARU DITERIMA DARI HP!</div>
+        <div class="lead-toast-body">
+          <strong>${entry.playerName}</strong> (${competitionLeaderboardService.maskPhoneNumber(entry.phone)})<br/>
+          Lagu: <em>${entry.songTitle}</em> • <strong>${entry.score.toLocaleString()} PTS</strong>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      if (toast) toast.remove();
+    }, 7000);
+  }
+
+  _setupResultQrCode() {
+    const canvas = document.getElementById('result-qr-canvas');
+    if (!canvas) return;
+    const pending = competitionLeaderboardService.getPendingSession();
+    if (pending && pending.claimUrl) {
+      qrCodeService.renderToCanvas(canvas, pending.claimUrl, {
+        size: 180,
+        padding: 10,
+        darkColor: '#0a0518',
+        lightColor: '#ffffff',
+        showEmblem: true,
+      });
+    }
+  }
+
+  _showPhoneQrModal() {
+    let modal = document.getElementById('phone-qr-modal');
+    if (modal) modal.remove();
+
+    const localUrl = `https://${window.__LOCAL_IP__ || '192.168.1.18'}:5173`;
+
+    modal = document.createElement('div');
+    modal.id = 'phone-qr-modal';
+    modal.className = 'modal-backdrop';
+    modal.style.cssText = `
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(8, 4, 18, 0.88); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    `;
+    modal.innerHTML = `
+      <div style="background: linear-gradient(135deg, rgba(20, 10, 38, 0.98), rgba(35, 15, 60, 0.98)); border: 2px solid #00f7ff; box-shadow: 0 0 35px rgba(0, 247, 255, 0.4); border-radius: 18px; padding: 24px; max-width: 420px; width: 100%; text-align: center; color: #fff; font-family: Outfit, sans-serif;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+          <h3 style="margin:0; font-family: Orbitron, sans-serif; font-size: 17px; color: #00f7ff;">📱 SCAN DENGAN KAMERA HP</h3>
+          <button id="btn-close-qr-modal" style="background:none; border:none; color:#ff007f; font-size:24px; cursor:pointer; font-weight:bold; line-height:1;">✕</button>
+        </div>
+        <p style="font-size: 13px; color: #d0c8e8; margin-bottom: 14px; line-height: 1.4;">
+          Buka <strong>Kamera bawaan HP</strong> Anda, arahkan ke QR Code di bawah untuk membuka game langsung di HP:
+        </p>
+        <div style="background:#ffffff; border-radius:14px; padding:12px; display:inline-block; box-shadow: 0 0 20px rgba(0,247,255,0.35);">
+          <canvas id="popup-qr-canvas" width="220" height="220"></canvas>
+        </div>
+        <div style="margin-top: 14px; font-size: 12.5px; color: #00ffaa; font-weight: 700;">
+          🔗 Link WiFi Lokal (HTTPS): <br/>
+          <a href="${localUrl}" target="_blank" style="color:#00f7ff; text-decoration: underline; word-break:break-all;">${localUrl}</a>
+        </div>
+        <div style="margin-top: 12px; font-size: 11.5px; color: #ff94c2; line-height: 1.4; background: rgba(255, 45, 117, 0.12); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255, 45, 117, 0.3);">
+          💡 <strong>Tips saat dibuka di HP:</strong><br/>
+          Jika muncul peringatan sertifikat lokal di browser HP, pilih <strong>Lanjutan (Advanced) ➔ Lanjutkan ke situs (Proceed)</strong>, lalu klik <strong>Izinkan Kamera</strong>!
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const canvas = document.getElementById('popup-qr-canvas');
+    if (canvas) {
+      qrCodeService.renderToCanvas(canvas, localUrl, {
+        size: 220,
+        padding: 8,
+        darkColor: '#0a0518',
+        lightColor: '#ffffff',
+      });
+    }
+
+    const closeBtn = document.getElementById('btn-close-qr-modal');
+    if (closeBtn) closeBtn.onclick = () => modal.remove();
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
   }
 
   _bindGameEngine() {
@@ -90,6 +242,17 @@ class App {
 
     gameEngine.onRhythmBeat = (beatData) => {
       this._onRhythmBeatPulse(beatData);
+    };
+
+    rhythmEngine.onPauseChange = (isPaused) => {
+      const overlay = document.getElementById('game-pause-overlay');
+      if (overlay) {
+        overlay.style.display = isPaused ? 'flex' : 'none';
+      }
+      const pauseBtn = document.getElementById('btn-hud-pause');
+      if (pauseBtn) {
+        pauseBtn.innerHTML = isPaused ? '▶️' : '⏸️';
+      }
     };
 
     gameEngine.onChordEvaluated = (data) => {
@@ -117,6 +280,48 @@ class App {
     };
   }
 
+  _showRestReminderToast(minutes) {
+    let toast = document.getElementById('rest-reminder-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'rest-reminder-toast';
+      toast.className = 'rest-reminder-toast';
+      document.body.appendChild(toast);
+    }
+    toast.innerHTML = `
+      <div class="toast-title">🧘 REHAT SEJENAK DULU YUK!</div>
+      <div class="toast-body">
+        Kamu sudah bermain selama <strong>${minutes} menit</strong>. Istirahatkan pergelangan tangan & jari sejenak agar tetap rileks!
+      </div>
+      <div class="toast-actions">
+        <button class="toast-btn toast-btn-pause" id="btn-toast-pause">⏸️ Jeda Game</button>
+        <button class="toast-btn toast-btn-dismiss" id="btn-toast-dismiss">Tutup ✕</button>
+      </div>
+    `;
+    toast.classList.add('visible');
+
+    const pauseBtn = toast.querySelector('#btn-toast-pause');
+    if (pauseBtn) {
+      pauseBtn.onclick = () => {
+        if (gameEngine.currentState === GAME_STATES.GAMEPLAY_PHASE) {
+          gameEngine.pause();
+        }
+        toast.classList.remove('visible');
+      };
+    }
+    const dismissBtn = toast.querySelector('#btn-toast-dismiss');
+    if (dismissBtn) {
+      dismissBtn.onclick = () => {
+        toast.classList.remove('visible');
+      };
+    }
+    setTimeout(() => {
+      if (toast && toast.classList.contains('visible')) {
+        toast.classList.remove('visible');
+      }
+    }, 12000);
+  }
+
   triggerVirtualGesture(fingerCount) {
     const shape = fingerCount === 0 ? 'FIST' : fingerCount === 5 ? 'OPEN_PALM' : 'OTHER';
     const gestureEvent = {
@@ -141,44 +346,58 @@ class App {
   // RENDER DISPATCHER
   // ----------------------------------------------------
   render() {
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    this.appEl.innerHTML = `
-      <button class="viewport-toggle-btn" id="btn-toggle-viewport">
-        ${this.isFullscreen ? '📱 Phone Frame' : '🖥️ Fullscreen'}
-      </button>
+      const isTvSong = gameEngine.currentState === GAME_STATES.KOMANG || gameEngine.currentState === GAME_STATES.NADIMU;
 
-      <div class="phone-shell ${this.isFullscreen ? 'fullscreen-mode' : ''}">
-        <div class="phone-status-bar">
-          <span>${timeStr}</span>
-          <div class="notch-pill"></div>
-          <span>5G ⚡</span>
+      this.appEl.innerHTML = `
+        <button class="viewport-toggle-btn" id="btn-toggle-viewport">
+          ${this.isFullscreen ? '📱 Phone Frame' : '🖥️ Fullscreen'}
+        </button>
+
+        <div class="phone-shell ${(this.isFullscreen || isTvSong) ? 'fullscreen-mode tv-mode' : ''}">
+          ${isTvSong ? '' : `
+            <div class="phone-status-bar">
+              <span>${timeStr}</span>
+              <div class="notch-pill"></div>
+              <span>5G ⚡</span>
+            </div>
+          `}
+
+          <div class="screen-container ${isTvSong ? 'tv-screen-container' : ''}" id="screen-viewport">
+            ${this._getScreenTemplate()}
+          </div>
         </div>
+      `;
 
-        <div class="screen-container" id="screen-viewport">
-          ${this._getScreenTemplate()}
-        </div>
-      </div>
-    `;
+      // Rebind Viewport Toggle Button
+      const toggleBtn = document.getElementById('btn-toggle-viewport');
+      if (toggleBtn) {
+        toggleBtn.onclick = () => {
+          this.isFullscreen = !this.isFullscreen;
+          settingsManager.update('viewportMode', this.isFullscreen ? 'fullscreen' : 'mobile-frame');
+          this.render();
+        };
+      }
 
-    // Rebind Viewport Toggle Button
-    const toggleBtn = document.getElementById('btn-toggle-viewport');
-    if (toggleBtn) {
-      toggleBtn.onclick = () => {
-        this.isFullscreen = !this.isFullscreen;
-        settingsManager.update('viewportMode', this.isFullscreen ? 'fullscreen' : 'mobile-frame');
-        this.render();
-      };
+      // Attach view-specific hooks
+      this._afterRender();
+    } catch (renderError) {
+      console.error('Render pipeline error caught:', renderError);
     }
-
-    // Attach view-specific hooks
-    this._afterRender();
   }
 
   _getScreenTemplate() {
+    if (window.location.hash.startsWith('#claim')) {
+      return ClaimScoreScreen.render();
+    }
+
     switch (gameEngine.currentState) {
       case GAME_STATES.HOME:
         return this._templateHome();
+      case GAME_STATES.TRACK_SELECT:
+        return TrackSelectScreen.render();
       case GAME_STATES.LEVEL_SELECT:
         return this._templateLevels();
       case GAME_STATES.CALIBRATION:
@@ -195,6 +414,14 @@ class App {
         return this._templateResultPhase();
       case GAME_STATES.JINGLE_BELLS:
         return this._templateJingleBells();
+      case GAME_STATES.KOMANG:
+        return this._templateKomang();
+      case GAME_STATES.NADIMU:
+        return this._templateNadimu();
+      case GAME_STATES.MIDI_IMPORT:
+        return MidiImportScreen.render();
+      case GAME_STATES.LEADERBOARD:
+        return LeaderboardScreen.render();
       default:
         return this._templateHome();
     }
@@ -208,12 +435,38 @@ class App {
   }
 
   _afterRender() {
+    if (window.location.hash.startsWith('#claim')) {
+      this._clearAutoAdvance();
+      this._stopCameraAndTracking();
+      ClaimScoreScreen.bindEvents(this);
+      return;
+    }
+
     const state = gameEngine.currentState;
+
+    // Track active gameplay sessions for ergonomic rest reminders
+    const isPlayingSession = [
+      GAME_STATES.GAMEPLAY_PHASE,
+      GAME_STATES.KOMANG,
+      GAME_STATES.NADIMU,
+      GAME_STATES.JINGLE_BELLS,
+      GAME_STATES.FREE_SYNTH
+    ].includes(state);
+
+    if (isPlayingSession) {
+      sessionTimerService.resume();
+    } else {
+      sessionTimerService.pause();
+    }
 
     if (state === GAME_STATES.HOME) {
       this._clearAutoAdvance();
       this._setupHomeWaveform();
       this._stopCameraAndTracking();
+    } else if (state === GAME_STATES.TRACK_SELECT) {
+      this._clearAutoAdvance();
+      this._stopCameraAndTracking();
+      TrackSelectScreen.bindEvents(this);
     } else if (state === GAME_STATES.FREE_SYNTH) {
       this._clearAutoAdvance();
       this._setupSynthWaveform();
@@ -225,9 +478,26 @@ class App {
       this._clearAutoAdvance();
       this._setupCameraAndTracking();
       this._setupJingleBellsListeners();
+    } else if (state === GAME_STATES.KOMANG) {
+      this._clearAutoAdvance();
+      this._setupCameraAndTracking();
+      this._setupKomangListeners();
+    } else if (state === GAME_STATES.NADIMU) {
+      this._clearAutoAdvance();
+      this._setupCameraAndTracking();
+      this._setupNadimuListeners();
+    } else if (state === GAME_STATES.MIDI_IMPORT) {
+      this._clearAutoAdvance();
+      this._stopCameraAndTracking();
+      MidiImportScreen.bindEvents(this);
+    } else if (state === GAME_STATES.LEADERBOARD) {
+      this._clearAutoAdvance();
+      this._stopCameraAndTracking();
+      LeaderboardScreen.bindEvents(this);
     } else if (state === GAME_STATES.RESULT_PHASE) {
       this._clearAutoAdvance();
       this._stopCameraAndTracking();
+      this._setupResultQrCode();
 
       // If passed (score >= 70%) and not finale: auto-advance countdown to next level
       const summary = scoreManager.getSummary();
@@ -303,6 +573,15 @@ class App {
         </div>
 
         <div class="mode-cards-grid">
+          <!-- Featured Competition Track Selection & Prize Leaderboard -->
+          <button class="mode-btn track-select" id="btn-home-tracks" style="background:linear-gradient(135deg, rgba(255, 45, 117, 0.28) 0%, rgba(0, 247, 255, 0.24) 100%); border:1.5px solid var(--cyan); box-shadow:0 0 25px rgba(0,247,255,0.4); grid-column: span 2;">
+            <div class="mode-btn-left">
+              <span class="mode-btn-title" style="color:#fff; font-size:13.5px; font-weight:900;">🎵 PILIH LAGU & TANTANGAN HADIAH (LEADERBOARD)</span>
+              <span class="mode-btn-desc" style="color:var(--cyan); font-weight:700;">Komang, Jingle Bells & Pop • 1 Papan Peringkat Setara (100k Pts) • Scan QR Rebut Hadiah!</span>
+            </div>
+            <span style="font-size:24px;">🏆</span>
+          </button>
+
           <button class="mode-btn classic" id="btn-home-play">
             <div class="mode-btn-left">
               <span class="mode-btn-title">▶ CLASSIC CAMPAIGN</span>
@@ -342,9 +621,28 @@ class App {
             </div>
             <span style="font-size:18px;">🎄</span>
           </button>
+
+          <button class="mode-btn komang-song" id="btn-home-komang">
+            <div class="mode-btn-left">
+              <span class="mode-btn-title">🌺 KOMANG - RAIM LAODE</span>
+              <span class="mode-btn-desc">Play-Along Backing Track • Tempo 130 BPM • Partitur G Major</span>
+            </div>
+            <span style="font-size:18px;">✨</span>
+          </button>
+
+          <button class="mode-btn midi-song" id="btn-home-midi" style="border-color:var(--cyan);background:linear-gradient(135deg, rgba(0, 247, 255, 0.12), rgba(18, 10, 38, 0.75));">
+            <div class="mode-btn-left">
+              <span class="mode-btn-title">🎼 IMPORT LAGU MIDI</span>
+              <span class="mode-btn-desc">Unggah File MIDI Sendiri • Deteksi Akor Otomatis • Mainkan Ritme</span>
+            </div>
+            <span style="font-size:18px;">🎹</span>
+          </button>
         </div>
 
         <div class="home-util-grid">
+          <button class="btn-secondary" id="btn-home-leaderboard" style="padding:10px 8px;font-size:11px;">
+            <span>🏆</span> PAPAN SKOR
+          </button>
           <button class="btn-secondary" id="btn-home-levels" style="padding:10px 8px;font-size:11px;">
             <span>🎚️</span> CAMPAIGN LEVELS
           </button>
@@ -469,6 +767,27 @@ class App {
           </div>
           <div class="hud-pill combo-pill" id="game-combo-pill">
             <span>x0 COMBO</span>
+          </div>
+          <div class="hud-pill" id="hud-timer-pill" title="Durasi Sesi Bermain">
+            <span id="session-timer-display">⏱️ 00:00</span>
+          </div>
+          <button class="hud-pause-btn" id="btn-hud-pause" title="Jeda Permainan (Esc / P)">
+            ⏸️
+          </button>
+        </div>
+
+        <!-- Pause Modal Overlay -->
+        <div class="pause-modal-overlay" id="game-pause-overlay" style="display:none;">
+          <div class="pause-modal-card">
+            <div class="pause-modal-title">⏸️ PERMAINAN DIJEDA</div>
+            <div class="pause-modal-desc">
+              Istirahatkan pergelangan tangan dan lengan Anda sejenak. Skor, kombo, dan ritme permainan tersimpan aman.
+            </div>
+            <div class="pause-modal-actions">
+              <button class="btn-primary" id="btn-pause-resume" style="padding:12px;font-size:13px;letter-spacing:1px;">▶ LANJUTKAN BERMAIN</button>
+              <button class="btn-secondary" id="btn-pause-restart" style="padding:10px;font-size:11px;">↺ ULANGI TAHAP INI</button>
+              <button class="btn-secondary" id="btn-pause-quit" style="padding:10px;font-size:11px;">‹ KELUAR KE MENU</button>
+            </div>
           </div>
         </div>
 
@@ -858,7 +1177,15 @@ class App {
             <button class="btn-primary" id="btn-grand-reset" style="width:100%;background:linear-gradient(135deg, gold 0%, #ff8c00 100%);color:#050210;box-shadow:0 0 25px rgba(255,215,0,0.6);font-size:13px;font-weight:900;">
               <span>🎉</span> PESERTA BERIKUTNYA (RESTART EVENT)
             </button>
-            <button class="btn-secondary" id="btn-result-home" style="width:100%;">
+            <div class="result-btn-row" style="margin-top:6px;">
+              <button class="btn-secondary" id="btn-result-leaderboard" style="font-size:11px;">
+                <span>🏆</span> PAPAN SKOR
+              </button>
+              <button class="btn-secondary" id="btn-result-share" style="font-size:11px;border-color:gold;color:gold;">
+                <span>☁️</span> CLOUD SYNC
+              </button>
+            </div>
+            <button class="btn-secondary" id="btn-result-home" style="width:100%;margin-top:6px;">
               <span>🏠</span> KEMBALI KE HOME
             </button>
           </div>
@@ -934,6 +1261,36 @@ class App {
           <div class="adaptive-badge">
             ${isPassed ? `Hebat! Skor memenuhi kriteria kelulusan (≥ 70%).` : `Coba lagi untuk mencapai skor minimal 70% dan membuka level selanjutnya.`}
           </div>
+
+          <!-- OFFICIAL COMPETITION LEADERBOARD PRIZE & QR CLAIM SECTION -->
+          <div class="result-qr-claim-section">
+            <div class="rqr-header">
+              <span class="rqr-badge">🏆 KOMPETISI BERHADIAH RESMI BOOTH</span>
+              <div class="rqr-title">KLAIM SKOR KE PAPAN PERINGKAT</div>
+              <div class="rqr-desc">Scan QR di bawah menggunakan kamera HP untuk memasukkan Nama & No. HP pemenang:</div>
+            </div>
+
+            <div class="rqr-body">
+              <div class="rqr-canvas-box">
+                <canvas id="result-qr-canvas" width="180" height="180"></canvas>
+              </div>
+              <div class="rqr-info-side">
+                <div class="rqr-score-stat">
+                  <span>SKOR STANDAR KOMPETISI:</span>
+                  <strong class="rqr-pts">${(summary.compSession?.score || Math.round(summary.scorePct * 1000)).toLocaleString()} PTS</strong>
+                  <small>Dinilai adil & setara dari max 100.000 Pts</small>
+                </div>
+                <div class="rqr-btns-row">
+                  <button class="btn-primary" id="btn-result-direct-claim" style="font-size:11px;padding:8px 12px;">
+                    <span>✏️</span> Input di Layar Ini
+                  </button>
+                  <button class="btn-secondary" id="btn-result-open-lead" style="font-size:11px;padding:8px 12px;">
+                    <span>🏆</span> Buka Papan Peringkat
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="result-buttons-container">
@@ -951,7 +1308,15 @@ class App {
               <span>↺</span> COBA LAGI LEVEL ${gameEngine.currentLevel} (TARGET 70%)
             </button>
           `}
-          <button class="btn-secondary" id="btn-result-home" style="width:100%;">
+          <div class="result-btn-row" style="margin-top:6px;">
+            <button class="btn-secondary" id="btn-result-leaderboard" style="font-size:11px;">
+              <span>🏆</span> PAPAN SKOR
+            </button>
+            <button class="btn-secondary" id="btn-result-share" style="font-size:11px;border-color:var(--cyan);color:var(--cyan);">
+              <span>☁️</span> CLOUD SYNC
+            </button>
+          </div>
+          <button class="btn-secondary" id="btn-result-home" style="width:100%;margin-top:6px;">
             <span>🏠</span> HOME
           </button>
         </div>
@@ -1068,6 +1433,54 @@ class App {
               </label>
             </div>
           </div>
+
+          <div class="setting-group">
+            <span style="font-family:var(--font-display);font-size:12px;color:var(--cyan);letter-spacing:1px;">PERFORMA & BATERAI (ECO MODE)</span>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Eco / Low Performance Mode</div>
+                <div class="setting-desc">Optimalkan pemrosesan untuk laptop ringan & hemat baterai</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="set-eco-mode" ${s.ecoMode ? 'checked' : ''}>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <span style="font-family:var(--font-display);font-size:12px;color:var(--gold);letter-spacing:1px;">ERGONOMI & KENYAMANAN BERMAIN</span>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Pengingat Istirahat Lengan</div>
+                <div class="setting-desc">Peringatan santai tiap 15 menit untuk meregangkan tangan</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="set-rest-reminder" ${s.restReminderEnabled !== false ? 'checked' : ''}>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <div>
+                <div class="setting-label">Nama Pemain</div>
+                <div class="setting-desc">Ditampilkan pada Papan Skor</div>
+              </div>
+              <input type="text" id="set-player-name" value="${scoreManager.playerName || 'CYBER_PLAYER'}" style="background:rgba(0,0,0,0.4);border:1px solid var(--border-neon);color:#fff;border-radius:6px;padding:4px 8px;font-family:var(--font-display);font-size:11px;width:130px;" maxlength="16">
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <span style="font-family:var(--font-display);font-size:12px;color:var(--pink);letter-spacing:1px;">CLOUD LEADERBOARD SYNC (OPSIONAL)</span>
+
+            <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+              <div class="setting-label">REST API Endpoint URL</div>
+              <input type="text" id="set-cloud-endpoint" placeholder="https://your-api.supabase.co/rest/v1/scores" value="${onlineLeaderboardService.endpointUrl || ''}" style="width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:6px;padding:6px 8px;font-size:10px;font-family:monospace;">
+              <span style="font-size:9.5px;color:var(--text-muted);">Biarkan kosong untuk menggunakan penyimpanan lokal offline tanpa cloud backend.</span>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -1127,25 +1540,31 @@ class App {
       handTrackingService.startTracking(videoEl, (result) => {
         // 0. Render Virtual Background (Zoom Style with solid person & cyber wallpaper)
         if (cameraCanvasEl) {
-          virtualBackgroundService.updateSegmentation(videoEl, result.timestamp || performance.now());
+          if (!settingsManager.settings.ecoMode && virtualBackgroundService.isEnabled) {
+            virtualBackgroundService.updateSegmentation(videoEl, result.timestamp || performance.now());
+          }
           virtualBackgroundService.render(cameraCanvasEl, videoEl, cameraService.isMirrored);
         }
 
         // 1. Process landmarks in gesture recognizer with frame timestamps
+        const isTwoHandLevel = (gameEngine.currentState === GAME_STATES.GAMEPLAY_PHASE && gameEngine.currentLevel >= 7);
+        const isFreeSynth = (gameEngine.currentState === GAME_STATES.FREE_SYNTH);
+        const allowTwoHands = isTwoHandLevel || isFreeSynth;
+
         const gestureResult = gestureRecognitionService.process(
           result.landmarks,
           result.handedness,
-          false,
+          allowTwoHands,
           result
         );
 
-        // 2. Draw skeleton
+        // 2. Draw skeleton ONLY for validated active player hands
         handTrackingService.drawLandmarks(
           ctx,
           canvasEl.width,
           canvasEl.height,
-          result.landmarks,
-          result.handedness,
+          gestureResult.validLandmarks || [],
+          gestureResult.validHandedness || [],
           cameraService.isMirrored,
           gestureResult.activeFingersPerHand
         );
@@ -1153,8 +1572,10 @@ class App {
         // 3. Update UI displays
         this._updateTrackingHUD(gestureResult, result.fps, result);
 
-        // 4. Live camera evaluation for real-time rhythm challenge (low-latency)
-        if (gameEngine.currentState === GAME_STATES.GAMEPLAY_PHASE) {
+        // 4. Live camera evaluation for real-time rhythm & song challenges (low-latency)
+        if (gameEngine.currentState === GAME_STATES.GAMEPLAY_PHASE ||
+            gameEngine.currentState === GAME_STATES.JINGLE_BELLS ||
+            gameEngine.currentState === GAME_STATES.KOMANG) {
           gameEngine.handleLiveTracking(gestureResult);
         }
 
@@ -1195,11 +1616,17 @@ class App {
     }
 
     const chordDetail = chordMappingService.getMappingDetails(gestureResult.totalFingers);
-    const chordStr = chordDetail ? ` → ${chordDetail.chord} (${chordDetail.name})` : '';
+    const chordStr = (gestureResult.hasHand && chordDetail) ? ` → ${chordDetail.chord} (${chordDetail.name})` : '';
 
     const detectedText = document.getElementById('detected-gesture-text');
     if (detectedText) {
-      detectedText.innerText = `${gestureResult.totalFingers} Fingers${chordStr}`;
+      if (gestureResult.hasHand) {
+        detectedText.innerText = `${gestureResult.totalFingers} Fingers${chordStr}`;
+      } else {
+        detectedText.innerText = (gestureResult.guidance === 'MOVE YOUR HAND CLOSER')
+          ? 'Dekatkan Tangan ke Kamera ✋'
+          : 'Menunggu Tangan...';
+      }
     }
 
     // Update Live Input in Hit Zone
@@ -1225,7 +1652,9 @@ class App {
       if (liveDot && liveText && curNote) {
         if (!gestureResult.hasHand) {
           liveDot.className = 'live-dot';
-          liveText.innerText = 'Kamera: Tunjukkan tangan di depan kamera 📷';
+          liveText.innerText = (gestureResult.guidance === 'MOVE YOUR HAND CLOSER')
+            ? 'Kamera: Dekatkan tangan ke kamera ✋'
+            : 'Kamera: Tunjukkan tangan di depan kamera 📷';
         } else if (gestureResult.totalFingers === curNote.fingerCount) {
           liveDot.className = 'live-dot matched';
           liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK! ✔)`;
@@ -1233,6 +1662,31 @@ class App {
           liveDot.className = 'live-dot waiting';
           liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curNote.fingerCount} Jari ${curNote.emoji})`;
         }
+      }
+    }
+
+    // Update Komang live status indicator & bottom-corner hand guide
+    if (gameEngine.currentState === GAME_STATES.KOMANG) {
+      const liveDot = document.getElementById('komang-live-dot');
+      const liveText = document.getElementById('komang-live-text');
+      const curMeasure = komangService.getCurrentMeasure();
+      if (liveDot && liveText && curMeasure) {
+        const isMatched = gestureResult.hasHand && (gestureResult.totalFingers === curMeasure.fingerCount);
+        if (!gestureResult.hasHand) {
+          liveDot.className = 'live-dot';
+          liveText.innerText = (gestureResult.guidance === 'MOVE YOUR HAND CLOSER')
+            ? 'Kamera: Dekatkan tangan ke kamera ✋'
+            : 'Kamera: Tunjukkan tangan di depan kamera 📷';
+        } else if (isMatched) {
+          liveDot.className = 'live-dot matched';
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK ${curMeasure.chord}! ✔ PERFECT)`;
+        } else {
+          liveDot.className = 'live-dot waiting';
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curMeasure.fingerCount} Jari ${curMeasure.emoji})`;
+        }
+
+        // Live update the illustrated hand guide in the bottom corner
+        this._renderKomangHandGuide(curMeasure, gestureResult.totalFingers, isMatched);
       }
     }
 
@@ -1714,6 +2168,1586 @@ class App {
 
     document.body.appendChild(modal);
   }
+
+  // ----------------------------------------------------
+  // KOMANG (RAIM LAODE) INTERACTIVE PLAY-ALONG ENGINE
+  // ----------------------------------------------------
+  _templateKomang() {
+    const curMeasure = komangService.getCurrentMeasure();
+    const curIdx = komangService.currentMeasureIndex;
+    const isPlayAlong = komangService.mode === 'PLAY_ALONG';
+    const isGuide = komangService.mode === 'GUIDE';
+    const isTempo = komangService.mode === 'TEMPO';
+    const isPlaying = komangService.isPlaying;
+    const isTilesView = komangService.viewMode === 'TILES';
+
+    // 4 Systems (16 Measures) - Piano Arrangement Aga Pratama Alamsyah
+    const systems = [
+      { id: 1, measures: [1, 2, 3, 4], label: 'Line 1: G ➔ D/F# (Intro Melodi)' },
+      { id: 2, measures: [5, 6, 7, 8], label: 'Line 2: Am ➔ Cm (Syahdu Menuju Vokal)' },
+      { id: 3, measures: [9, 10, 11, 12], label: 'Line 3: G ➔ D/F# ("Sebab kau terlalu indah...")' },
+      { id: 4, measures: [13, 14, 15, 16], label: 'Line 4: Am ➔ Cm ➔ G ("Kau Komang-ku...")' },
+    ];
+
+    const systemsHtml = systems.map(sys => {
+      const measuresHtml = sys.measures.map(mNum => {
+        const m = KOMANG_MEASURES.find(item => item.measure === mNum);
+        if (!m) return '';
+        const isActive = m.index === curIdx;
+        const isDone = komangService.evaluatedMeasures.has(m.index);
+
+        return `
+          <div class="komang-measure-box ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}" data-measure-idx="${m.index}">
+            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+              <span class="komang-m-chord">${m.chord}</span>
+              <span class="komang-m-finger">${m.emoji} ${m.fingerCount}F</span>
+            </div>
+            <span class="komang-m-lyric" title="${m.lyric}">"${m.lyric}"</span>
+            <span class="komang-m-notes">${m.notes}</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="komang-score-system" data-system="${sys.id}">
+          <div class="komang-system-header">
+            <span>BAR ${sys.measures[0]} - ${sys.measures[sys.measures.length - 1]} • ${sys.label}</span>
+            <span>𝄞 ♯ G Major</span>
+          </div>
+          <div class="komang-system-measures">
+            ${measuresHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const activeKeys = curMeasure?.keys || [];
+    const whiteKeys = KOMANG_PIANO_KEYS.filter(k => !k.isBlack);
+    const blackKeys = KOMANG_PIANO_KEYS.filter(k => k.isBlack);
+
+    const whiteKeysHtml = whiteKeys.map(k => {
+      const isTarget = activeKeys.includes(k.note);
+      return `
+        <div class="komang-white-key ${isTarget ? 'target-chord-key' : ''}" data-note="${k.note}">
+          <span>${k.label}</span>
+        </div>
+      `;
+    }).join('');
+
+    const blackKeyPositions = {
+      'F#3': '21%',
+      'Eb4': '55%',
+      'F#4': '68%',
+    };
+
+    const blackKeysHtml = blackKeys.map(k => {
+      const isTarget = activeKeys.includes(k.note);
+      const leftPos = blackKeyPositions[k.note] || '50%';
+      return `
+        <div class="komang-black-key ${isTarget ? 'target-chord-key' : ''}" data-note="${k.note}" style="left:${leftPos};"></div>
+      `;
+    }).join('');
+
+    return `
+      <div class="komang-screen tv-landscape">
+        <!-- TOP HEADER: TV Friendly, Sleek Synthwave Bar -->
+        <div class="komang-header">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Menu">‹</button>
+            <div>
+              <div class="komang-title">
+                <span class="komang-logo-pulse">🌺</span> KOMANG — RAIM LAODE
+              </div>
+              <span class="komang-subtitle">
+                ${komangService.sessionMode === '30S_RANDOM' 
+                  ? `⏱️ SESI 30 DETIK (BAGIAN RANDOM: ${komangService.currentSegment?.title || 'Intro'}) • 130 BPM` 
+                  : '🎹 MODE LAGU PENUH (4:30) • Raim Laode • G Major'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Mode controls & View Switcher -->
+          <div class="komang-header-actions">
+            <!-- 30S RANDOM vs FULL SONG Switcher -->
+            <div class="komang-view-switcher">
+              <button class="komang-view-btn ${komangService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-komang-mode-30s" title="Main cepat 30 detik dari bagian acak lagu Komang">
+                🎲 30s RANDOM
+              </button>
+              <button class="komang-view-btn ${komangService.sessionMode === 'FULL_SONG' ? 'active' : ''}" id="btn-komang-mode-full" title="Main lagu penuh dari awal sampai akhir">
+                🎵 LAGU PENUH
+              </button>
+            </div>
+
+            <!-- PIANO TILES vs PARTITUR View Toggle -->
+            <div class="komang-view-switcher">
+              <button class="komang-view-btn ${isTilesView ? 'active' : ''}" id="btn-komang-view-tiles">
+                🎹 PIANO TILES (RITME)
+              </button>
+              <button class="komang-view-btn ${!isTilesView ? 'active' : ''}" id="btn-komang-view-sheet">
+                🎼 PARTITUR LENGKAP
+              </button>
+            </div>
+
+            <!-- Audio Modes -->
+            <div class="jingle-mode-pills">
+              <button class="mode-pill ${isPlayAlong ? 'active' : ''}" id="btn-komang-mode-playalong">🎵 MP3 KARAOKE</button>
+              <button class="mode-pill ${isGuide ? 'active' : ''}" id="btn-komang-mode-guide">🎓 BELAJAR</button>
+              <button class="mode-pill ${isTempo ? 'active' : ''}" id="btn-komang-mode-tempo">⏱️ 130 BPM</button>
+            </div>
+
+            <!-- No-Fail / Challenge Mode Toggle Button -->
+            <button class="mode-pill ${komangService.isNoFail ? 'active' : ''}" id="btn-komang-nofail-toggle" title="Klik untuk beralih antara Mode Santai (Tanpa Kalah) atau Mode Tantangan">
+              ${komangService.isNoFail ? '🛡️ MODE SANTAI (BEBAS)' : '🎮 5 NYAWA (TANTANGAN)'}
+            </button>
+
+            <!-- TV Fullscreen Button -->
+            <button class="btn-tv-fullscreen" id="btn-komang-fullscreen-tv" title="Tampilkan Fullscreen 16:9 di TV">
+              🖥️ TV FULLSCREEN
+            </button>
+          </div>
+        </div>
+
+        <!-- MAIN STAGE: 3-Column TV Landscape Layout (NO GEPENG!) -->
+        <div class="komang-tv-stage ${isTilesView ? 'tiles-mode' : 'sheet-mode'}">
+
+          <!-- 1. LEFT COLUMN: TV HUD, BIG LYRICS, SCORE & TRANSPORT -->
+          <div class="komang-left-col">
+            <!-- Score, Combo & Lives Card -->
+            <div class="komang-tv-score-card">
+              <div class="tv-score-row">
+                <div class="tv-score-item">
+                  <span class="tv-stat-kicker">TOTAL SKOR</span>
+                  <span class="tv-score-num" id="komang-cur-score">${komangService.score} PTS</span>
+                </div>
+                <div class="tv-score-item combo-item">
+                  <span class="tv-stat-kicker">STREAK COMBO</span>
+                  <span class="tv-combo-num" id="komang-cur-combo">x${komangService.combo} COMBO</span>
+                </div>
+                <div class="tv-score-item lives-item">
+                  <span class="tv-stat-kicker">SISA NYAWA</span>
+                  <div class="komang-hearts-row" id="komang-hearts-row">
+                    ${komangService.isNoFail ? '<span style="font-size:12px; color:#00ffaa; font-weight:900; font-family:var(--font-display);">🛡️ BEBAS</span>' : `${'❤️'.repeat(Math.max(0, komangService.lives))}${'🖤'.repeat(Math.max(0, komangService.maxLives - komangService.lives))}`}
+                  </div>
+                </div>
+              </div>
+              <div class="tv-multiplier-row">
+                <span class="multiplier-pill" id="komang-multiplier-pill">⚡ MULTIPLIER 1.0x</span>
+                <div class="komang-speed-selector">
+                  <span style="font-size:10px; color:var(--text-muted); font-weight:800; letter-spacing:0.5px;">KECEPATAN UBIN:</span>
+                  <button class="speed-chip ${komangService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" title="Sangat Santai & Pelan (Cocok untuk Pemula)">🐢 Santai (0.75x)</button>
+                  <button class="speed-chip ${komangService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" title="Tenang & Pas (Rekomendasi Standar)">🌿 Normal (1.0x)</button>
+                  <button class="speed-chip ${komangService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" title="Lebih Cepat (Tantangan)">⚡ Cepat (1.3x)</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Giant Karaoke Lyrics Display (High Legibility from TV Couch) -->
+            <div class="komang-karaoke-card">
+              <div class="karaoke-badge-row">
+                <span class="tv-tag" id="komang-session-tag">
+                  ${komangService.sessionMode === '30S_RANDOM' ? `🎲 30s: ${komangService.currentSegment?.title || 'Intro'}` : '🎤 LIRIK SEKARANG'}
+                </span>
+                <span class="komang-chord-badge" id="komang-cur-chord">${curMeasure.chord}</span>
+              </div>
+              <div class="komang-big-lyric" id="komang-cur-lyric">
+                "${curMeasure.lyric}"
+              </div>
+              <div class="komang-next-lyric-cue" id="komang-next-preview">
+                👉 Bar ${curMeasure.measure} / 16 (G Major)
+              </div>
+              <div class="komang-chord-desc-bar" id="komang-cur-desc">
+                ${curMeasure.chordDesc}
+              </div>
+            </div>
+
+            <!-- Audio Backing Player Card -->
+            <div class="komang-player-card">
+              <div class="komang-transport-row">
+                <button class="komang-btn-play" id="btn-komang-play-pause">
+                  <span id="komang-play-label">${isPlaying ? '⏸️ JEDA' : (komangService.sessionMode === '30S_RANDOM' ? '▶️ MAIN 30s' : '▶️ PUTAR LAGU')}</span>
+                </button>
+                <button class="btn-score-reset" id="btn-komang-random-segment" title="Pilih bagian 30 detik acak lain dari lagu Komang">
+                  🎲 Acak 30s
+                </button>
+                <button class="btn-score-reset" id="btn-komang-reset">
+                  ↺ Ulang
+                </button>
+                <span class="komang-time-badge" id="komang-time-display">${komangService.sessionMode === '30S_RANDOM' ? '⏱️ SISA: 30s' : '0:00 / 4:30'}</span>
+              </div>
+
+              <div class="komang-progress-bar" id="komang-progress-bar">
+                <div class="komang-progress-fill" id="komang-progress-fill"></div>
+              </div>
+
+              <div class="komang-sync-row">
+                <div class="komang-offset-controls">
+                  <span>⏱️ Sync:</span>
+                  <button class="komang-offset-btn" id="komang-offset-minus">-0.1s</button>
+                  <span id="komang-offset-val">${komangService.audioOffsetSec.toFixed(1)}s</span>
+                  <button class="komang-offset-btn" id="komang-offset-plus">+0.1s</button>
+                  <button class="komang-offset-btn" id="komang-offset-zero">0.0s</button>
+                </div>
+                <div class="komang-vol-row">
+                  <span>🔊 MP3:</span>
+                  <input type="range" class="komang-vol-slider" id="komang-vol-backing" min="0" max="1" step="0.05" value="${komangService.backingVolume}">
+                  <span>🎹 Piano:</span>
+                  <input type="range" class="komang-vol-slider" id="komang-vol-player" min="0" max="1" step="0.05" value="${komangService.playerVolume}">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. CENTER COLUMN: PIANO TILES HIGHWAY OR SHEET MUSIC -->
+          <div class="komang-center-col">
+            ${isTilesView ? `
+              <!-- PIANO TILES 4-LANE HIGHWAY -->
+              <div class="komang-highway-wrapper">
+                <div class="highway-top-header">
+                  <span>🎵 PIANO TILES RHYTHM HIGHWAY (4 JALUR NADA)</span>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="komang-offset-btn" id="btn-toggle-piano-height" title="Ubah ukuran tuts piano (Panjang, Ekstra Panjang, Kompak)">
+                      🎹 Tuts: <span id="label-piano-height">${komangTilesEngine.getKeyHeightLabel ? komangTilesEngine.getKeyHeightLabel() : 'Panjang (35%)'}</span>
+                    </button>
+                    <span class="highway-hint-keys">Ketuk tuts atau kamera tangan ✋</span>
+                  </div>
+                </div>
+                <div class="komang-highway-stage">
+                  <canvas id="komang-tiles-canvas"></canvas>
+                </div>
+              </div>
+            ` : `
+              <!-- SHEET MUSIC & PIANO VIEW -->
+              <div class="komang-sheet-wrapper">
+                <div class="komang-score-card">
+                  <div class="score-card-header">
+                    <span class="score-title">🎼 PARTITUR KOMANG — RAIM LAODE (G MAJOR • 130 BPM)</span>
+                    <span style="font-size:11px; color:var(--text-muted);">Klik bar untuk melompat langsung</span>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:8px;" id="komang-score-container">
+                    ${systemsHtml}
+                  </div>
+                </div>
+
+                <div class="komang-piano-card">
+                  <div class="piano-card-header">
+                    <span>🎹 VIRTUAL PIANO (Akor ${curMeasure.chord} • Tuts Menyala Pink)</span>
+                    <span class="piano-hint-text">1F=G • 2F=D/F# • 3F=Am • 4F=Cm • 5F=G</span>
+                  </div>
+                  <div class="komang-piano-keyboard" id="komang-piano-keyboard">
+                    ${whiteKeysHtml}
+                    ${blackKeysHtml}
+                  </div>
+                </div>
+              </div>
+            `}
+          </div>
+
+          <!-- 3. RIGHT COLUMN: LIVE CAMERA VIEWPORT & BOTTOM CORNER HAND GUIDE -->
+          <div class="komang-right-col">
+            <!-- Camera Viewport with Hand Skeleton Tracking -->
+            <div class="camera-viewport komang-camera-box">
+              <video id="camera-video" autoplay playsinline muted></video>
+              <canvas id="camera-canvas"></canvas>
+              <canvas id="tracking-canvas"></canvas>
+              <div class="camera-guide-frame"></div>
+              <div class="camera-guidance-pill" id="komang-guidance-pill">
+                TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}
+              </div>
+              ${this._templateCameraOverlay()}
+            </div>
+
+            <!-- Live Status Bar -->
+            <div class="komang-live-status-pill">
+              <span class="live-dot waiting" id="komang-live-dot"></span>
+              <span class="live-text" id="komang-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari ${curMeasure.emoji}</span>
+            </div>
+
+            <!-- GAMBAR TANGAN DI POJOK BAWAH SEBAGAI PETUNJUKNYA -->
+            <div class="komang-hand-guide-card" id="komang-hand-guide-card">
+              <div class="hand-guide-header">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:16px;">🖐️</span>
+                  <span class="hand-guide-title">PETUNJUK GESTUR TANGAN</span>
+                </div>
+                <span class="hand-guide-badge" id="komang-hand-target-badge">
+                  ${curMeasure.emoji} ${curMeasure.fingerCount} JARI
+                </span>
+              </div>
+
+              <!-- Canvas Gambar Tangan Petunjuk -->
+              <div class="hand-guide-canvas-box">
+                <canvas id="komang-hand-guide-canvas" width="280" height="220"></canvas>
+              </div>
+
+              <!-- Label dan Penjelasan Petunjuk Bawah -->
+              <div class="hand-guide-footer">
+                <div class="hand-guide-chord-name" id="komang-guide-chord-name">
+                  AKOR: <strong>${curMeasure.chord}</strong> (${curMeasure.label})
+                </div>
+                <div class="hand-guide-mini-legend">
+                  <span class="guide-tag ${curMeasure.fingerCount === 1 ? 'active' : ''}">1F: G</span>
+                  <span class="guide-tag ${curMeasure.fingerCount === 2 ? 'active' : ''}">2F: D/F#</span>
+                  <span class="guide-tag ${curMeasure.fingerCount === 3 ? 'active' : ''}">3F: Am</span>
+                  <span class="guide-tag ${curMeasure.fingerCount === 4 ? 'active' : ''}">4F: Cm</span>
+                  <span class="guide-tag wildcard-tag" style="color:#ffd700; border-color:rgba(255,215,0,0.5);" title="Buka 5 Jari untuk memukul nada apa pun!">🖐️ 5F: WILDCARD ✨</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick fallback touch buttons for TV remote/mouse -->
+            <div class="komang-quick-fbtns-row">
+              <button class="komang-fbtn ${curMeasure.fingerCount === 1 ? 'active' : ''}" data-fingers="1" data-chord="G">
+                <span>☝️ 1: G</span>
+              </button>
+              <button class="komang-fbtn ${curMeasure.fingerCount === 2 ? 'active' : ''}" data-fingers="2" data-chord="D/F#">
+                <span>✌️ 2: D/F#</span>
+              </button>
+              <button class="komang-fbtn ${curMeasure.fingerCount === 3 ? 'active' : ''}" data-fingers="3" data-chord="Am">
+                <span>🤟 3: Am</span>
+              </button>
+              <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-fingers="4" data-chord="Cm">
+                <span>🖐️ 4: Cm</span>
+              </button>
+              <button class="komang-fbtn wildcard-fbtn" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas (Pukul Jalur Aktif)">
+                <span>🖐️ 5: SAKTI ✨</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  _setupKomangListeners() {
+    // 1. Setup Piano Tiles Highway canvas if in TILES view
+    const tilesCanvas = document.getElementById('komang-tiles-canvas');
+    if (tilesCanvas) {
+      komangTilesEngine.init(tilesCanvas, komangService);
+      komangService.setTilesEngine(komangTilesEngine);
+      if (komangService.isPlaying) {
+        komangTilesEngine.start();
+      }
+    }
+
+    // 2. Initial render of bottom corner hand guide
+    this._renderKomangHandGuide();
+
+    komangService.onMeasureChanged = (measure, idx) => {
+      this._updateKomangUI(measure, idx);
+      this._renderKomangHandGuide(measure);
+    };
+
+    komangService.onTimelineTick = (data) => {
+      this._onKomangTimelineTick(data);
+    };
+
+    komangService.onChordHit = (data) => {
+      this._onKomangChordHit(data);
+      this._renderKomangHandGuide(data.measure, data.measure.fingerCount, true);
+    };
+
+    komangService.onLifeLost = (data) => {
+      this._onKomangLifeLost(data);
+    };
+
+    komangService.onLifeRecovered = (data) => {
+      const heartsRow = document.getElementById('komang-hearts-row');
+      if (heartsRow && !komangService.isNoFail) {
+        const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
+        const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
+        heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      }
+    };
+
+    komangService.onGameOver = (result) => {
+      this._showKomangGameOverModal(result);
+    };
+
+    komangService.onSongFinished = (stats) => {
+      this._showKomangVictoryModal(stats);
+    };
+
+    komangService.onAudioStateChanged = (isPlaying) => {
+      const label = document.getElementById('komang-play-label');
+      if (label) {
+        label.innerText = isPlaying ? '⏸️ JEDA' : '▶️ PUTAR LAGU';
+      }
+      if (isPlaying && komangTilesEngine) {
+        komangTilesEngine.start();
+      } else if (!isPlaying && komangTilesEngine) {
+        komangTilesEngine.stop();
+      }
+    };
+
+    this._updateKomangUI(komangService.getCurrentMeasure(), komangService.currentMeasureIndex);
+  }
+
+  _renderKomangHandGuide(curMeasure = null, detectedFingers = 0, isMatched = false) {
+    const guideCanvas = document.getElementById('komang-hand-guide-canvas');
+    if (!guideCanvas) return;
+    const m = curMeasure || komangService.getCurrentMeasure();
+    if (!m) return;
+
+    const targetFingers = m.fingerCount;
+    const matched = isMatched || (this.lastDetectedFingers === targetFingers);
+    const stateKey = `${m.chord}_${targetFingers}_${detectedFingers}_${matched}`;
+
+    if (this._lastKomangHandGuideKey === stateKey) return;
+    this._lastKomangHandGuideKey = stateKey;
+
+    HandVisualizer.drawTVHandGuide(guideCanvas, targetFingers, detectedFingers, m.chord, matched);
+
+    // Target badge
+    const badge = document.getElementById('komang-hand-target-badge');
+    if (badge) {
+      badge.innerText = `${m.emoji} ${m.fingerCount} JARI`;
+      badge.style.color = matched ? '#00ffaa' : '#ff7eb3';
+    }
+
+    // Guide chord name
+    const chordNameEl = document.getElementById('komang-guide-chord-name');
+    if (chordNameEl) {
+      chordNameEl.innerHTML = `AKOR: <strong style="color:${matched ? '#00ffaa' : '#ff94c2'};">${m.chord}</strong> (${m.label}) ${matched ? '✔ COCOK!' : ''}`;
+    }
+
+    // Update tags in mini legend
+    const tags = document.querySelectorAll('.hand-guide-mini-legend .guide-tag');
+    tags.forEach(t => {
+      const isTarget = t.innerText.startsWith(`${targetFingers}F`);
+      t.classList.toggle('active', isTarget);
+    });
+  }
+
+  _updateKomangUI(curMeasure, idx) {
+    if (!curMeasure) return;
+
+    const chordEl = document.getElementById('komang-cur-chord');
+    if (chordEl) chordEl.innerText = curMeasure.chord;
+
+    const lyricEl = document.getElementById('komang-cur-lyric');
+    if (lyricEl) lyricEl.innerText = `"${curMeasure.lyric}"`;
+
+    const descEl = document.getElementById('komang-cur-desc');
+    if (descEl) descEl.innerText = curMeasure.chordDesc;
+
+    const guidancePill = document.getElementById('komang-guidance-pill');
+    if (guidancePill) {
+      guidancePill.innerText = `TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}`;
+    }
+
+    // Update Bottom Corner Hand Guide
+    this._renderKomangHandGuide(curMeasure);
+
+    // Highlight active measure box on sheet music (if in sheet view)
+    const mBoxes = document.querySelectorAll('.komang-measure-box');
+    mBoxes.forEach(box => {
+      const i = parseInt(box.dataset.measureIdx, 10);
+      const isCur = i === idx;
+      const isDone = komangService.evaluatedMeasures.has(i);
+      box.classList.toggle('active', isCur);
+      box.classList.toggle('done', isDone);
+      if (isCur) {
+        try {
+          box.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        } catch (e) {}
+      }
+    });
+
+    // Highlight active chord keys on piano
+    const activeKeys = curMeasure.keys || [];
+    const pKeys = document.querySelectorAll('.komang-white-key, .komang-black-key');
+    pKeys.forEach(k => {
+      const note = k.dataset.note;
+      k.classList.toggle('target-chord-key', activeKeys.includes(note));
+    });
+
+    // Update quick finger buttons
+    const fbtns = document.querySelectorAll('.komang-fbtn');
+    fbtns.forEach(btn => {
+      const f = parseInt(btn.dataset.fingers, 10);
+      btn.classList.toggle('active', f === curMeasure.fingerCount);
+    });
+  }
+
+  _onKomangTimelineTick(data) {
+    const now = performance.now();
+    if (!this._lastKomangTickUiTime) this._lastKomangTickUiTime = 0;
+
+    // 1. Time display formatted e.g. ⏱️ SISA: 28s or 1:12 / 4:30 (Only update when second changes!)
+    const curSec = data.is30sSession ? Math.ceil(data.sessionRemainingSec) : Math.floor(data.currentTimeSec);
+    if (this._lastKomangDisplaySec !== curSec) {
+      this._lastKomangDisplaySec = curSec;
+      const timeEl = document.getElementById('komang-time-display');
+      if (timeEl) {
+        if (data.is30sSession) {
+          timeEl.innerText = `⏱️ SISA: ${curSec}s`;
+        } else {
+          const curM = Math.floor(data.currentTimeSec / 60);
+          const curS = Math.floor(data.currentTimeSec % 60);
+          const totM = Math.floor(data.totalDurationSec / 60);
+          const totS = Math.floor(data.totalDurationSec % 60);
+          timeEl.innerText = `${curM}:${curS.toString().padStart(2, '0')} / ${totM}:${totS.toString().padStart(2, '0')}`;
+        }
+      }
+    }
+
+    // 2. Audio progress fill bar & preview text (Throttled to ~12Hz / every 80ms to avoid DOM reflows)
+    if (now - this._lastKomangTickUiTime > 80) {
+      this._lastKomangTickUiTime = now;
+
+      const fillEl = document.getElementById('komang-progress-fill');
+      if (fillEl) {
+        if (data.is30sSession) {
+          fillEl.style.width = `${(data.sessionProgress * 100).toFixed(1)}%`;
+        } else if (data.totalDurationSec > 0) {
+          const pct = Math.min(100, Math.max(0, (data.currentTimeSec / data.totalDurationSec) * 100));
+          fillEl.style.width = `${pct}%`;
+        }
+      }
+
+      // 3. Next chord preview countdown
+      const nextPreviewEl = document.getElementById('komang-next-preview');
+      if (nextPreviewEl && data.nextMeasure) {
+        const nxt = data.nextMeasure;
+        const timeSec = data.timeToNextMeasureSec;
+        if (timeSec <= 1.2) {
+          nextPreviewEl.innerHTML = `<span style="color:#00f7ff; font-weight:800;">👉 ${nxt.chord} (${nxt.emoji} ${nxt.fingerCount}F) in ${timeSec.toFixed(1)}s!</span>`;
+        } else {
+          nextPreviewEl.innerText = `👉 Bar ${data.activeMeasure.measure} / 16 • Selanjutnya ${nxt.chord} (${nxt.emoji} ${nxt.fingerCount}F)`;
+        }
+      }
+    }
+
+    // 4. Particle pulse on downbeat (Only once per measure downbeat)
+    if (data.measureProgress < 0.08 && this.particleSystem && !this._downbeatPulsed) {
+      this._downbeatPulsed = true;
+      this.particleSystem.triggerPulse(0.2);
+    } else if (data.measureProgress >= 0.15) {
+      this._downbeatPulsed = false;
+    }
+  }
+
+  _onKomangChordHit(data) {
+    if (this.particleSystem) {
+      this.particleSystem.triggerPulse(0.45);
+    }
+
+    // Flash live dot
+    const liveDot = document.getElementById('komang-live-dot');
+    const liveText = document.getElementById('komang-live-text');
+    if (liveDot && liveText) {
+      liveDot.className = 'live-dot matched';
+      liveText.innerText = `Terdeteksi: ${data.measure.chord} [${data.rating} HIT! +${data.points} pts] ⭐`;
+      setTimeout(() => {
+        if (liveDot) liveDot.className = 'live-dot waiting';
+      }, 350);
+    }
+
+    // Update score, combo & multiplier HUD
+    const scoreEl = document.getElementById('komang-cur-score');
+    if (scoreEl) scoreEl.innerText = `${data.score} PTS`;
+
+    const comboEl = document.getElementById('komang-cur-combo');
+    if (comboEl) comboEl.innerText = `x${data.combo} COMBO`;
+
+    const multEl = document.getElementById('komang-multiplier-pill');
+    if (multEl && data.multiplier) {
+      multEl.innerText = `⚡ MULTIPLIER ${data.multiplier.toFixed(1)}x`;
+      multEl.classList.toggle('high-mult', data.multiplier >= 2.0);
+    }
+
+    // Ensure hearts are synced
+    const heartsRow = document.getElementById('komang-hearts-row');
+    if (heartsRow && data.lives !== undefined) {
+      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
+      const deadHearts = '🖤'.repeat(Math.max(0, komangService.maxLives - data.lives));
+      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+    }
+
+    // Piano keys press flash
+    const activeKeys = data.measure.keys || [];
+    activeKeys.forEach(note => {
+      const keyEl = document.querySelector(`.komang-white-key[data-note="${note}"], .komang-black-key[data-note="${note}"]`);
+      if (keyEl) {
+        keyEl.classList.add('pressed');
+        setTimeout(() => keyEl.classList.remove('pressed'), 180);
+      }
+    });
+  }
+
+  _onKomangLifeLost(data) {
+    // 1. Update Hearts UI with shake animation
+    const heartsRow = document.getElementById('komang-hearts-row');
+    if (heartsRow) {
+      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
+      const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
+      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      heartsRow.classList.add('heart-damage');
+      setTimeout(() => heartsRow.classList.remove('heart-damage'), 350);
+    }
+
+    // 2. Reset combo & multiplier
+    const comboEl = document.getElementById('komang-cur-combo');
+    if (comboEl) comboEl.innerText = 'x0 COMBO';
+
+    const multEl = document.getElementById('komang-multiplier-pill');
+    if (multEl) {
+      multEl.innerText = '⚡ MULTIPLIER 1.0x';
+      multEl.classList.remove('high-mult');
+    }
+
+    // 3. Flash live status banner red
+    const liveDot = document.getElementById('komang-live-dot');
+    const liveText = document.getElementById('komang-live-text');
+    if (liveDot && liveText) {
+      liveDot.className = 'live-dot miss';
+      liveText.innerText = data.reason === 'WRONG_FINGER' ? 'SALAH JARI! Nyawa -1 💔' : 'MISS! Ubin Terlewat -1 💔';
+      setTimeout(() => {
+        if (liveDot) liveDot.className = 'live-dot waiting';
+      }, 450);
+    }
+  }
+
+  _showKomangGameOverModal(result) {
+    const existing = document.getElementById('komang-gameover-backdrop');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'komang-modal-backdrop';
+    modal.id = 'komang-gameover-backdrop';
+    modal.innerHTML = `
+      <div class="komang-modal-dialog gameover-dialog">
+        <div class="modal-icon-header">💔</div>
+        <h2 class="modal-title-gameover">LAGU TERHENTI</h2>
+        <p class="modal-subtitle-gameover">Kehabisan Nyawa di Bar ${result.barReached || 1} / ${result.totalMeasures || 16}</p>
+
+        <!-- Penjelasan Mengapa Nyawa Berkurang & Cara Mengaturnya -->
+        <div style="background:rgba(255,45,117,0.12); border:1px solid rgba(255,45,117,0.4); border-radius:12px; padding:12px 16px; margin:14px 0; text-align:left;">
+          <div style="font-size:12px; font-weight:800; color:#ff4d6d; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+            <span>⚠️</span> DI MANA SALAHNYA & MENGAPA NYAWA BERKURANG?
+          </div>
+          <p style="font-size:11px; color:#cbd5e1; line-height:1.5; margin:0 0 6px 0;">
+            Nyawa berkurang saat <strong>ubin balok meluncur melewati garis putih bawah</strong> tanpa ditekan atau tanpa terdeteksi tangan di kamera (Total: <strong>${result.missHits || 5} ubin terlewat</strong>).
+          </p>
+          <div style="font-size:11px; color:#00ffaa; font-weight:700; display:flex; align-items:center; gap:6px;">
+            <span>🛡️</span> <span>Mau main bebas tanpa nyawa? Klik tombol hijau <strong>LANJUTKAN SANTAI</strong> di bawah, lagu tidak akan berhenti!</span>
+          </div>
+        </div>
+
+        <div class="modal-stats-grid">
+          <div class="mstat-box">
+            <span class="mstat-label">TOTAL SKOR</span>
+            <span class="mstat-val gold">${result.score} PTS</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">AKURASI</span>
+            <span class="mstat-val cyan">${result.accuracy}%</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">MAX COMBO</span>
+            <span class="mstat-val pink">x${result.maxCombo}</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">UBIN TERLEWAT (MISS)</span>
+            <span class="mstat-val red">${result.missHits}</span>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button class="btn-modal-retry" id="btn-komang-random-next" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%); color:#000; font-weight:900;">
+            <span>🎲</span> COBA 30s LAIN (RANDOM)
+          </button>
+          <button class="btn-modal-retry" id="btn-komang-gameover-retry">
+            <span>↺</span> ULANG SEGMEN INI
+          </button>
+          <button class="btn-modal-retry" id="btn-komang-gameover-nofail" style="background:linear-gradient(135deg, #00ffaa 0%, #00aa66 100%); color:#000;">
+            <span>▶</span> LANJUTKAN SANTAI (NO-FAIL)
+          </button>
+          <button class="btn-modal-home" id="btn-komang-gameover-home">
+            <span>🏠</span> HOME MENU
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  _showKomangVictoryModal(stats) {
+    try {
+      confetti({
+        particleCount: 220,
+        spread: 110,
+        origin: { y: 0.5 },
+      });
+    } catch (e) {}
+
+    const existing = document.getElementById('komang-victory-backdrop');
+    if (existing) existing.remove();
+
+    const gradeColorMap = {
+      'S+': '#ffd700',
+      'S': '#00f7ff',
+      'A': '#00ff88',
+      'B': '#a855f7',
+      'C': '#ff7eb3',
+    };
+    const gradeColor = gradeColorMap[stats.grade] || '#00f7ff';
+
+    const modal = document.createElement('div');
+    modal.className = 'komang-modal-backdrop';
+    modal.id = 'komang-victory-backdrop';
+    modal.innerHTML = `
+      <div class="komang-modal-dialog victory-dialog">
+        <div class="modal-confetti-badge">🎉 ${stats.is30sSession ? 'SESI 30 DETIK SELESAI!' : 'LAGU KOMANG SELESAI!'} 🎉</div>
+        <h2 class="modal-title-victory">VICTORY CLEAR!</h2>
+        <p class="modal-subtitle-victory">
+          ${stats.is30sSession ? `Bagian: <strong>${stats.segment?.title || 'Komang'}</strong> (${stats.segment?.lyricHint || ''})` : 'Piano Karaoke • Raim Laode • Key G Major'}
+        </p>
+
+        <!-- Grade & Star Celebration Banner -->
+        <div class="victory-grade-banner">
+          <div class="victory-grade-circle" style="color:${gradeColor}; border-color:${gradeColor}; box-shadow:0 0 35px ${gradeColor}88;">
+            ${stats.grade}
+          </div>
+          <div class="victory-stars-box">
+            <div class="victory-stars-row">
+              ${'⭐'.repeat(stats.stars || 1)}
+            </div>
+            ${stats.isFullCombo ? `
+              <span class="full-combo-pill">👑 PERFECT FULL COMBO!</span>
+            ` : `
+              <span class="clear-pill">✨ TINGKAT: ${stats.grade === 'S' || stats.grade === 'S+' ? 'MASTER PIANIS' : 'PIANIS MAHIR'}</span>
+            `}
+          </div>
+        </div>
+
+        <div class="modal-stats-grid">
+          <div class="mstat-box">
+            <span class="mstat-label">TOTAL SKOR</span>
+            <span class="mstat-val gold">${stats.score} PTS</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">AKURASI</span>
+            <span class="mstat-val cyan">${stats.accuracy}%</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">MAX COMBO</span>
+            <span class="mstat-val pink">x${stats.maxCombo}</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">SISA NYAWA</span>
+            <span class="mstat-val red">${'❤️'.repeat(stats.remainingLives || 1)}</span>
+          </div>
+        </div>
+
+        <!-- Hit Detail Breakdown -->
+        <div class="victory-breakdown-row">
+          <span class="vbreak-item perfect">PERFECT: ${stats.perfectHits}</span>
+          <span class="vbreak-item great">GREAT: ${stats.greatHits}</span>
+          <span class="vbreak-item good">GOOD: ${stats.goodHits}</span>
+          <span class="vbreak-item miss">MISS: ${stats.missHits}</span>
+        </div>
+
+        <!-- OFFICIAL KOMANG COMPETITION QR CLAIM CARD -->
+        <div class="komang-qr-claim-card">
+          <div class="kqc-left">
+            <canvas id="komang-victory-qr-canvas" width="130" height="130"></canvas>
+          </div>
+          <div class="kqc-right">
+            <span class="kqc-badge">🎁 KOMPETISI BERHADIAH RESMI</span>
+            <div class="kqc-title">SCAN QR UNTUK DAFTAR NAMA & HP</div>
+            <div class="kqc-score">Skor Standar: <strong>${(stats.compSession?.score || Math.round(stats.accuracy * 1000)).toLocaleString()} PTS / 100k</strong></div>
+            <div class="kqc-buttons">
+              <button class="btn-kqc-manual" id="btn-komang-manual-claim">✏️ Input di Layar</button>
+              <button class="btn-kqc-lead" id="btn-komang-view-lead">🏆 Papan Peringkat</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button class="btn-modal-retry" id="btn-komang-random-next" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%); color:#000; font-weight:900;">
+            <span>🎲</span> MAIN 30 DETIK LAIN (RANDOM)
+          </button>
+          <button class="btn-modal-retry" id="btn-komang-victory-retry">
+            <span>↺</span> ULANG SEGMEN INI
+          </button>
+          <button class="btn-modal-home" id="btn-komang-victory-home">
+            <span>🏠</span> HOME MENU
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Render scannable QR Code on modal
+    setTimeout(() => {
+      const qrCanvas = document.getElementById('komang-victory-qr-canvas');
+      const session = stats.compSession || competitionLeaderboardService.getPendingSession();
+      if (qrCanvas && session?.claimUrl) {
+        qrCodeService.renderToCanvas(qrCanvas, session.claimUrl, {
+          size: 130,
+          padding: 8,
+          darkColor: '#0a0518',
+          lightColor: '#ffffff',
+          showEmblem: false,
+        });
+      }
+    }, 60);
+  }
+
+  // ----------------------------------------------------
+  // SELALU ADA DI NADIMU (OST JUMBO) INTERACTIVE ENGINE
+  // ----------------------------------------------------
+  _templateNadimu() {
+    const curMeasure = nadimuService.getCurrentMeasure();
+    const curIdx = nadimuService.currentMeasureIndex;
+    const isPlaying = nadimuService.isPlaying;
+    const isTilesView = nadimuService.viewMode === 'TILES';
+
+    const systems = [
+      { id: 1, measures: [1, 2, 3, 4], label: 'Bait 1: C ➔ F ➔ Em ➔ Am ("Kala nanti badai...")' },
+      { id: 2, measures: [5, 6, 7, 8], label: 'Bait 2: Dm ➔ G ➔ C ➔ G ("Andaikan saat itu...")' },
+      { id: 3, measures: [9, 10, 11, 12], label: 'Reff: F ➔ G ➔ Em ➔ Am ("Sedikit demi sedikit...")' },
+      { id: 4, measures: [13, 14, 15, 16], label: 'Klimaks: Dm ➔ G ➔ F ➔ C ("Selalu ada di nadimu...")' },
+    ];
+
+    const systemsHtml = systems.map(sys => {
+      const measuresHtml = sys.measures.map(mNum => {
+        const m = NADIMU_MEASURES.find(item => item.measure === mNum);
+        if (!m) return '';
+        const isActive = m.index === curIdx;
+        const isDone = nadimuService.evaluatedMeasures.has(m.index);
+
+        return `
+          <div class="komang-measure-box ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}" data-measure-idx="${m.index}">
+            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+              <span class="komang-m-chord">${m.chord}</span>
+              <span class="komang-m-finger">${m.emoji} ${m.fingerCount}F</span>
+            </div>
+            <span class="komang-m-lyric" title="${m.lyric}">"${m.lyric}"</span>
+            <span class="komang-m-notes">${m.notes}</span>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="komang-score-system" data-system="${sys.id}">
+          <div class="komang-system-header">
+            <span>BAR ${sys.measures[0]} - ${sys.measures[sys.measures.length - 1]} • ${sys.label}</span>
+            <span>𝄞 C Major</span>
+          </div>
+          <div class="komang-system-measures">
+            ${measuresHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const activeKeys = curMeasure?.keys || [];
+    const whiteKeys = NADIMU_PIANO_KEYS.filter(k => !k.isBlack);
+    const whiteKeysHtml = whiteKeys.map(k => {
+      const isTarget = activeKeys.includes(k.note);
+      return `
+        <div class="komang-white-key ${isTarget ? 'target-chord-key' : ''}" data-note="${k.note}">
+          <span>${k.label}</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="komang-screen tv-landscape">
+        <!-- TOP HEADER: TV Friendly Bar -->
+        <div class="komang-header">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Menu">‹</button>
+            <div>
+              <div class="komang-title">
+                <span class="komang-logo-pulse">🎵</span> SELALU ADA DI NADIMU — OST JUMBO
+              </div>
+              <span class="komang-subtitle">
+                ${nadimuService.sessionMode === '30S_RANDOM' 
+                  ? `⏱️ SESI 30 DETIK (BAGIAN RANDOM: ${nadimuService.currentSegment?.title || 'Bait 1'}) • 78 BPM` 
+                  : '🎵 FULL SONG • OST JUMBO • KEY C MAJOR • 78 BPM'}
+              </span>
+            </div>
+          </div>
+
+          <div class="komang-header-actions">
+            <!-- 30S vs Full Song switcher -->
+            <div class="komang-view-switcher">
+              <button class="komang-view-btn ${nadimuService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-nadimu-mode-30s" title="Main cepat 30 detik bagian acak lagu Nadimu">
+                🎲 30s Random
+              </button>
+              <button class="komang-view-btn ${nadimuService.sessionMode === 'FULL_SONG' ? 'active' : ''}" id="btn-nadimu-mode-full" title="Main lagu penuh dari awal sampai akhir">
+                🎵 Full Song
+              </button>
+            </div>
+
+            <!-- View Switcher (Tiles vs Sheet) -->
+            <div class="komang-view-switcher">
+              <button class="komang-view-btn ${isTilesView ? 'active' : ''}" id="btn-nadimu-view-tiles">
+                🎮 Highway Ubin
+              </button>
+              <button class="komang-view-btn ${!isTilesView ? 'active' : ''}" id="btn-nadimu-view-sheet">
+                🎼 Partitur
+              </button>
+            </div>
+
+            <!-- Mode Santai vs Nyawa -->
+            <div class="hud-pill-group">
+              <button class="mode-pill ${nadimuService.isNoFail ? 'active' : ''}" id="btn-nadimu-nofail-toggle" title="Klik untuk beralih antara Mode Santai (Tanpa Kalah) atau Mode Tantangan">
+                ${nadimuService.isNoFail ? '🛡️ MODE SANTAI (BEBAS)' : '🎮 5 NYAWA (TANTANGAN)'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN 3-COLUMN TV STAGE -->
+        <div class="komang-tv-stage">
+          
+          <!-- 1. LEFT COLUMN: SCORE, SPEED, LYRIC KARAOKE CARD & CONTROLS -->
+          <div class="komang-left-col">
+            <!-- Score & Combo Big Card -->
+            <div class="komang-tv-score-card">
+              <div class="tv-score-row">
+                <div class="tv-stat-block">
+                  <span class="tv-score-label">SKOR ANDA</span>
+                  <span class="tv-score-num" id="nadimu-cur-score">${nadimuService.score} PTS</span>
+                </div>
+                <div class="tv-stat-block">
+                  <span class="tv-score-label">COMBO</span>
+                  <span class="tv-combo-num" id="nadimu-cur-combo">x${nadimuService.combo} COMBO</span>
+                </div>
+              </div>
+              <div class="tv-lives-row">
+                <span class="tv-lives-label">STATUS NYAWA:</span>
+                <span class="tv-hearts-display" id="nadimu-hearts-row">
+                  ${nadimuService.isNoFail ? '<span style="font-size:12px; color:#00ffaa; font-weight:900; font-family:var(--font-display);">🛡️ BEBAS</span>' : `${'❤️'.repeat(Math.max(0, nadimuService.lives))}${'🖤'.repeat(Math.max(0, nadimuService.maxLives - nadimuService.lives))}`}
+                </span>
+                <span class="multiplier-pill" id="nadimu-multiplier-pill">⚡ MULTIPLIER 1.0x</span>
+              </div>
+            </div>
+
+            <!-- Speed Selector -->
+            <div class="komang-speed-selector">
+              <div class="speed-header">
+                <span class="speed-title">KECEPATAN UBIN (SPEED)</span>
+                <span class="speed-value" id="nadimu-speed-val">${nadimuService.speedMultiplier.toFixed(2)}x</span>
+              </div>
+              <div class="speed-chips-row">
+                <button class="speed-chip ${nadimuService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" data-song="nadimu" title="Sangat Santai & Pelan">🐢 Santai (0.75x)</button>
+                <button class="speed-chip ${nadimuService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" data-song="nadimu" title="Tenang & Pas (Rekomendasi)">🌿 Normal (1.0x)</button>
+                <button class="speed-chip ${nadimuService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" data-song="nadimu" title="Lebih Cepat">⚡ Cepat (1.3x)</button>
+              </div>
+            </div>
+
+            <!-- Big Karaoke & Chord Visualizer Card -->
+            <div class="komang-karaoke-card">
+              <div class="karaoke-card-header">
+                <span class="karaoke-badge">
+                  ${nadimuService.sessionMode === '30S_RANDOM' ? `🎲 30s: ${nadimuService.currentSegment?.title || 'Bait 1'}` : '🎤 LIRIK SEKARANG'}
+                </span>
+                <span class="measure-indicator" id="nadimu-measure-indicator">Bar ${curMeasure.measure} / 16</span>
+              </div>
+
+              <div class="karaoke-body">
+                <div class="komang-chord-badge" id="nadimu-cur-chord" style="color:#00f7ff; border-color:#00f7ff; text-shadow:0 0 15px rgba(0,247,255,0.6);">
+                  ${curMeasure.chord}
+                </div>
+                <div class="komang-big-lyric" id="nadimu-cur-lyric">
+                  "${curMeasure.lyric}"
+                </div>
+                <div class="komang-next-lyric-cue" id="nadimu-next-preview">
+                  👉 Selanjutnya: ${nadimuService.getNextMeasure().chord} ("${nadimuService.getNextMeasure().lyric}")
+                </div>
+              </div>
+
+              <div class="komang-chord-desc-bar" id="nadimu-cur-desc">
+                ${curMeasure.chordDesc}
+              </div>
+            </div>
+
+            <!-- Player & Progress Card -->
+            <div class="komang-player-card">
+              <div class="komang-transport-row">
+                <button class="komang-btn-play" id="btn-nadimu-play-toggle" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%);">
+                  <span id="nadimu-play-label">${isPlaying ? '⏸️ JEDA' : (nadimuService.sessionMode === '30S_RANDOM' ? '▶️ MAIN 30s' : '▶️ PUTAR LAGU')}</span>
+                </button>
+                <button class="btn-secondary" id="btn-nadimu-random-segment" title="Pilih bagian lagu acak baru">
+                  <span>🎲</span> Ganti Bagian
+                </button>
+                <button class="btn-secondary" id="btn-nadimu-reset" title="Ulang dari awal bagian ini">
+                  <span>↺</span> Ulang
+                </button>
+                <div class="komang-time-badge" id="nadimu-time-display">
+                  ⏱️ SISA: 30s
+                </div>
+              </div>
+              <div class="komang-progress-bar" id="nadimu-progress-bar">
+                <div class="komang-progress-fill" id="nadimu-progress-fill" style="background:linear-gradient(90deg, #00f7ff, #00ffaa);"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 2. CENTER COLUMN: PIANO TILES HIGHWAY -->
+          <div class="komang-center-col">
+            ${isTilesView ? `
+              <div class="komang-highway-wrapper">
+                <div class="highway-top-header">
+                  <span>🎵 PIANO TILES RHYTHM HIGHWAY (4 JALUR NADA)</span>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="highway-hint-keys">Ketuk tuts atau kamera tangan ✋</span>
+                  </div>
+                </div>
+                <div class="komang-highway-stage">
+                  <canvas id="nadimu-tiles-canvas"></canvas>
+                </div>
+              </div>
+            ` : `
+              <div class="komang-sheet-wrapper">
+                <div class="komang-score-card">
+                  <div class="score-card-header">
+                    <span class="score-title">🎼 PARTITUR SELALU ADA DI NADIMU (C MAJOR • 78 BPM)</span>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:8px;" id="nadimu-score-container">
+                    ${systemsHtml}
+                  </div>
+                </div>
+
+                <div class="komang-piano-card">
+                  <div class="piano-card-header">
+                    <span>🎹 VIRTUAL PIANO (Akor ${curMeasure.chord} • Tuts Menyala Cyan)</span>
+                  </div>
+                  <div class="komang-piano-keyboard" id="nadimu-piano-keyboard">
+                    ${whiteKeysHtml}
+                  </div>
+                </div>
+              </div>
+            `}
+          </div>
+
+          <!-- 3. RIGHT COLUMN: LIVE CAMERA VIEWPORT & HAND GUIDE -->
+          <div class="komang-right-col">
+            <div class="camera-viewport komang-camera-box">
+              <video id="camera-video" autoplay playsinline muted></video>
+              <canvas id="camera-canvas"></canvas>
+              <canvas id="tracking-canvas"></canvas>
+              <div class="camera-guide-frame"></div>
+              <div class="camera-guidance-pill" id="nadimu-guidance-pill" style="border-color:#00f7ff; color:#00f7ff;">
+                TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}
+              </div>
+              ${this._templateCameraOverlay()}
+            </div>
+
+            <div class="komang-live-status-pill">
+              <span class="live-dot waiting" id="nadimu-live-dot"></span>
+              <span class="live-text" id="nadimu-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari ${curMeasure.emoji}</span>
+            </div>
+
+            <!-- Petunjuk Gestur Tangan Bawah -->
+            <div class="komang-hand-guide-card" id="nadimu-hand-guide-card">
+              <div class="hand-guide-header">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:16px;">🖐️</span>
+                  <span class="hand-guide-title">PETUNJUK GESTUR TANGAN</span>
+                </div>
+                <span class="hand-guide-badge" id="nadimu-hand-target-badge" style="color:#00f7ff;">
+                  ${curMeasure.emoji} ${curMeasure.fingerCount} JARI
+                </span>
+              </div>
+
+              <div class="hand-guide-canvas-box">
+                <canvas id="nadimu-hand-guide-canvas" width="280" height="220"></canvas>
+              </div>
+
+              <div class="hand-guide-footer">
+                <div class="hand-guide-chord-name" id="nadimu-guide-chord-name">
+                  AKOR: <strong>${curMeasure.chord}</strong> (${curMeasure.label})
+                </div>
+                <div class="hand-guide-mini-legend">
+                  <span class="guide-tag ${curMeasure.fingerCount === 1 ? 'active' : ''}">1F: C</span>
+                  <span class="guide-tag ${curMeasure.fingerCount === 2 ? 'active' : ''}">2F: F/Dm</span>
+                  <span class="guide-tag ${curMeasure.fingerCount === 3 ? 'active' : ''}">3F: Em/Am</span>
+                  <span class="guide-tag ${curMeasure.fingerCount === 4 ? 'active' : ''}">4F: G</span>
+                  <span class="guide-tag wildcard-tag" style="color:#ffd700; border-color:rgba(255,215,0,0.5);" title="Buka 5 Jari untuk memukul nada apa pun!">🖐️ 5F: WILDCARD ✨</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick fallback buttons for touch/mouse -->
+            <div class="komang-quick-fbtns-row">
+              <button class="komang-fbtn ${curMeasure.fingerCount === 1 ? 'active' : ''}" data-song="nadimu" data-fingers="1" data-chord="C">
+                <span>☝️ 1: C</span>
+              </button>
+              <button class="komang-fbtn ${curMeasure.fingerCount === 2 ? 'active' : ''}" data-song="nadimu" data-fingers="2" data-chord="F">
+                <span>✌️ 2: F</span>
+              </button>
+              <button class="komang-fbtn ${curMeasure.fingerCount === 3 ? 'active' : ''}" data-song="nadimu" data-fingers="3" data-chord="Em">
+                <span>🤟 3: Em</span>
+              </button>
+              <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-song="nadimu" data-fingers="4" data-chord="G">
+                <span>🖐️ 4: G</span>
+              </button>
+              <button class="komang-fbtn wildcard-fbtn" data-song="nadimu" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas">
+                <span>🖐️ 5: SAKTI ✨</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }
+
+  _setupNadimuListeners() {
+    const tilesCanvas = document.getElementById('nadimu-tiles-canvas');
+    if (tilesCanvas) {
+      nadimuTilesEngine.init(tilesCanvas, nadimuService);
+      nadimuService.setTilesEngine(nadimuTilesEngine);
+      if (nadimuService.isPlaying) {
+        nadimuTilesEngine.start();
+      }
+    }
+
+    this._renderNadimuHandGuide();
+
+    nadimuService.onMeasureChanged = (measure, idx) => {
+      this._updateNadimuUI(measure, idx);
+      this._renderNadimuHandGuide(measure);
+    };
+
+    nadimuService.onTimelineTick = (data) => {
+      this._onNadimuTimelineTick(data);
+    };
+
+    nadimuService.onChordHit = (data) => {
+      this._onNadimuChordHit(data);
+      this._renderNadimuHandGuide(data.measure, data.measure.fingerCount, true);
+    };
+
+    nadimuService.onLifeLost = (data) => {
+      this._onNadimuLifeLost(data);
+    };
+
+    nadimuService.onLifeRecovered = (data) => {
+      const heartsRow = document.getElementById('nadimu-hearts-row');
+      if (heartsRow && !nadimuService.isNoFail) {
+        const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
+        const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
+        heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      }
+    };
+
+    nadimuService.onGameOver = (result) => {
+      this._showNadimuGameOverModal(result);
+    };
+
+    nadimuService.onSongFinished = (stats) => {
+      this._showNadimuVictoryModal(stats);
+    };
+
+    nadimuService.onAudioStateChanged = (isPlaying) => {
+      const label = document.getElementById('nadimu-play-label');
+      if (label) {
+        label.innerText = isPlaying ? '⏸️ JEDA' : '▶️ PUTAR LAGU';
+      }
+      if (isPlaying && nadimuTilesEngine) {
+        nadimuTilesEngine.start();
+      } else if (!isPlaying && nadimuTilesEngine) {
+        nadimuTilesEngine.stop();
+      }
+    };
+
+    this._updateNadimuUI(nadimuService.getCurrentMeasure(), nadimuService.currentMeasureIndex);
+  }
+
+  _renderNadimuHandGuide(curMeasure = null, detectedFingers = 0, isMatched = false) {
+    const guideCanvas = document.getElementById('nadimu-hand-guide-canvas');
+    if (!guideCanvas) return;
+    const m = curMeasure || nadimuService.getCurrentMeasure();
+    if (!m) return;
+
+    const targetFingers = m.fingerCount;
+    const matched = isMatched || (this.lastDetectedFingers === targetFingers);
+    const stateKey = `${m.chord}_${targetFingers}_${detectedFingers}_${matched}`;
+
+    if (this._lastNadimuHandGuideKey === stateKey) return;
+    this._lastNadimuHandGuideKey = stateKey;
+
+    HandVisualizer.drawTVHandGuide(guideCanvas, targetFingers, detectedFingers, m.chord, matched);
+
+    const badge = document.getElementById('nadimu-hand-target-badge');
+    if (badge) {
+      badge.innerText = `${m.emoji} ${m.fingerCount} JARI`;
+      badge.style.color = matched ? '#00ffaa' : '#00f7ff';
+    }
+
+    const chordNameEl = document.getElementById('nadimu-guide-chord-name');
+    if (chordNameEl) {
+      chordNameEl.innerHTML = `AKOR: <strong style="color:${matched ? '#00ffaa' : '#00f7ff'};">${m.chord}</strong> (${m.label}) ${matched ? '✔ COCOK!' : ''}`;
+    }
+
+    const tags = document.querySelectorAll('#nadimu-hand-guide-card .guide-tag');
+    tags.forEach(t => {
+      const isTarget = t.innerText.startsWith(`${targetFingers}F`);
+      t.classList.toggle('active', isTarget);
+    });
+  }
+
+  _updateNadimuUI(curMeasure, idx) {
+    if (!curMeasure) return;
+
+    const chordEl = document.getElementById('nadimu-cur-chord');
+    if (chordEl) chordEl.innerText = curMeasure.chord;
+
+    const lyricEl = document.getElementById('nadimu-cur-lyric');
+    if (lyricEl) lyricEl.innerText = `"${curMeasure.lyric}"`;
+
+    const descEl = document.getElementById('nadimu-cur-desc');
+    if (descEl) descEl.innerText = curMeasure.chordDesc;
+
+    const guidancePill = document.getElementById('nadimu-guidance-pill');
+    if (guidancePill) {
+      guidancePill.innerText = `TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}`;
+    }
+
+    const indicator = document.getElementById('nadimu-measure-indicator');
+    if (indicator) {
+      indicator.innerText = `Bar ${curMeasure.measure} / 16`;
+    }
+
+    this._renderNadimuHandGuide(curMeasure);
+
+    // Highlight active measure box on sheet music
+    const mBoxes = document.querySelectorAll('#nadimu-score-container .komang-measure-box');
+    mBoxes.forEach(box => {
+      const i = parseInt(box.dataset.measureIdx, 10);
+      const isCur = i === idx;
+      const isDone = nadimuService.evaluatedMeasures.has(i);
+      box.classList.toggle('active', isCur);
+      box.classList.toggle('done', isDone);
+    });
+
+    // Piano key highlight
+    const activeKeys = curMeasure.keys || [];
+    const pKeys = document.querySelectorAll('#nadimu-piano-keyboard .komang-white-key');
+    pKeys.forEach(k => {
+      const note = k.dataset.note;
+      k.classList.toggle('target-chord-key', activeKeys.includes(note));
+    });
+
+    // Quick finger buttons
+    const fbtns = document.querySelectorAll('.komang-fbtn[data-song="nadimu"]');
+    fbtns.forEach(btn => {
+      const f = parseInt(btn.dataset.fingers, 10);
+      btn.classList.toggle('active', f === curMeasure.fingerCount);
+    });
+  }
+
+  _onNadimuTimelineTick(data) {
+    const curSec = Math.ceil(data.sessionRemainingSec);
+    const timeEl = document.getElementById('nadimu-time-display');
+    if (timeEl) {
+      if (nadimuService.sessionMode === '30S_RANDOM') {
+        timeEl.innerText = `⏱️ SISA: ${curSec}s`;
+      } else {
+        const curM = Math.floor(data.songTime / 60);
+        const curS = Math.floor(data.songTime % 60);
+        timeEl.innerText = `${curM}:${curS.toString().padStart(2, '0')} / 4:43`;
+      }
+    }
+
+    const fillEl = document.getElementById('nadimu-progress-fill');
+    if (fillEl) {
+      if (nadimuService.sessionMode === '30S_RANDOM') {
+        const pct = Math.min(100, Math.max(0, (data.sessionElapsedSec / data.sessionDurationSec) * 100));
+        fillEl.style.width = `${pct.toFixed(1)}%`;
+      } else {
+        const pct = Math.min(100, Math.max(0, (data.songTime / 283) * 100));
+        fillEl.style.width = `${pct.toFixed(1)}%`;
+      }
+    }
+
+    const nextPreviewEl = document.getElementById('nadimu-next-preview');
+    if (nextPreviewEl) {
+      const nxt = nadimuService.getNextMeasure();
+      nextPreviewEl.innerText = `👉 Selanjutnya: ${nxt.chord} (${nxt.emoji} ${nxt.fingerCount}F) • "${nxt.lyric}"`;
+    }
+  }
+
+  _onNadimuChordHit(data) {
+    if (this.particleSystem) {
+      this.particleSystem.triggerPulse(0.45);
+    }
+
+    const liveDot = document.getElementById('nadimu-live-dot');
+    const liveText = document.getElementById('nadimu-live-text');
+    if (liveDot && liveText) {
+      liveDot.className = 'live-dot matched';
+      liveText.innerText = `Terdeteksi: ${data.measure.chord} [${data.rating} HIT! +${data.earnedPoints} pts] ⭐`;
+      setTimeout(() => {
+        if (liveDot) liveDot.className = 'live-dot waiting';
+      }, 350);
+    }
+
+    const scoreEl = document.getElementById('nadimu-cur-score');
+    if (scoreEl) scoreEl.innerText = `${data.score} PTS`;
+
+    const comboEl = document.getElementById('nadimu-cur-combo');
+    if (comboEl) comboEl.innerText = `x${data.combo} COMBO`;
+
+    const multEl = document.getElementById('nadimu-multiplier-pill');
+    if (multEl) {
+      let mult = 1.0;
+      if (data.combo >= 20) mult = 2.5;
+      else if (data.combo >= 10) mult = 2.0;
+      else if (data.combo >= 5) mult = 1.5;
+      multEl.innerText = `⚡ MULTIPLIER ${mult.toFixed(1)}x`;
+      multEl.classList.toggle('high-mult', mult >= 2.0);
+    }
+
+    const heartsRow = document.getElementById('nadimu-hearts-row');
+    if (heartsRow && data.lives !== undefined && !nadimuService.isNoFail) {
+      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
+      const deadHearts = '🖤'.repeat(Math.max(0, nadimuService.maxLives - data.lives));
+      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+    }
+  }
+
+  _onNadimuLifeLost(data) {
+    const heartsRow = document.getElementById('nadimu-hearts-row');
+    if (heartsRow) {
+      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
+      const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
+      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      heartsRow.classList.add('heart-damage');
+      setTimeout(() => heartsRow.classList.remove('heart-damage'), 350);
+    }
+
+    const comboEl = document.getElementById('nadimu-cur-combo');
+    if (comboEl) comboEl.innerText = 'x0 COMBO';
+
+    const multEl = document.getElementById('nadimu-multiplier-pill');
+    if (multEl) {
+      multEl.innerText = '⚡ MULTIPLIER 1.0x';
+      multEl.classList.remove('high-mult');
+    }
+
+    const liveDot = document.getElementById('nadimu-live-dot');
+    const liveText = document.getElementById('nadimu-live-text');
+    if (liveDot && liveText) {
+      liveDot.className = 'live-dot miss';
+      liveText.innerText = 'MISS! Ubin Terlewat -1 Nyawa 💔';
+      setTimeout(() => {
+        if (liveDot) liveDot.className = 'live-dot waiting';
+      }, 450);
+    }
+  }
+
+  _showNadimuGameOverModal(result) {
+    const existing = document.getElementById('nadimu-gameover-backdrop');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'komang-modal-backdrop';
+    modal.id = 'nadimu-gameover-backdrop';
+    modal.innerHTML = `
+      <div class="komang-modal-dialog gameover-dialog">
+        <div class="modal-icon-header">💔</div>
+        <h2 class="modal-title-gameover">LAGU TERHENTI</h2>
+        <p class="modal-subtitle-gameover">Kehabisan Nyawa • Selalu Ada di Nadimu</p>
+
+        <div style="background:rgba(255,45,117,0.12); border:1px solid rgba(255,45,117,0.4); border-radius:12px; padding:12px 16px; margin:14px 0; text-align:left;">
+          <div style="font-size:12px; font-weight:800; color:#ff4d6d; display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+            <span>⚠️</span> UBIN TERLEWAT
+          </div>
+          <p style="font-size:11px; color:#cbd5e1; line-height:1.5; margin:0 0 6px 0;">
+            Nyawa habis karena ada ubin yang meluncur melewati garis hit tanpa terdeteksi (Total: <strong>${result.missHits || 5} ubin</strong>).
+          </p>
+          <div style="font-size:11px; color:#00ffaa; font-weight:700;">
+            <span>🛡️</span> Ingin main tanpa rasa kalah? Gunakan tombol <strong>LANJUTKAN SANTAI</strong>!
+          </div>
+        </div>
+
+        <div class="modal-stats-grid">
+          <div class="mstat-box">
+            <span class="mstat-label">TOTAL SKOR</span>
+            <span class="mstat-val gold">${result.score} PTS</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">AKURASI</span>
+            <span class="mstat-val cyan">${result.accuracyPct}%</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">MAX COMBO</span>
+            <span class="mstat-val pink">x${result.maxCombo}</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">MISS</span>
+            <span class="mstat-val red">${result.missHits}</span>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button class="btn-modal-retry" id="btn-nadimu-random-next" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%); color:#000; font-weight:900;">
+            <span>🎲</span> COBA 30s LAIN (RANDOM)
+          </button>
+          <button class="btn-modal-retry" id="btn-nadimu-gameover-retry">
+            <span>↺</span> ULANG SEGMEN INI
+          </button>
+          <button class="btn-modal-retry" id="btn-nadimu-gameover-nofail" style="background:linear-gradient(135deg, #00ffaa 0%, #00aa66 100%); color:#000;">
+            <span>▶</span> LANJUTKAN SANTAI (NO-FAIL)
+          </button>
+          <button class="btn-modal-home" id="btn-nadimu-gameover-home">
+            <span>🏠</span> HOME MENU
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  _showNadimuVictoryModal(stats) {
+    try {
+      confetti({
+        particleCount: 220,
+        spread: 110,
+        origin: { y: 0.5 },
+      });
+    } catch (e) {}
+
+    const existing = document.getElementById('nadimu-victory-backdrop');
+    if (existing) existing.remove();
+
+    const gradeColorMap = {
+      'S+': '#ffd700',
+      'S': '#00f7ff',
+      'A': '#00ff88',
+      'B': '#a855f7',
+      'C': '#ff7eb3',
+    };
+    const gradeColor = gradeColorMap[stats.grade] || '#00f7ff';
+
+    // Create official competition session for leaderboard
+    const compSession = competitionLeaderboardService.createPendingSession({
+      songId: 'NADIMU',
+      songTitle: '🎵 Selalu Ada di Nadimu - OST Jumbo',
+      songBadge: '🎵 NADIMU',
+      songEmoji: '🎵',
+      totalNotes: Math.max(12, stats.perfectHits + stats.greatHits + stats.goodHits + stats.missHits),
+      perfectCount: stats.perfectHits,
+      greatCount: stats.greatHits,
+      goodCount: stats.goodHits,
+      badCount: 0,
+      missCount: stats.missHits,
+      maxCombo: stats.maxCombo,
+      scorePct: stats.accuracyPct,
+      grade: stats.grade,
+    });
+    stats.compSession = compSession;
+
+    const modal = document.createElement('div');
+    modal.className = 'komang-modal-backdrop';
+    modal.id = 'nadimu-victory-backdrop';
+    modal.innerHTML = `
+      <div class="komang-modal-dialog victory-dialog">
+        <div class="modal-confetti-badge">🎉 ${nadimuService.sessionMode === '30S_RANDOM' ? 'SESI 30 DETIK SELESAI!' : 'LAGU SELESAI!'} 🎉</div>
+        <h2 class="modal-title-victory" style="color:#00f7ff;">VICTORY CLEAR!</h2>
+        <p class="modal-subtitle-victory">
+          ${nadimuService.sessionMode === '30S_RANDOM' 
+            ? `Bagian: <strong>${nadimuService.currentSegment?.title || 'Bait 1'}</strong> ("${nadimuService.currentSegment?.lyricHint || ''}")` 
+            : 'Selalu Ada di Nadimu • OST Jumbo • Key C Major'}
+        </p>
+
+        <!-- Grade & Star Celebration Banner -->
+        <div class="victory-grade-banner">
+          <div class="victory-grade-circle" style="color:${gradeColor}; border-color:${gradeColor}; box-shadow:0 0 35px ${gradeColor}88;">
+            ${stats.grade}
+          </div>
+          <div class="victory-stars-box">
+            <div class="victory-stars-row">
+              ${'⭐'.repeat(stats.stars || 4)}
+            </div>
+            <span class="clear-pill">✨ TINGKAT: ${stats.grade === 'S' || stats.grade === 'S+' ? 'MASTER PIANIS' : 'PIANIS MAHIR'}</span>
+          </div>
+        </div>
+
+        <div class="modal-stats-grid">
+          <div class="mstat-box">
+            <span class="mstat-label">TOTAL SKOR</span>
+            <span class="mstat-val gold">${stats.score} PTS</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">AKURASI</span>
+            <span class="mstat-val cyan">${stats.accuracyPct}%</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">MAX COMBO</span>
+            <span class="mstat-val pink">x${stats.maxCombo}</span>
+          </div>
+          <div class="mstat-box">
+            <span class="mstat-label">SISA NYAWA</span>
+            <span class="mstat-val red">${'❤️'.repeat(stats.lives || nadimuService.lives || 1)}</span>
+          </div>
+        </div>
+
+        <div class="victory-breakdown-row">
+          <span class="vbreak-item perfect">PERFECT: ${stats.perfectHits}</span>
+          <span class="vbreak-item great">GREAT: ${stats.greatHits}</span>
+          <span class="vbreak-item good">GOOD: ${stats.goodHits}</span>
+          <span class="vbreak-item miss">MISS: ${stats.missHits}</span>
+        </div>
+
+        <!-- OFFICIAL COMPETITION QR CLAIM CARD -->
+        <div class="komang-qr-claim-card" style="border-color:#00f7ff;">
+          <div class="kqc-left">
+            <canvas id="nadimu-victory-qr-canvas" width="130" height="130"></canvas>
+          </div>
+          <div class="kqc-right">
+            <span class="kqc-badge" style="background:#00f7ff; color:#060a14;">🎁 KOMPETISI BERHADIAH RESMI</span>
+            <div class="kqc-title">SCAN QR UNTUK DAFTAR NAMA & HP</div>
+            <div class="kqc-score">Skor Standar: <strong>${(compSession?.score || 90000).toLocaleString()} PTS / 100k</strong></div>
+            <div class="kqc-buttons">
+              <button class="btn-kqc-manual" id="btn-nadimu-manual-claim">✏️ Input di Layar</button>
+              <button class="btn-kqc-lead" id="btn-nadimu-view-lead">🏆 Papan Peringkat</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button class="btn-modal-retry" id="btn-nadimu-random-next" style="background:linear-gradient(135deg, #00f7ff 0%, #0088ff 100%); color:#000; font-weight:900;">
+            <span>🎲</span> MAIN 30 DETIK LAIN (RANDOM)
+          </button>
+          <button class="btn-modal-retry" id="btn-nadimu-victory-retry">
+            <span>↺</span> ULANG SEGMEN INI
+          </button>
+          <button class="btn-modal-home" id="btn-nadimu-victory-home">
+            <span>🏠</span> HOME MENU
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    setTimeout(() => {
+      const qrCanvas = document.getElementById('nadimu-victory-qr-canvas');
+      if (qrCanvas && compSession?.claimUrl) {
+        qrCodeService.renderToCanvas(qrCanvas, compSession.claimUrl, {
+          size: 130,
+          padding: 8,
+          darkColor: '#0a0518',
+          lightColor: '#ffffff',
+          showEmblem: false,
+        });
+      }
+    }, 60);
+  }
 }
 
 // Global delegated click handler
@@ -1735,7 +3769,10 @@ document.addEventListener('click', (e) => {
   }
 
   // 1. Home Buttons
-  else if (e.target.closest('#btn-home-play')) {
+  else if (e.target.closest('#btn-home-tracks')) {
+    audioManager.init();
+    gameEngine.setState(GAME_STATES.TRACK_SELECT);
+  } else if (e.target.closest('#btn-home-play')) {
     audioManager.init();
     scoreManager.resetCampaign();
     const tempVideo = document.getElementById('camera-video');
@@ -1778,11 +3815,40 @@ document.addEventListener('click', (e) => {
     cameraService.requestCamera(tempVideo).catch(() => {});
     jingleBellsService.setMode('GUIDE');
     gameEngine.setState(GAME_STATES.JINGLE_BELLS);
+  } else if (e.target.closest('#btn-home-komang')) {
+    audioManager.init();
+    audioManager.resume();
+    audioManager.loadPianoSamples().catch(() => {});
+    const tempVideo = document.getElementById('camera-video');
+    cameraService.requestCamera(tempVideo).catch(() => {});
+    komangService.setMode('PLAY_ALONG');
+    gameEngine.setState(GAME_STATES.KOMANG);
+  } else if (e.target.closest('#btn-home-midi')) {
+    audioManager.init();
+    gameEngine.setState(GAME_STATES.MIDI_IMPORT);
+  } else if (e.target.closest('#btn-home-leaderboard')) {
+    audioManager.init();
+    gameEngine.setState(GAME_STATES.LEADERBOARD);
+  }
+
+  // 1b. Pause Controls & Modal Actions
+  else if (e.target.closest('#btn-hud-pause')) {
+    gameEngine.togglePause();
+  } else if (e.target.closest('#btn-pause-resume')) {
+    gameEngine.resume();
+  } else if (e.target.closest('#btn-pause-restart')) {
+    gameEngine.resume();
+    gameEngine.startRound(gameEngine.currentMode, gameEngine.currentLevel);
+  } else if (e.target.closest('#btn-pause-quit')) {
+    gameEngine.resume();
+    gameEngine.finishRound(false);
+    gameEngine.setState(GAME_STATES.HOME);
   }
 
   // 2. Navigation Back
   else if (e.target.closest('#btn-back-home')) {
     jingleBellsService.stop();
+    komangService.stop();
     gameEngine.setState(GAME_STATES.HOME);
   }
 
@@ -1831,6 +3897,40 @@ document.addEventListener('click', (e) => {
   } else if (e.target.closest('#btn-result-home')) {
     if (window.app) window.app._clearAutoAdvance();
     gameEngine.setState(GAME_STATES.HOME);
+  } else if (e.target.closest('#btn-result-leaderboard') || e.target.closest('#btn-result-open-lead')) {
+    if (window.app) window.app._clearAutoAdvance();
+    gameEngine.setState(GAME_STATES.LEADERBOARD);
+  } else if (e.target.closest('#btn-result-direct-claim') || e.target.closest('#btn-komang-manual-claim')) {
+    if (window.app) window.app._clearAutoAdvance();
+    const existing = document.getElementById('komang-victory-backdrop');
+    if (existing) existing.remove();
+    gameEngine.setState(GAME_STATES.LEADERBOARD);
+    setTimeout(() => {
+      const manModal = document.getElementById('manual-input-modal');
+      if (manModal) manModal.style.display = 'flex';
+    }, 150);
+  } else if (e.target.closest('#btn-komang-view-lead')) {
+    const existing = document.getElementById('komang-victory-backdrop');
+    if (existing) existing.remove();
+    gameEngine.setState(GAME_STATES.LEADERBOARD);
+  } else if (e.target.closest('#btn-result-share')) {
+    const summary = scoreManager.getSummary();
+    const shareBtn = document.getElementById('btn-result-share');
+    if (shareBtn) shareBtn.innerText = '⌛ MENGIRIM...';
+    onlineLeaderboardService.submitScore({
+      playerName: scoreManager.playerName || 'CYBER_PLAYER',
+      mode: summary.mode,
+      level: summary.level,
+      scorePct: summary.scorePct,
+      maxCombo: summary.maxCombo,
+      stars: summary.stars,
+      rating: summary.rating
+    }).then(res => {
+      if (shareBtn) {
+        shareBtn.innerText = res.success ? '✔ TERSIMPAN KE CLOUD!' : '💾 TERSIMPAN DI LOKAL';
+        shareBtn.disabled = true;
+      }
+    });
   } else if (e.target.closest('#btn-replay-voice')) {
     const summary = scoreManager.getSummary();
     audioManager.playRatingSFX(summary.stars);
@@ -1899,6 +3999,260 @@ document.addEventListener('click', (e) => {
     gameEngine.setState(GAME_STATES.HOME);
   }
 
+  // 9. Komang Actions & Controls
+  else if (e.target.closest('#btn-komang-play-pause')) {
+    if (komangService.isPlaying) {
+      komangService.pause();
+      if (window.app) window.app.render();
+    } else {
+      // Clean up any open victory or gameover backdrop
+      const vModal = document.getElementById('komang-victory-backdrop');
+      if (vModal) vModal.remove();
+      const gModal = document.getElementById('komang-gameover-backdrop');
+      if (gModal) gModal.remove();
+
+      // In 30s Random mode: if starting a new session or replaying after finished/game-over,
+      // AUTOMATICALLY pick a new random segment! No need to press 'Acak' beforehand!
+      const isFreshOrFinished = (
+        komangService.isFinished ||
+        komangService.isGameOver ||
+        komangService.sessionRemainingSec <= 0.2 ||
+        komangService.sessionElapsedSec === 0
+      );
+
+      if (komangService.sessionMode === '30S_RANDOM' && isFreshOrFinished) {
+        komangService.pickRandomSegment(true);
+        komangService.reset();
+        if (window.app) window.app.render();
+      } else if (isFreshOrFinished) {
+        komangService.reset();
+        if (window.app) window.app.render();
+      }
+
+      komangService.play();
+      if (window.app) window.app.render();
+    }
+  } else if (e.target.closest('#btn-komang-reset')) {
+    komangService.reset();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-mode-playalong')) {
+    komangService.setMode('PLAY_ALONG');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-mode-guide')) {
+    komangService.setMode('GUIDE');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-mode-tempo')) {
+    komangService.setMode('TEMPO');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#komang-offset-minus')) {
+    komangService.setAudioOffset(komangService.audioOffsetSec - 0.1);
+    const offsetEl = document.getElementById('komang-offset-val');
+    if (offsetEl) offsetEl.innerText = `${komangService.audioOffsetSec.toFixed(1)}s`;
+  } else if (e.target.closest('#komang-offset-plus')) {
+    komangService.setAudioOffset(komangService.audioOffsetSec + 0.1);
+    const offsetEl = document.getElementById('komang-offset-val');
+    if (offsetEl) offsetEl.innerText = `${komangService.audioOffsetSec.toFixed(1)}s`;
+  } else if (e.target.closest('#komang-offset-zero')) {
+    komangService.setAudioOffset(0.0);
+    const offsetEl = document.getElementById('komang-offset-val');
+    if (offsetEl) offsetEl.innerText = `0.0s`;
+  } else if (e.target.closest('.komang-measure-box')) {
+    const box = e.target.closest('.komang-measure-box');
+    const idx = parseInt(box.dataset.measureIdx, 10);
+    if (!isNaN(idx)) {
+      komangService.jumpToMeasure(idx);
+    }
+  } else if (e.target.closest('.komang-white-key') || e.target.closest('.komang-black-key')) {
+    const keyEl = e.target.closest('.komang-white-key') || e.target.closest('.komang-black-key');
+    const note = keyEl.dataset.note;
+    if (note) {
+      audioManager.playPianoNote(note, { duration: 1.2, noPad: true, pureAcoustic: true });
+      keyEl.classList.add('pressed');
+      setTimeout(() => keyEl.classList.remove('pressed'), 180);
+      const cur = komangService.getCurrentMeasure();
+      if (cur && cur.keys && cur.keys.includes(note)) {
+        komangService.triggerChord(komangService.currentMeasureIndex, true);
+      }
+    }
+  } else if (e.target.closest('.komang-fbtn')) {
+    const fbtn = e.target.closest('.komang-fbtn');
+    const fingers = parseInt(fbtn.dataset.fingers, 10);
+    if (!isNaN(fingers)) {
+      if (komangService.viewMode === 'TILES' && komangTilesEngine) {
+        komangTilesEngine.evaluateGesture(fingers, true);
+      } else {
+        if (window.app) window.app.triggerVirtualGesture(fingers);
+      }
+    }
+  } else if (e.target.closest('#btn-komang-random-segment') || e.target.closest('#btn-komang-random-next')) {
+    const vModal = document.getElementById('komang-victory-backdrop');
+    if (vModal) vModal.remove();
+    const gModal = document.getElementById('komang-gameover-backdrop');
+    if (gModal) gModal.remove();
+
+    komangService.pickRandomSegment(true);
+    komangService.reset();
+    komangService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-play-toggle')) {
+    if (nadimuService.isPlaying) nadimuService.pause();
+    else nadimuService.play();
+  } else if (e.target.closest('#btn-nadimu-random-segment') || e.target.closest('#btn-nadimu-random-next')) {
+    const vModal = document.getElementById('nadimu-victory-backdrop');
+    if (vModal) vModal.remove();
+    const gModal = document.getElementById('nadimu-gameover-backdrop');
+    if (gModal) gModal.remove();
+
+    nadimuService.pickRandomSegment(true);
+    nadimuService.stop();
+    nadimuService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-reset')) {
+    nadimuService.stop();
+    nadimuService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-mode-30s')) {
+    nadimuService.setSessionMode('30S_RANDOM');
+    nadimuService.stop();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-mode-full')) {
+    nadimuService.setSessionMode('FULL_SONG');
+    nadimuService.stop();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-view-tiles')) {
+    nadimuService.viewMode = 'TILES';
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-view-sheet')) {
+    nadimuService.viewMode = 'SHEET';
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-nofail-toggle')) {
+    nadimuService.setNoFail(!nadimuService.isNoFail);
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-gameover-retry') || e.target.closest('#btn-nadimu-victory-retry')) {
+    const vModal = document.getElementById('nadimu-victory-backdrop');
+    if (vModal) vModal.remove();
+    const gModal = document.getElementById('nadimu-gameover-backdrop');
+    if (gModal) gModal.remove();
+
+    nadimuService.stop();
+    nadimuService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-gameover-nofail')) {
+    const gModal = document.getElementById('nadimu-gameover-backdrop');
+    if (gModal) gModal.remove();
+
+    nadimuService.setNoFail(true);
+    nadimuService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-gameover-home') || e.target.closest('#btn-nadimu-victory-home')) {
+    const vModal = document.getElementById('nadimu-victory-backdrop');
+    if (vModal) vModal.remove();
+    const gModal = document.getElementById('nadimu-gameover-backdrop');
+    if (gModal) gModal.remove();
+
+    nadimuService.stop();
+    gameEngine.setState(GAME_STATES.HOME);
+  } else if (e.target.closest('#btn-nadimu-view-lead')) {
+    const vModal = document.getElementById('nadimu-victory-backdrop');
+    if (vModal) vModal.remove();
+    nadimuService.stop();
+    gameEngine.setState(GAME_STATES.LEADERBOARD);
+  } else if (e.target.closest('#btn-nadimu-manual-claim')) {
+    const vModal = document.getElementById('nadimu-victory-backdrop');
+    if (vModal) vModal.remove();
+    nadimuService.stop();
+    gameEngine.setState(GAME_STATES.LEADERBOARD);
+    setTimeout(() => {
+      const openManBtn = document.getElementById('btn-open-manual-input');
+      if (openManBtn) openManBtn.click();
+    }, 150);
+  } else if (e.target.closest('.komang-fbtn[data-song="nadimu"]')) {
+    const fbtn = e.target.closest('.komang-fbtn[data-song="nadimu"]');
+    const fingers = parseInt(fbtn.dataset.fingers, 10);
+    if (!isNaN(fingers)) {
+      nadimuTilesEngine.evaluateGesture(fingers, true);
+    }
+  } else if (e.target.closest('#btn-komang-mode-30s')) {
+    komangService.setSessionMode('30S_RANDOM');
+    komangService.reset();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-mode-full')) {
+    komangService.setSessionMode('FULL_SONG');
+    komangService.reset();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-replay') || e.target.closest('#btn-komang-victory-retry')) {
+    const modal = document.getElementById('komang-complete-modal') || document.getElementById('komang-victory-backdrop');
+    if (modal) modal.remove();
+    komangService.reset();
+    komangService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-home') || e.target.closest('#btn-komang-victory-home') || e.target.closest('#btn-komang-gameover-home')) {
+    const modal = document.getElementById('komang-complete-modal') || document.getElementById('komang-victory-backdrop') || document.getElementById('komang-gameover-backdrop');
+    if (modal) modal.remove();
+    komangService.stop();
+    gameEngine.setState(GAME_STATES.HOME);
+  } else if (e.target.closest('#btn-komang-gameover-retry')) {
+    const modal = document.getElementById('komang-gameover-backdrop');
+    if (modal) modal.remove();
+    komangService.reset();
+    komangService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-gameover-nofail')) {
+    const modal = document.getElementById('komang-gameover-backdrop');
+    if (modal) modal.remove();
+    komangService.setNoFail(true);
+    komangService.play();
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-nofail-toggle')) {
+    komangService.setNoFail(!komangService.isNoFail);
+    if (window.app) window.app.render();
+  } else if (e.target.closest('.speed-chip')) {
+    const chip = e.target.closest('.speed-chip');
+    const speed = parseFloat(chip.dataset.speed) || 1.0;
+    komangService.setSpeed(speed);
+    document.querySelectorAll('.speed-chip').forEach(c => c.classList.toggle('active', c === chip));
+  } else if (e.target.closest('#komang-progress-bar')) {
+    const bar = e.target.closest('#komang-progress-bar');
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    if (komangService.audioEl && komangService.audioEl.duration) {
+      const targetSec = ratio * komangService.audioEl.duration;
+      komangService.seek(targetSec);
+      if (komangTilesEngine) {
+        komangTilesEngine.tiles.forEach(t => {
+          if (t.timeSec >= targetSec - 0.2) {
+            t.status = 'PENDING';
+            t.hitRating = null;
+          }
+        });
+      }
+    }
+  } else if (e.target.closest('#btn-toggle-piano-height')) {
+    const newLabel = komangTilesEngine.cycleKeyHeightMode();
+    const labelEl = document.getElementById('label-piano-height');
+    if (labelEl) labelEl.innerText = newLabel;
+  } else if (e.target.closest('#btn-komang-view-tiles')) {
+    komangService.setViewMode('TILES');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-view-sheet')) {
+    komangService.setViewMode('SHEET');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-komang-fullscreen-tv')) {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      if (window.app) {
+        window.app.isFullscreen = true;
+        settingsManager.update('viewportMode', 'fullscreen');
+        window.app.render();
+      }
+    } else {
+      document.exitFullscreen().catch(() => {});
+      if (window.app) window.app.render();
+    }
+  } else if (e.target.closest('#btn-show-phone-qr') || e.target.closest('#btn-home-show-qr')) {
+    if (window.app) window.app._showPhoneQrModal();
+  }
+
   // 8. Settings change inputs
   const target = e.target;
   if (target.id === 'set-master-vol') {
@@ -1921,6 +4275,14 @@ document.addEventListener('click', (e) => {
   } else if (target.id === 'set-virtual') {
     settingsManager.update('showVirtualControls', target.checked);
     window.app.render();
+  } else if (target.id === 'set-eco-mode') {
+    settingsManager.update('ecoMode', target.checked);
+    if (typeof audioManager?.setEcoMode === 'function') audioManager.setEcoMode(target.checked);
+    if (typeof virtualBackgroundService?.setEcoMode === 'function') virtualBackgroundService.setEcoMode(target.checked);
+    if (window.app?.particleSystem?.setEcoMode) window.app.particleSystem.setEcoMode(target.checked);
+    if (komangTilesEngine?.setEcoMode) komangTilesEngine.setEcoMode(target.checked);
+  } else if (target.id === 'set-rest-reminder') {
+    settingsManager.update('restReminderEnabled', target.checked);
   } else if (target.id === 'synth-preset-select') {
     settingsManager.update('soundPreset', target.value);
   }
@@ -1937,6 +4299,66 @@ document.addEventListener('input', (e) => {
     settingsManager.update('padVolume', parseFloat(target.value));
   } else if (target.id === 'set-reverb-vol') {
     settingsManager.update('reverbAmount', parseFloat(target.value));
+  } else if (target.id === 'komang-vol-backing') {
+    komangService.setVolumes(parseFloat(target.value), komangService.playerVolume);
+  } else if (target.id === 'komang-vol-player') {
+    komangService.setVolumes(komangService.backingVolume, parseFloat(target.value));
+  } else if (target.id === 'set-player-name') {
+    scoreManager.playerName = target.value.trim() || 'CYBER_PLAYER';
+    scoreManager.save();
+  } else if (target.id === 'set-cloud-endpoint') {
+    onlineLeaderboardService.setEndpoint(target.value.trim());
+  }
+});
+
+// File upload listener for custom Komang MP3 & settings change commits
+document.addEventListener('change', (e) => {
+  const target = e.target;
+  if (target.id === 'set-player-name') {
+    scoreManager.playerName = target.value.trim() || 'CYBER_PLAYER';
+    scoreManager.save();
+  } else if (target.id === 'set-cloud-endpoint') {
+    onlineLeaderboardService.setEndpoint(target.value.trim());
+  } else if (target.id === 'komang-file-input' && target.files && target.files[0]) {
+    const file = target.files[0];
+    const url = URL.createObjectURL(file);
+    komangService.setAudioSource(url, 0.0);
+    const nameEl = document.getElementById('komang-track-name');
+    if (nameEl) nameEl.innerText = file.name;
+    if (window.app) window.app.render();
+  }
+});
+
+// Keyboard controls for Piano Tiles lanes and Play/Pause
+document.addEventListener('keydown', (e) => {
+  const isKomang = gameEngine.currentState === GAME_STATES.KOMANG;
+  const isNadimu = gameEngine.currentState === GAME_STATES.NADIMU;
+  if (!isKomang && !isNadimu) return;
+  if (['input', 'textarea'].includes(document.activeElement?.tagName?.toLowerCase())) return;
+
+  const tilesEngine = isKomang ? komangTilesEngine : nadimuTilesEngine;
+  const songService = isKomang ? komangService : nadimuService;
+
+  const key = e.key.toLowerCase();
+  if (key === '1' || key === 'd') {
+    e.preventDefault();
+    tilesEngine.triggerLaneAction(0, true);
+  } else if (key === '2' || key === 'f') {
+    e.preventDefault();
+    tilesEngine.triggerLaneAction(1, true);
+  } else if (key === '3' || key === 'j') {
+    e.preventDefault();
+    tilesEngine.triggerLaneAction(2, true);
+  } else if (key === '4' || key === 'k') {
+    e.preventDefault();
+    tilesEngine.triggerLaneAction(3, true);
+  } else if (key === '5' || key === 'l') {
+    e.preventDefault();
+    tilesEngine.evaluateGesture(5, true);
+  } else if (key === ' ') {
+    e.preventDefault();
+    if (songService.isPlaying) songService.pause();
+    else songService.play();
   }
 });
 

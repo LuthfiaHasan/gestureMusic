@@ -30,6 +30,7 @@ class AudioManager {
       reverb: 0.4,
     };
 
+    this.isEcoMode = false;
     this.lastAudioTriggerMs = 0;
     this.initialized = false;
 
@@ -198,12 +199,13 @@ class AudioManager {
     const newVoices = [];
 
     // ADSR settings based on preset
-    const adsr = this._getPresetADSR();
+    const preset = options.preset || this.currentPreset;
+    const adsr = this._getPresetADSR(preset);
 
     const isSamplePreset = (
-      (this.currentPreset === 'Acoustic Piano' && this.instrumentsLoaded.piano) ||
-      (this.currentPreset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) ||
-      (this.currentPreset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar)
+      (preset === 'Acoustic Piano' && this.instrumentsLoaded.piano) ||
+      (preset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) ||
+      (preset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar)
     );
 
     chordData.frequencies.forEach((freq, idx) => {
@@ -211,18 +213,20 @@ class AudioManager {
       const panOffset = ((idx / (chordData.frequencies.length - 1 || 1)) - 0.5) * 0.6;
       const midi = (chordData.midis && chordData.midis[idx]) || 60;
 
-      // Natural acoustic strum timing cascade for guitar presets (~16ms between strings)
-      const isGuitar = (this.currentPreset === 'Acoustic Guitar' || this.currentPreset === 'Nylon Guitar');
-      const noteStartTime = isGuitar ? (now + idx * 0.016) : now;
+      // Natural acoustic strum timing / gentle human rolled chord cascade
+      const isGuitar = (preset === 'Acoustic Guitar' || preset === 'Nylon Guitar');
+      const rollDelay = options.rollChord ? 0.022 : (isGuitar ? 0.016 : 0);
+      const noteStartTime = now + idx * rollDelay;
 
       // 1. Primary Instrument Voice Layer: Sampled Real Instrument or Soft Synth
-      if (this.currentPreset === 'Acoustic Piano' && this.instrumentsLoaded.piano) {
-        const pianoVoice = this._createSamplePianoVoice(midi, freq, noteStartTime, panOffset, holdDuration);
+      if (preset === 'Acoustic Piano' && this.instrumentsLoaded.piano) {
+        const pianoGain = options.gainScale || (options.pureAcoustic ? 0.38 : 0.45);
+        const pianoVoice = this._createSamplePianoVoice(midi, freq, noteStartTime, panOffset, holdDuration, pianoGain);
         newVoices.push(pianoVoice);
-      } else if (this.currentPreset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) {
+      } else if (preset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) {
         const guitarVoice = this._createSampleAcousticGuitarVoice(midi, freq, noteStartTime, panOffset, holdDuration);
         newVoices.push(guitarVoice);
-      } else if (this.currentPreset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar) {
+      } else if (preset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar) {
         const guitarVoice = this._createSampleNylonGuitarVoice(midi, freq, noteStartTime, panOffset, holdDuration);
         newVoices.push(guitarVoice);
       } else {
@@ -230,18 +234,24 @@ class AudioManager {
         newVoices.push(pianoVoice);
       }
 
-      // 2. Pad Layer (adds atmospheric warmth for synth and piano presets)
-      if (!isSamplePreset) {
-        const padVoice = this._createPadVoice(freq, now, adsr, panOffset, holdDuration);
-        newVoices.push(padVoice);
-      } else if (this.currentPreset === 'Acoustic Piano') {
-        // Subtle natural hall acoustic pad for real piano preset
-        const padVoice = this._createPadVoice(freq, now, { ...adsr, sustain: 0.25, release: 0.9 }, panOffset, holdDuration);
-        newVoices.push(padVoice);
+      // 2. Pad Layer (only when NOT pureAcoustic / noPad / ecoMode)
+      const shouldPlayPad = !options.noPad && !options.pureAcoustic && !this.isEcoMode;
+      if (shouldPlayPad) {
+        if (!isSamplePreset) {
+          const padVoice = this._createPadVoice(freq, now, adsr, panOffset, holdDuration);
+          newVoices.push(padVoice);
+        } else if (preset === 'Acoustic Piano') {
+          // Subtle natural hall acoustic pad for real piano preset
+          const padVoice = this._createPadVoice(freq, now, { ...adsr, sustain: 0.18, release: 0.8 }, panOffset, holdDuration);
+          newVoices.push(padVoice);
+        }
       }
     });
 
+    const voiceEndTime = now + holdDuration + 0.8;
+    newVoices.forEach(v => { if (v) v.endTime = voiceEndTime; });
     this.activeVoices = newVoices;
+    this._pruneActiveVoices();
     this.lastAudioTriggerMs = +(performance.now() - tAudioStart).toFixed(2);
     return chordData;
   }
@@ -281,12 +291,142 @@ class AudioManager {
       voice = this._createPianoVoice(freq, now, adsr, panOffset, holdDuration);
     }
 
-    // Warm atmospheric pad overtone layer
-    const padVoice = this._createPadVoice(freq, now, { ...adsr, sustain: 0.2, release: 0.8 }, panOffset, holdDuration * 0.75);
+    this.activeVoices.push(voice);
+    if (!options.noPad && !options.pureAcoustic) {
+      // Warm atmospheric pad overtone layer
+      const padVoice = this._createPadVoice(freq, now, { ...adsr, sustain: 0.18, release: 0.8 }, panOffset, holdDuration * 0.75);
+      this.activeVoices.push(padVoice);
+    }
 
-    this.activeVoices.push(voice, padVoice);
     this.lastAudioTriggerMs = +(performance.now() - tAudioStart).toFixed(2);
     return { midi, freq, note: noteName };
+  }
+
+  /**
+   * Play crystal-clear, singing Steinway Grand Piano melody note(s) for Komang.
+   * Carefully voiced in sweet singing registers (Octave 4-6) to harmonize perfectly
+   * with Andre Panggabean's backing track without distortion, boomy bass, or clipping.
+   */
+  playKomangMelodyNote(noteOrNotes, options = {}) {
+    const tAudioStart = performance.now();
+    if (!this.initialized) this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    if (!this.ctx) return null;
+
+    const rawNotes = Array.isArray(noteOrNotes) ? noteOrNotes : [noteOrNotes];
+    const notes = rawNotes.filter(n => Boolean(n));
+    if (notes.length === 0) return null;
+
+    const now = this.ctx.currentTime;
+    const duration = options.duration || 1.4;
+    const isPerfect = !!options.isPerfect;
+    const baseGain = options.gainScale || (isPerfect ? 0.40 : 0.35);
+
+    // Subtle stereo pan by lane (Lane 0: -0.18, Lane 1: -0.06, Lane 2: +0.06, Lane 3: +0.18)
+    let pan = options.pan;
+    if (pan === undefined && options.lane !== undefined) {
+      pan = (options.lane - 1.5) * 0.12;
+    }
+    if (pan === undefined) pan = 0;
+
+    // Gracefully trim excessive ringing voices to keep WebAudio clean and pristine
+    if (this.activeVoices.length > 14) {
+      this.stopPreviousVoices(now, 0.18);
+    }
+
+    notes.forEach((item, idx) => {
+      let midi = 67; // G4 default
+      let freq = 392.0;
+      let cleanNote = 'G4';
+
+      if (typeof item === 'number') {
+        midi = item;
+        freq = midiToFreq(midi);
+      } else if (typeof item === 'string') {
+        cleanNote = item.trim();
+        const m = cleanNote.match(/^([A-G][#b]?)(-?\d+)?$/);
+        if (m) {
+          let oct = m[2] !== undefined ? parseInt(m[2], 10) : 4;
+          // Protect against low muddy notes that clash with the backing track bass
+          if (oct < 4) oct = 4;
+          cleanNote = `${m[1]}${oct}`;
+        }
+        midi = noteToMidi(cleanNote);
+        freq = midiToFreq(midi);
+      }
+
+      // Micro human strum cascade (0.018s roll per note for chords)
+      const noteTime = now + idx * 0.018;
+      // Power scaling for multi-note chords so total volume remains balanced
+      const noteGain = baseGain / Math.sqrt(Math.max(1, notes.length));
+
+      let voice;
+      if (this.instrumentsLoaded.piano) {
+        voice = this._createSamplePianoVoice(midi, freq, noteTime, pan + (idx * 0.03), duration, noteGain);
+      } else {
+        const adsr = { attack: 0.01, decay: 0.32, sustain: 0.28, release: 0.85, filterFreq: 3400 };
+        voice = this._createPianoVoice(freq, noteTime, adsr, pan, duration);
+        if (voice && voice.gain) {
+          voice.gain.gain.setValueAtTime(noteGain, noteTime);
+        }
+      }
+
+      if (voice) {
+        this.activeVoices.push(voice);
+      }
+    });
+
+    // On PERFECT hit: add a crystalline, subtle overtone bell sparkle
+    if (isPerfect) {
+      this._playPerfectSparkle(now + 0.01, pan);
+    }
+
+    this.lastAudioTriggerMs = +(performance.now() - tAudioStart).toFixed(2);
+    return { notes, count: notes.length };
+  }
+
+  /**
+   * Crystalline bell chime for PERFECT rhythm hits
+   */
+  _playPerfectSparkle(startTime, pan = 0) {
+    if (!this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2093, startTime); // C7 bell chime
+      osc.frequency.exponentialRampToValueAtTime(3136, startTime + 0.14); // G7 sparkle
+
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2600, startTime);
+      filter.Q.setValueAtTime(4.0, startTime);
+
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.linearRampToValueAtTime(0.032, startTime + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.26);
+
+      let panner = null;
+      if (this.ctx.createStereoPanner) {
+        panner = this.ctx.createStereoPanner();
+        panner.pan.setValueAtTime(pan, startTime);
+      }
+
+      osc.connect(filter);
+      filter.connect(gain);
+      if (panner) {
+        gain.connect(panner);
+        panner.connect(this.sfxGain);
+      } else {
+        gain.connect(this.sfxGain);
+      }
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.28);
+    } catch (e) {}
   }
 
   /**
@@ -634,8 +774,8 @@ class AudioManager {
     };
   }
 
-  _createSamplePianoVoice(midi, freq, startTime, pan = 0, holdDuration = 1.6) {
-    return this._createSampledVoice(this.instrumentBuffers.piano, midi, freq, startTime, pan, holdDuration, 0.9, 0.9);
+  _createSamplePianoVoice(midi, freq, startTime, pan = 0, holdDuration = 1.6, gainScale = 0.42) {
+    return this._createSampledVoice(this.instrumentBuffers.piano, midi, freq, startTime, pan, holdDuration, 0.85, gainScale);
   }
 
   _createSampleAcousticGuitarVoice(midi, freq, startTime, pan = 0, holdDuration = 1.6) {
@@ -741,15 +881,63 @@ class AudioManager {
   }
 
   /**
+   * Prune expired voices and cap polyphony to prevent memory leaks
+   */
+  _pruneActiveVoices() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    this.activeVoices = this.activeVoices.filter(v => {
+      if (!v) return false;
+      if (v.isStopped) return false;
+      if (v.endTime && now > v.endTime + 0.3) return false;
+      return true;
+    });
+
+    // If polyphony exceeds safe cap (24 voices), gracefully release oldest
+    if (this.activeVoices.length > 24) {
+      const overflow = this.activeVoices.length - 24;
+      for (let i = 0; i < overflow; i++) {
+        const oldVoice = this.activeVoices.shift();
+        if (oldVoice && oldVoice.stop) {
+          try { oldVoice.stop(now, 0.08); } catch (e) {}
+        }
+      }
+    }
+  }
+
+  /**
+   * Toggle Eco Mode for low-spec audio processing
+   */
+  setEcoMode(enabled) {
+    this.isEcoMode = !!enabled;
+    if (this.reverbGain && this.ctx) {
+      // In Eco Mode, turn off convolution reverb pass to save significant CPU cycles
+      this.reverbGain.gain.setValueAtTime(this.isEcoMode ? 0.0001 : this.volumes.reverb, this.ctx.currentTime);
+    }
+  }
+
+  /**
    * Stop previous voices smoothly
    */
-  stopPreviousVoices(time = (this.ctx ? this.ctx.currentTime : 0), fade = 0.3) {
+  stopPreviousVoices(time = (this.ctx ? this.ctx.currentTime : 0), fade = 0.2) {
     if (!this.ctx) return;
     const t = time || this.ctx.currentTime;
     this.activeVoices.forEach(v => {
-      if (v && v.stop) v.stop(t, fade);
+      if (v && v.stop) {
+        try { v.stop(t, fade); } catch (e) {}
+      }
     });
     this.activeVoices = [];
+  }
+
+  /**
+   * Complete stop of all audio output and speech synthesis
+   */
+  stopAll() {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+    this.stopPreviousVoices(0, 0.08);
   }
 
   /**
@@ -861,6 +1049,38 @@ class AudioManager {
 
     osc.start(now);
     osc.stop(now + 0.3);
+  }
+
+  /**
+   * SFX: Dramatic Game Over / Record Brake
+   */
+  playGameOverSound() {
+    if (!this.initialized) this.init();
+    this.resume();
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const filter = this.ctx.createBiquadFilter();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(35, now + 0.65); // pitch drop
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(700, now);
+    filter.frequency.exponentialRampToValueAtTime(100, now + 0.65);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.24, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(now);
+    osc.stop(now + 0.75);
   }
 
   /**
