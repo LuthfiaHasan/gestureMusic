@@ -2,7 +2,6 @@
 // Features: Downscaled processing canvas, Newest-Frame-Priority (drop stale frames), GPU acceleration, zero queue lag.
 
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
-import { virtualBackgroundService } from './VirtualBackgroundService.js';
 
 export class HandTrackingService {
   constructor() {
@@ -58,36 +57,40 @@ export class HandTrackingService {
         );
       }
 
-      // 2. Load model task asset
-      let modelPath = '/models/hand_landmarker.task';
-      try {
-        const testRes = await fetch(modelPath, { method: 'HEAD' });
-        if (!testRes.ok) throw new Error('Local task model not found');
-      } catch (err) {
-        modelPath = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-      }
+      // 2. Load model task asset directly from local public directory
+      const modelPath = '/models/hand_landmarker.task';
 
-      // 3. Initialize with GPU delegate and real-time video parameters
-      this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: modelPath,
-          delegate: 'GPU',
-        },
-        runningMode: 'VIDEO',
-        numHands: 2,
-        minHandDetectionConfidence: 0.65, // Reject non-hand artifacts & clothes patterns
-        minHandPresenceConfidence: 0.65,  // Strict hand presence
-        minTrackingConfidence: 0.60,      // Robust landmark tracking
-      });
+      // 3. Initialize with GPU delegate, fallback to CPU if GPU unsupported
+      try {
+        this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: modelPath,
+            delegate: 'GPU',
+          },
+          runningMode: 'VIDEO',
+          numHands: 2,
+          minHandDetectionConfidence: 0.45,
+          minHandPresenceConfidence: 0.45,
+          minTrackingConfidence: 0.45,
+        });
+        console.log('HandLandmarker loaded with GPU delegate');
+      } catch (gpuErr) {
+        console.warn('GPU delegate note, falling back to CPU:', gpuErr);
+        this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: modelPath,
+          },
+          runningMode: 'VIDEO',
+          numHands: 2,
+          minHandDetectionConfidence: 0.45,
+          minHandPresenceConfidence: 0.45,
+          minTrackingConfidence: 0.45,
+        });
+        console.log('HandLandmarker loaded with CPU mode');
+      }
 
       this.isModelLoaded = true;
       this.isLoading = false;
-      console.log('HandLandmarker loaded with GPU delegate & fast pipeline');
-
-      // Initialize Zoom-style Virtual Background with the same vision instance
-      virtualBackgroundService.loadModel(vision).catch((e) => {
-        console.warn('VirtualBackground load note:', e);
-      });
     } catch (err) {
       this.isLoading = false;
       console.error('Failed to load HandLandmarker model:', err);
@@ -156,8 +159,10 @@ export class HandTrackingService {
           if (this.onResultsCallback) {
             this.onResultsCallback({
               landmarks: results.landmarks || [],
+              multiHandLandmarks: results.landmarks || [],
               worldLandmarks: results.worldLandmarks || [],
               handedness: results.handednesses || [],
+              multiHandedness: results.handednesses || [],
               fps: this.fps,
               inferenceMs: this.lastInferenceMs,
               timestamp: startTime,
@@ -189,114 +194,176 @@ export class HandTrackingService {
   /**
    * Renders futuristic neon cyberpunk hand skeleton onto overlay canvas
    */
-  drawLandmarks(ctx, width, height, landmarksList, handednessList, isMirrored = true, activeFingersPerHand = []) {
+  /**
+   * Renders high-visibility futuristic neon cyberpunk hand skeleton onto overlay canvas
+   */
+  drawLandmarks(ctx, width, height, landmarksList, handednessList, isMirrored = true, currentTarget = null, videoElement = null) {
     ctx.clearRect(0, 0, width, height);
 
     if (!landmarksList || landmarksList.length === 0) return;
 
-    // Landmark connections
+    // Calculate exact object-fit: cover projection to align landmarks precisely over webcam video
+    let renderW = width;
+    let renderH = height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (videoElement && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+      const vw = videoElement.videoWidth;
+      const vh = videoElement.videoHeight;
+      const scale = Math.max(width / vw, height / vh);
+      renderW = vw * scale;
+      renderH = vh * scale;
+      offsetX = (width - renderW) / 2;
+      offsetY = (height - renderH) / 2;
+    }
+
+    const toScreenX = (normX) => {
+      const px = isMirrored ? (1 - normX) : normX;
+      return offsetX + px * renderW;
+    };
+    const toScreenY = (normY) => {
+      return offsetY + normY * renderH;
+    };
+
+    // Bone connections
     const FINGER_CONNECTIONS = [
-      // Thumb
-      [0, 1], [1, 2], [2, 3], [3, 4],
-      // Index
-      [0, 5], [5, 6], [6, 7], [7, 8],
-      // Middle
-      [0, 9], [9, 10], [10, 11], [11, 12],
-      // Ring
-      [0, 13], [13, 14], [14, 15], [15, 16],
-      // Pinky
-      [0, 17], [17, 18], [18, 19], [19, 20],
-      // Palm cross connections
-      [5, 9], [9, 13], [13, 17], [0, 17]
+      [0, 1], [1, 2], [2, 3], [3, 4],       // Thumb
+      [0, 5], [5, 6], [6, 7], [7, 8],       // Index
+      [0, 9], [9, 10], [10, 11], [11, 12],   // Middle
+      [0, 13], [13, 14], [14, 15], [15, 16], // Ring
+      [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+      [5, 9], [9, 13], [13, 17], [0, 17], [2, 5] // Palm
     ];
 
-    const FINGERTIP_INDICES = [4, 8, 12, 16, 20];
+    const targetCount = currentTarget ? currentTarget.fingerCount : 1;
+    const targetLabel = currentTarget ? `${currentTarget.name} (${targetCount} JARI)` : 'JARI TELUNJUK (1 JARI)';
 
     landmarksList.forEach((landmarks, handIdx) => {
-      const handLabel = handednessList[handIdx]?.[0]?.categoryName || (handIdx === 0 ? 'Left' : 'Right');
-      const isLeft = handLabel.toLowerCase() === 'left';
-      
-      // Cyber colors: Left Hand = Cyan / Electric Blue, Right Hand = Magenta / Hot Pink
-      const primaryColor = isLeft ? '#00f7ff' : '#ff007f';
-      const secondaryColor = isLeft ? '#0077ff' : '#c000ff';
-      const glowColor = isLeft ? 'rgba(0, 247, 255, 0.45)' : 'rgba(255, 0, 127, 0.45)';
-
-      const activeFingers = activeFingersPerHand[handIdx] || [false, false, false, false, false];
-
-      // Draw skeleton lines (100% GPU accelerated vector, zero CPU blur)
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = primaryColor;
+      // 1. Draw glowing connecting bones (clean cyber mint/green lines)
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(0, 255, 170, 0.45)';
+      ctx.shadowColor = '#00ffaa';
+      ctx.shadowBlur = 8;
 
       FINGER_CONNECTIONS.forEach(([startIdx, endIdx]) => {
         const p1 = landmarks[startIdx];
         const p2 = landmarks[endIdx];
-
-        const x1 = isMirrored ? (1 - p1.x) * width : p1.x * width;
-        const y1 = p1.y * height;
-        const x2 = isMirrored ? (1 - p2.x) * width : p2.x * width;
-        const y2 = p2.y * height;
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      });
-
-      // Draw joints
-      landmarks.forEach((p, idx) => {
-        const x = isMirrored ? (1 - p.x) * width : p.x * width;
-        const y = p.y * height;
-
-        const isTip = FINGERTIP_INDICES.includes(idx);
-        const fingerTipIdx = FINGERTIP_INDICES.indexOf(idx);
-        const isActiveTip = isTip && activeFingers[fingerTipIdx];
-
-        ctx.beginPath();
-        if (isActiveTip) {
-          // Large glowing beacon for active finger!
-          ctx.arc(x, y, 16, 0, 2 * Math.PI);
-          ctx.fillStyle = glowColor;
-          ctx.fill();
-
+        if (p1 && p2) {
           ctx.beginPath();
-          ctx.arc(x, y, 9, 0, 2 * Math.PI);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-
-          // Outer halo ring
-          ctx.beginPath();
-          ctx.arc(x, y, 16, 0, 2 * Math.PI);
-          ctx.strokeStyle = primaryColor;
-          ctx.lineWidth = 2;
+          ctx.moveTo(toScreenX(p1.x), toScreenY(p1.y));
+          ctx.lineTo(toScreenX(p2.x), toScreenY(p2.y));
           ctx.stroke();
-        } else if (isTip) {
-          ctx.arc(x, y, 6, 0, 2 * Math.PI);
-          ctx.fillStyle = secondaryColor;
-          ctx.fill();
-        } else {
-          ctx.arc(x, y, 4, 0, 2 * Math.PI);
-          ctx.fillStyle = primaryColor;
-          ctx.fill();
         }
       });
-
-      // Draw Hand Center Label Tag
-      const wrist = landmarks[0];
-      const wx = isMirrored ? (1 - wrist.x) * width : wrist.x * width;
-      const wy = Math.min(height - 20, wrist.y * height + 24);
-
-      ctx.save();
-      ctx.fillStyle = glowColor;
-      ctx.fillRect(wx - 36, wy - 14, 72, 22);
-      ctx.strokeStyle = primaryColor;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(wx - 36, wy - 14, 72, 22);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 11px Outfit, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${handLabel.toUpperCase()} HAND`, wx, wy + 2);
       ctx.restore();
+
+      // 2. Draw clean green landmark dots on each knuckle/joint
+      ctx.save();
+      landmarks.forEach((p, idx) => {
+        const x = toScreenX(p.x);
+        const y = toScreenY(p.y);
+
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#00ff88';
+        ctx.shadowColor = '#00ff88';
+        ctx.shadowBlur = 4;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x, y, 3.8, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      // 3. Draw Target Reticle on the Active Primary Fingertip (Index landmark 8, or middle if 2 fingers)
+      const primaryTip = landmarks[8] || landmarks[4];
+      if (primaryTip && handIdx === 0) {
+        const rx = toScreenX(primaryTip.x);
+        const ry = toScreenY(primaryTip.y);
+
+        ctx.save();
+        // Inner glowing circle
+        ctx.beginPath();
+        ctx.arc(rx, ry, 12, 0, Math.PI * 2);
+        ctx.strokeStyle = '#00f7ff';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#00f7ff';
+        ctx.shadowBlur = 16;
+        ctx.stroke();
+
+        // Outer pulsing ring
+        ctx.beginPath();
+        ctx.arc(rx, ry, 20, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 247, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Center white core
+        ctx.beginPath();
+        ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#00f7ff';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+
+        // 4. Draw angled leader line and HUD Pill Badge as shown in mockup
+        const lineStartX = rx + 20;
+        const lineStartY = ry;
+        const lineMidX = Math.min(width - 150, rx + 45);
+        const lineMidY = Math.max(30, ry - 14);
+        const lineEndX = lineMidX + 30;
+
+        ctx.beginPath();
+        ctx.moveTo(lineStartX, lineStartY);
+        ctx.lineTo(lineMidX, lineMidY);
+        ctx.lineTo(lineEndX, lineMidY);
+        ctx.strokeStyle = '#00f7ff';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#00f7ff';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+
+        // Pill HUD Badge
+        ctx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+        const txt = targetLabel;
+        const txtWidth = ctx.measureText(txt).width;
+        const padX = 12;
+        const badgeW = txtWidth + padX * 2;
+        const badgeH = 26;
+        const badgeX = Math.min(width - badgeW - 8, lineEndX + 4);
+        const badgeY = lineMidY - badgeH / 2;
+
+        ctx.fillStyle = 'rgba(6, 16, 36, 0.9)';
+        ctx.strokeStyle = '#00f7ff';
+        ctx.lineWidth = 1.6;
+        ctx.shadowColor = 'rgba(0, 247, 255, 0.6)';
+        ctx.shadowBlur = 14;
+
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 13);
+        } else {
+          ctx.rect(badgeX, badgeY, badgeW, badgeH);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = '#00f7ff';
+        ctx.fillText(txt, badgeX + padX, lineMidY);
+
+        ctx.restore();
+      }
     });
   }
 }

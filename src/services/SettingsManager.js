@@ -16,12 +16,8 @@ export class SettingsManager {
       viewportMode: 'mobile-frame', // 'mobile-frame' or 'fullscreen'
       showVirtualControls: true, // allows on-screen fallback buttons
       stabilityDurationMs: 250,
-      ecoMode: false, // Low Performance / Eco Mode for smooth FPS on lower-tier hardware
-      restReminderEnabled: true, // Remind players to rest wrists/arms during long play sessions
-      restReminderIntervalMins: 15, // Interval in minutes
     };
 
-    this.onSettingsChanged = null;
     this.settings = { ...this.defaults };
     this.load();
   }
@@ -54,11 +50,6 @@ export class SettingsManager {
     audioManager.setSFXVolume(this.settings.sfxVolume);
     audioManager.setReverbAmount(this.settings.reverbAmount);
     audioManager.setPreset(this.settings.soundPreset);
-    audioManager.setEcoMode(this.settings.ecoMode);
-
-    if (this.onSettingsChanged) {
-      this.onSettingsChanged(this.settings);
-    }
   }
 
   triggerHaptic(type = 'good') {
