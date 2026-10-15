@@ -223,11 +223,9 @@ export class HandTrackingService {
 
       const activeFingers = activeFingersPerHand[handIdx] || [false, false, false, false, false];
 
-      // Draw skeleton lines
+      // Draw skeleton lines (100% GPU accelerated vector, zero CPU blur)
       ctx.lineWidth = 3;
       ctx.strokeStyle = primaryColor;
-      ctx.shadowColor = primaryColor;
-      ctx.shadowBlur = 10;
 
       FINGER_CONNECTIONS.forEach(([startIdx, endIdx]) => {
         const p1 = landmarks[startIdx];
@@ -256,27 +254,28 @@ export class HandTrackingService {
         ctx.beginPath();
         if (isActiveTip) {
           // Large glowing beacon for active finger!
+          ctx.arc(x, y, 16, 0, 2 * Math.PI);
+          ctx.fillStyle = glowColor;
+          ctx.fill();
+
+          ctx.beginPath();
           ctx.arc(x, y, 9, 0, 2 * Math.PI);
           ctx.fillStyle = '#ffffff';
-          ctx.shadowColor = primaryColor;
-          ctx.shadowBlur = 20;
           ctx.fill();
 
           // Outer halo ring
           ctx.beginPath();
-          ctx.arc(x, y, 15, 0, 2 * Math.PI);
+          ctx.arc(x, y, 16, 0, 2 * Math.PI);
           ctx.strokeStyle = primaryColor;
           ctx.lineWidth = 2;
           ctx.stroke();
         } else if (isTip) {
           ctx.arc(x, y, 6, 0, 2 * Math.PI);
           ctx.fillStyle = secondaryColor;
-          ctx.shadowBlur = 8;
           ctx.fill();
         } else {
           ctx.arc(x, y, 4, 0, 2 * Math.PI);
           ctx.fillStyle = primaryColor;
-          ctx.shadowBlur = 4;
           ctx.fill();
         }
       });
@@ -287,8 +286,6 @@ export class HandTrackingService {
       const wy = Math.min(height - 20, wrist.y * height + 24);
 
       ctx.save();
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = '#000000';
       ctx.fillStyle = glowColor;
       ctx.fillRect(wx - 36, wy - 14, 72, 22);
       ctx.strokeStyle = primaryColor;
