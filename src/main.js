@@ -30,6 +30,7 @@ import { sessionTimerService } from './services/SessionTimerService.js';
 import { onlineLeaderboardService } from './services/OnlineLeaderboardService.js';
 import { competitionLeaderboardService, COMPETITION_TRACKS } from './services/CompetitionLeaderboardService.js';
 import { qrCodeService } from './services/QrCodeService.js';
+import { JatuhSukaGame, TaragakPulangGame } from './services/MotionSyncGameEngine.js';
 
 class App {
   constructor() {
@@ -444,6 +445,9 @@ class App {
         return this._templateKomang();
       case GAME_STATES.NADIMU:
         return this._templateNadimu();
+      case GAME_STATES.JATUH_SUKA:
+      case GAME_STATES.TARAGAK_PULANG:
+        return '<div id="motion-sync-game-root" style="width:100%; min-height:100vh;"></div>';
       case GAME_STATES.MIDI_IMPORT:
         return MidiImportScreen.render();
       case GAME_STATES.LEADERBOARD:
@@ -485,6 +489,13 @@ class App {
       sessionTimerService.pause();
     }
 
+    if (state !== GAME_STATES.JATUH_SUKA && state !== GAME_STATES.TARAGAK_PULANG) {
+      if (this._currentMotionSyncGame && typeof this._currentMotionSyncGame.stop === 'function') {
+        try { this._currentMotionSyncGame.stop(); } catch (e) {}
+        this._currentMotionSyncGame = null;
+      }
+    }
+
     if (state === GAME_STATES.HOME) {
       this._clearAutoAdvance();
       this._setupHomeWaveform();
@@ -512,6 +523,22 @@ class App {
       this._clearAutoAdvance();
       this._setupCameraAndTracking();
       this._setupNadimuListeners();
+    } else if (state === GAME_STATES.JATUH_SUKA) {
+      this._clearAutoAdvance();
+      this._stopCameraAndTracking();
+      const root = document.getElementById('motion-sync-game-root');
+      if (root) {
+        this._currentMotionSyncGame = new JatuhSukaGame(root, () => gameEngine.setState(GAME_STATES.TRACK_SELECT));
+        this._currentMotionSyncGame.start();
+      }
+    } else if (state === GAME_STATES.TARAGAK_PULANG) {
+      this._clearAutoAdvance();
+      this._stopCameraAndTracking();
+      const root = document.getElementById('motion-sync-game-root');
+      if (root) {
+        this._currentMotionSyncGame = new TaragakPulangGame(root, () => gameEngine.setState(GAME_STATES.TRACK_SELECT));
+        this._currentMotionSyncGame.start();
+      }
     } else if (state === GAME_STATES.MIDI_IMPORT) {
       this._clearAutoAdvance();
       this._stopCameraAndTracking();

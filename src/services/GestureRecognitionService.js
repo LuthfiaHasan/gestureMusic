@@ -1,4 +1,5 @@
-import { virtualBackgroundService } from './VirtualBackgroundService.js';
+// GestureRecognitionService.js - Ultra-Fast Low-Latency Finger Detection & Temporal Confirmation
+// Features: 2-frame fast confirmation (~50ms), immediate old-gesture eviction, noise filtering, and latency measurement.
 
 export class GestureRecognitionService {
   constructor() {
@@ -49,10 +50,7 @@ export class GestureRecognitionService {
         gestureType: 'NONE',
         guidance: this.guidanceMessage,
         activeFingersPerHand: [],
-        validLandmarks: [],
-        validHandedness: [],
         stability: 0,
-        isConfirmed: false,
         gestureCalcMs: this.lastGestureCalcMs,
         transitionLatencyMs: this.lastTransitionLatencyMs,
         profiling: null,
@@ -60,11 +58,10 @@ export class GestureRecognitionService {
     }
 
     // -------------------------------------------------------------
-    // EVENT MODE: ANTI-BACKGROUND & ANTI-PASSERBY PROXIMITY FILTER
+    // EVENT MODE: ANTI-PASSERBY & PROXIMITY HAND FILTERING
     // -------------------------------------------------------------
-    // 1. If Virtual Background is ON, discard any hands located in the replaced background.
-    // 2. Discard hands from distant people / background noise (< 0.11 handSize).
-    // 3. Discard hands outside the central interaction zone.
+    // Discard hands from people walking in the background or extreme edges,
+    // and strictly select only the player's dominant hand(s) in front of camera.
     const candidateHands = [];
 
     landmarksList.forEach((landmarks, idx) => {
@@ -77,25 +74,17 @@ export class GestureRecognitionService {
       const handSize = Math.hypot(wrist.x - middleMCP.x, wrist.y - middleMCP.y);
       const palmWidth = Math.hypot(indexMCP.x - pinkyMCP.x, indexMCP.y - pinkyMCP.y);
 
-      // Check 1: Virtual Background Masking
-      // If virtual background is active, reject any hand situated in the replaced background
-      if (typeof virtualBackgroundService?.isHandInForeground === 'function') {
-        if (!virtualBackgroundService.isHandInForeground(landmarks, 0.28)) {
-          return;
-        }
-      }
-
-      // Check 2: Minimum size filter - reject hands smaller than 0.11 or narrow palms
-      if (handSize < 0.11 || palmWidth < 0.040) {
+      // Discard small hands (< 0.09): Background passersby far away!
+      if (handSize < 0.09 || palmWidth < 0.035) {
         return;
       }
 
-      // Check 3: Discard hands at extreme screen boundaries
-      if (wrist.x < 0.04 || wrist.x > 0.96 || wrist.y < 0.05 || wrist.y > 0.96) {
+      // Discard hands at extreme screen edges (people walking into frame edge)
+      if (wrist.x < 0.03 || wrist.x > 0.97 || wrist.y < 0.03 || wrist.y > 0.97) {
         return;
       }
 
-      // Proximity score: prioritize larger hand (closer to camera) + closer to central player zone
+      // Proximity score: larger hand (closer to camera) + closer to central player zone
       const distFromCenter = Math.hypot(wrist.x - 0.5, wrist.y - 0.6);
       const playerPriority = handSize * 2.5 - distFromCenter * 0.9;
 
@@ -108,7 +97,7 @@ export class GestureRecognitionService {
       });
     });
 
-    // If no candidate hands passed filter (e.g. only background passersby or no hand):
+    // If no candidate hands passed proximity filter (e.g. only background passersby or no hand):
     if (candidateHands.length === 0) {
       this.guidanceMessage = 'SHOW YOUR HAND TO CAMERA';
       this.resetCandidate();
@@ -122,10 +111,7 @@ export class GestureRecognitionService {
         gestureType: 'NONE',
         guidance: this.guidanceMessage,
         activeFingersPerHand: [],
-        validLandmarks: [],
-        validHandedness: [],
         stability: 0,
-        isConfirmed: false,
         gestureCalcMs: this.lastGestureCalcMs,
         transitionLatencyMs: this.lastTransitionLatencyMs,
         profiling: null,
@@ -135,51 +121,16 @@ export class GestureRecognitionService {
     // Sort candidate hands: closest player hand first
     candidateHands.sort((a, b) => b.playerPriority - a.playerPriority);
 
-    // Dynamic two-hand selection: allow two hands if requested OR if two distinct player hands are clearly present
-    let maxHandsToKeep = 1;
-    if (requiredTwoHands) {
-      maxHandsToKeep = 2;
-    } else if (candidateHands.length >= 2) {
-      const h0 = candidateHands[0];
-      const h1 = candidateHands[1];
-      const bothInInteractionZone = h0.handSize >= 0.135 && h1.handSize >= 0.135;
-      const xSeparation = Math.abs(h0.landmarks[0].x - h1.landmarks[0].x);
-      if (bothInInteractionZone && xSeparation >= 0.12) {
-        maxHandsToKeep = 2;
-      }
-    }
+    // For single-hand challenge, strictly keep ONLY the single most dominant player hand!
+    // For two-hand challenge, keep at most 2 hands.
+    const maxHandsToKeep = requiredTwoHands ? 2 : 1;
     const selectedHands = candidateHands.slice(0, maxHandsToKeep);
-
-    // Check if hands are close enough to the camera to be interactive (handSize >= 0.135)
-    // If all hands are < 0.135 (borderline/too far away), DO NOT register as active gesture!
-    const hasCloseHand = selectedHands.some(h => h.handSize >= 0.135);
-    if (!hasCloseHand) {
-      this.guidanceMessage = 'MOVE YOUR HAND CLOSER';
-      this.resetCandidate();
-      this.lastGestureCalcMs = +(performance.now() - calcStart).toFixed(2);
-      return {
-        hasHand: false,
-        totalFingers: 0,
-        confirmedFingers: 0,
-        leftFingers: 0,
-        rightFingers: 0,
-        gestureType: 'NONE',
-        guidance: this.guidanceMessage,
-        activeFingersPerHand: [],
-        validLandmarks: [],
-        validHandedness: [],
-        stability: 0,
-        isConfirmed: false,
-        gestureCalcMs: this.lastGestureCalcMs,
-        transitionLatencyMs: this.lastTransitionLatencyMs,
-        profiling: null,
-      };
-    }
 
     let leftFingers = 0;
     let rightFingers = 0;
     let primaryHandShape = 'UNKNOWN';
     const activeFingersPerHand = [];
+    let isTooFar = false;
 
     selectedHands.forEach((item, idx) => {
       const landmarks = item.landmarks;
@@ -196,6 +147,10 @@ export class GestureRecognitionService {
       } else {
         const detectedSide = item.handedness?.[0]?.categoryName?.toLowerCase();
         isLeft = detectedSide ? detectedSide === 'left' : (idx === 0);
+      }
+
+      if (item.handSize < 0.11) {
+        isTooFar = true;
       }
 
       // Detect each finger
@@ -219,20 +174,22 @@ export class GestureRecognitionService {
     );
 
     // Guidance evaluation
-    if (requiredTwoHands && selectedHands.length < 2 && totalFingers <= 5) {
+    if (isTooFar) {
+      this.guidanceMessage = 'MOVE YOUR HAND CLOSER';
+    } else if (requiredTwoHands && landmarksList.length < 2 && totalFingers <= 5) {
       this.guidanceMessage = 'SHOW BOTH HANDS';
     } else {
       this.guidanceMessage = 'GESTURE READY';
     }
 
     // -------------------------------------------------------------
-    // FAST TEMPORAL CONFIRMATION & JITTER FILTER
+    // FAST TEMPORAL CONFIRMATION (Requirements 7, 8, 9, 10):
     // -------------------------------------------------------------
     let isNewConfirmation = false;
     let stabilityProgress = 1.0;
 
     if (totalFingers === this.confirmedFingers) {
-      // Current gesture matches confirmed: keep rock-solid stable, clear any 1-frame candidate jitter
+      // Current gesture matches confirmed: keep stable
       this.candidateFingers = null;
       this.candidateFrames = 0;
       stabilityProgress = 1.0;
@@ -243,16 +200,11 @@ export class GestureRecognitionService {
         const elapsed = now - this.candidateStartTime;
         stabilityProgress = Math.min(1.0, this.candidateFrames / this.requiredConfirmationFrames);
 
-        // Confirm when required consecutive frames match OR elapsed >= max window with >= 2 frames
-        if (this.candidateFrames >= this.requiredConfirmationFrames || (elapsed >= this.maxConfirmationDurationMs && this.candidateFrames >= 2)) {
+        // Confirm when 2 consecutive frames match OR elapsed >= 70ms with >= 2 frames
+        if (this.candidateFrames >= this.requiredConfirmationFrames || elapsed >= this.maxConfirmationDurationMs) {
           // GESTURE CONFIRMED AT HIGH SPEED!
           const tGestureEnd = performance.now();
           this.lastTransitionLatencyMs = Math.max(1, Math.round(now - this.candidateStartTime));
-          
-          const prevFingers = this.confirmedFingers;
-          const prevShape = this.confirmedShape;
-          const hasActualChange = (totalFingers !== prevFingers) || (primaryHandShape !== prevShape);
-
           this.confirmedFingers = totalFingers;
           this.confirmedShape = primaryHandShape;
           this.candidateFingers = null;
@@ -260,33 +212,29 @@ export class GestureRecognitionService {
           stabilityProgress = 1.0;
           isNewConfirmation = true;
 
-          // Only dispatch sound/chord event when finger count or gesture shape has ACTUALLY changed
-          // to prevent intra-frame jitter from re-triggering the same chord repeatedly!
-          if (hasActualChange) {
-            const gestureEvent = {
-              hasHand: true,
-              totalFingers,
-              confirmedFingers: totalFingers,
-              leftFingers,
-              rightFingers,
-              gestureType: primaryHandShape,
-              timestamp: now,
-              activeFingersPerHand,
-              transitionLatencyMs: this.lastTransitionLatencyMs,
-              profiling: {
-                tCamera: frameMeta.tCamera || now,
-                tMediaPipe: frameMeta.tMediaPipe || now,
-                tFinger: tFingerEnd,
-                tGesture: tGestureEnd,
-                cameraToMediaPipeMs: frameMeta.inferenceMs || 0,
-                mediaPipeToFingerMs: frameMeta.tMediaPipe ? +(tFingerEnd - frameMeta.tMediaPipe).toFixed(2) : 0,
-                fingerToGestureMs: +(tGestureEnd - tFingerEnd).toFixed(2),
-              },
-            };
+          const gestureEvent = {
+            hasHand: true,
+            totalFingers,
+            confirmedFingers: totalFingers,
+            leftFingers,
+            rightFingers,
+            gestureType: primaryHandShape,
+            timestamp: now,
+            activeFingersPerHand,
+            transitionLatencyMs: this.lastTransitionLatencyMs,
+            profiling: {
+              tCamera: frameMeta.tCamera || now,
+              tMediaPipe: frameMeta.tMediaPipe || now,
+              tFinger: tFingerEnd,
+              tGesture: tGestureEnd,
+              cameraToMediaPipeMs: frameMeta.inferenceMs || 0,
+              mediaPipeToFingerMs: frameMeta.tMediaPipe ? +(tFingerEnd - frameMeta.tMediaPipe).toFixed(2) : 0,
+              fingerToGestureMs: +(tGestureEnd - tFingerEnd).toFixed(2),
+            },
+          };
 
-            if (this.onGestureConfirmed) {
-              this.onGestureConfirmed(gestureEvent);
-            }
+          if (this.onGestureConfirmed) {
+            this.onGestureConfirmed(gestureEvent);
           }
         }
       } else {
@@ -315,8 +263,6 @@ export class GestureRecognitionService {
       gestureType: primaryHandShape,
       guidance: this.guidanceMessage,
       activeFingersPerHand,
-      validLandmarks: selectedHands.map(h => h.landmarks),
-      validHandedness: selectedHands.map(h => h.handedness),
       stability: stabilityProgress,
       isConfirmed: isNewConfirmation || (totalFingers === this.confirmedFingers),
       gestureCalcMs: this.lastGestureCalcMs,
@@ -343,17 +289,11 @@ export class GestureRecognitionService {
   }
 
   /**
-   * Determine open/closed status for all 5 fingers of a hand with 3D landmark depth
+   * Determine open/closed status for all 5 fingers of a hand
    */
   _analyzeHandFingers(lm, isLeft) {
     const wrist = lm[0];
-    const dist2D = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
-    const dist3D = (p1, p2) => {
-      const dx = p1.x - p2.x;
-      const dy = p1.y - p2.y;
-      const dz = (p1.z !== undefined && p2.z !== undefined) ? (p1.z - p2.z) * 1.15 : 0;
-      return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    };
+    const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
     const thumbCMC = lm[1];
     const thumbMCP = lm[2];
@@ -364,8 +304,8 @@ export class GestureRecognitionService {
     const ringMCP = lm[13];
     const pinkyMCP = lm[17];
 
-    const palmWidth = dist3D(indexMCP, pinkyMCP);
-    const palmLength = dist3D(wrist, middleMCP);
+    const palmWidth = dist(indexMCP, pinkyMCP);
+    const palmLength = dist(wrist, middleMCP);
 
     // Vector pointing from Pinky MCP (17) to Index MCP (5)
     const vThumbSide = { x: indexMCP.x - pinkyMCP.x, y: indexMCP.y - pinkyMCP.y };
@@ -380,37 +320,32 @@ export class GestureRecognitionService {
     // ---------------------------------------------------------
     // 1. Fingers 2-5 (Index, Middle, Ring, Pinky)
     // ---------------------------------------------------------
-    const isFingerOpen = (tipIdx, dipIdx, pipIdx, mcpIdx, isPinky = false) => {
+    const isFingerOpen = (tipIdx, dipIdx, pipIdx, mcpIdx) => {
       const tip = lm[tipIdx];
       const dip = lm[dipIdx];
       const pip = lm[pipIdx];
       const mcp = lm[mcpIdx];
 
-      const dTipWrist = dist3D(tip, wrist);
-      const dDipWrist = dist3D(dip, wrist);
-      const dPipWrist = dist3D(pip, wrist);
+      const dTipWrist = dist(tip, wrist);
+      const dDipWrist = dist(dip, wrist);
+      const dPipWrist = dist(pip, wrist);
 
-      const dTipMcp = dist3D(tip, mcp);
-      const dPipMcp = dist3D(pip, mcp);
+      const dTipMcp = dist(tip, mcp);
+      const dPipMcp = dist(pip, mcp);
 
-      // Pinky is naturally shorter, so adapt relative thresholds
-      const wristMult = isPinky ? 0.90 : 0.95;
-      const pipMult = isPinky ? 0.98 : 1.04;
-      const mcpMult = isPinky ? 1.08 : 1.15;
+      // 1. Radial extension relative to wrist
+      const isExtendedFromWrist = (dTipWrist > dDipWrist * 0.96) && (dTipWrist > dPipWrist * 1.05);
 
-      // 1. Extension relative to wrist in 3D
-      const isExtendedFromWrist = (dTipWrist > dDipWrist * wristMult) && (dTipWrist > dPipWrist * pipMult);
+      // 2. Linear extension relative to MCP joint
+      const isExtendedFromMcp = dTipMcp > dPipMcp * 1.18;
 
-      // 2. Extension relative to MCP joint
-      const isExtendedFromMcp = dTipMcp > dPipMcp * mcpMult;
-
-      // 3. Collinear joint straightness in 3D: Vector MCP->PIP vs PIP->TIP
-      const vProx = { x: pip.x - mcp.x, y: pip.y - mcp.y, z: (pip.z || 0) - (mcp.z || 0) };
-      const vDist = { x: tip.x - pip.x, y: tip.y - pip.y, z: (tip.z || 0) - (pip.z || 0) };
-      const lenProx = Math.hypot(vProx.x, vProx.y, vProx.z) || 1e-6;
-      const lenDist = Math.hypot(vDist.x, vDist.y, vDist.z) || 1e-6;
-      const collinearity = (vProx.x * vDist.x + vProx.y * vDist.y + vProx.z * vDist.z) / (lenProx * lenDist);
-      const isStraight = collinearity > (isPinky ? 0.25 : 0.32);
+      // 3. Collinear joint straightness: Vector MCP->PIP vs PIP->TIP
+      const vProx = { x: pip.x - mcp.x, y: pip.y - mcp.y };
+      const vDist = { x: tip.x - pip.x, y: tip.y - pip.y };
+      const lenProx = Math.hypot(vProx.x, vProx.y) || 1e-6;
+      const lenDist = Math.hypot(vDist.x, vDist.y) || 1e-6;
+      const collinearity = (vProx.x * vDist.x + vProx.y * vDist.y) / (lenProx * lenDist);
+      const isStraight = collinearity > 0.35; // Positive dot product means extended along finger axis
 
       // 4. Projection along upward palm axis
       const tipUpProj = (tip.x - pip.x) * uUp.x + (tip.y - pip.y) * uUp.y;
@@ -419,15 +354,15 @@ export class GestureRecognitionService {
              (isExtendedFromMcp && tipUpProj > 0 && isStraight);
     };
 
-    const isIndexOpen = isFingerOpen(8, 7, 6, 5, false);
-    const isMiddleOpen = isFingerOpen(12, 11, 10, 9, false);
-    const isRingOpen = isFingerOpen(16, 15, 14, 13, false);
-    const isPinkyOpen = isFingerOpen(20, 19, 18, 17, true);
+    const isIndexOpen = isFingerOpen(8, 7, 6, 5);
+    const isMiddleOpen = isFingerOpen(12, 11, 10, 9);
+    const isRingOpen = isFingerOpen(16, 15, 14, 13);
+    const isPinkyOpen = isFingerOpen(20, 19, 18, 17);
 
     const indexPIP = lm[6];
 
     // Check for "0" circular gesture (touching thumb and index tip together to form an 'O' ring with other fingers curled)
-    const dThumbIndexTip = dist2D(thumbTip, lm[8]);
+    const dThumbIndexTip = dist(thumbTip, lm[8]);
     const isOZeroRing = (dThumbIndexTip < palmWidth * 0.28) && (!isMiddleOpen && !isRingOpen && !isPinkyOpen);
 
     // ---------------------------------------------------------
@@ -436,22 +371,21 @@ export class GestureRecognitionService {
     const thumbTipOutwardProj = (thumbTip.x - indexMCP.x) * uThumbSide.x + 
                                 (thumbTip.y - indexMCP.y) * uThumbSide.y;
 
-    const dTipIndexMCP = dist3D(thumbTip, indexMCP);
-    const dTipPinkyMCP = dist3D(thumbTip, pinkyMCP);
-    const dIpPinkyMCP = dist3D(thumbIP, pinkyMCP);
+    const dTipIndexMCP = dist(thumbTip, indexMCP);
+    const dTipPinkyMCP = dist(thumbTip, pinkyMCP);
+    const dIpPinkyMCP = dist(thumbIP, pinkyMCP);
 
-    const dThumbMcpTip = dist3D(thumbMCP, thumbTip);
-    const dThumbMcpIp = dist3D(thumbMCP, thumbIP);
-    const dThumbIpTip = dist3D(thumbIP, thumbTip);
-    const isThumbStraight = dThumbMcpTip > (dThumbMcpIp + dThumbIpTip) * 0.74;
+    const dThumbMcpTip = dist(thumbMCP, thumbTip);
+    const dThumbMcpIp = dist(thumbMCP, thumbIP);
+    const dThumbIpTip = dist(thumbIP, thumbTip);
+    const isThumbStraight = dThumbMcpTip > (dThumbMcpIp + dThumbIpTip) * 0.80;
 
     // Normal spread out thumb (as in 5 fingers / Open Palm)
-    // Resilient to angle and foreshortening
-    const isThumbSpreadOut = (
-      (thumbTipOutwardProj > palmWidth * 0.16 || dTipIndexMCP > palmWidth * 0.48) && 
-      (dTipPinkyMCP > dIpPinkyMCP * 1.01) &&
-      isThumbStraight
-    );
+    // Must extend outward laterally from the index base by a noticeable distance
+    const isThumbSpreadOut = (thumbTipOutwardProj > palmWidth * 0.22) && 
+                             (dTipIndexMCP > palmWidth * 0.55) && 
+                             (dTipPinkyMCP > dIpPinkyMCP * 1.05) &&
+                             isThumbStraight;
 
     // Thumbs-up (👍) - Thumb held high above knuckles while 4 fingers are curled
     const otherFingersClosed = !isIndexOpen && !isMiddleOpen && !isRingOpen && !isPinkyOpen;
@@ -463,12 +397,14 @@ export class GestureRecognitionService {
     // Thumb tip should be extending upwards from thumb IP joint:
     const thumbTipAboveIP = (thumbTip.x - thumbIP.x) * uUp.x + (thumbTip.y - thumbIP.y) * uUp.y;
 
+    // In a fist, thumb is curled ON/ACROSS fingers, so thumbTipAboveIndexPIP <= 0 and thumbUpProj is small!
+    // In a real thumbs-up, thumb sticks out HIGH above index PIP (> 0.15 * palmLength) and thumbUpProj > 0.55 * palmLength!
     const isThumbsUp = otherFingersClosed && 
                        !isOZeroRing &&
-                       (thumbTipAboveIndexPIP > palmLength * 0.12) && 
-                       (thumbUpProj > palmLength * 0.48) && 
-                       (thumbTipAboveIP > 0.005) &&
-                       (dist3D(thumbTip, wrist) > dist3D(thumbMCP, wrist) * 1.25) &&
+                       (thumbTipAboveIndexPIP > palmLength * 0.15) && 
+                       (thumbUpProj > palmLength * 0.55) && 
+                       (thumbTipAboveIP > 0.01) &&
+                       (dist(thumbTip, wrist) > dist(thumbMCP, wrist) * 1.35) &&
                        isThumbStraight;
 
     const isThumbOpen = isThumbSpreadOut || isThumbsUp;

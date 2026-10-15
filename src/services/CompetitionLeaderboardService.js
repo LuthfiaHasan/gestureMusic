@@ -77,6 +77,30 @@ export const COMPETITION_TRACKS = {
     emoji: '♾️',
     desc: 'Uji Ketahanan Non-Stop • 3 Nyawa • BPM Bertahap Meningkat',
   },
+  JATUH_SUKA: {
+    id: 'JATUH_SUKA',
+    title: '✨ Jatuh Suka - 10 Jari Motion',
+    artist: 'Tulus / Indonesian Pop',
+    genre: 'Pop Motion Audio Sync',
+    bpm: 110,
+    difficulty: 'HARD',
+    badge: '✨ JATUH SUKA',
+    color: '#00f7ff',
+    emoji: '✨',
+    desc: '10-Finger Motion Audio Sync • 5 Nyawa ❤️ • Sinkronisasi Gerakan Jari Real-Time',
+  },
+  TARAGAK_PULANG: {
+    id: 'TARAGAK_PULANG',
+    title: '🌾 Taragak Pulang - Minang Klasik',
+    artist: 'Dima / Minang Heritage',
+    genre: 'Minang Motion Audio Sync',
+    bpm: 105,
+    difficulty: 'HARD',
+    badge: '🌾 TARAGAK PULANG',
+    color: '#ffd700',
+    emoji: '🌾',
+    desc: '10-Finger Motion Audio Sync • Dendang Minang • 5 Nyawa ❤️ • Adu Kecepatan Refleks Jari',
+  },
 };
 
 export class CompetitionLeaderboardService {

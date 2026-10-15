@@ -118,6 +118,12 @@ export class TrackSelectScreen {
       case 'JINGLE_BELLS':
         gameEngine.setState(GAME_STATES.JINGLE_BELLS);
         break;
+      case 'JATUH_SUKA':
+        gameEngine.setState(GAME_STATES.JATUH_SUKA);
+        break;
+      case 'TARAGAK_PULANG':
+        gameEngine.setState(GAME_STATES.TARAGAK_PULANG);
+        break;
       case 'NEON_DAWN':
         gameEngine.startRound('CLASSIC', 1);
         break;
