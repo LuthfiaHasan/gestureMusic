@@ -126,15 +126,14 @@ body:has(.home-screen) #bg-canvas {
   overflow: hidden !important;
 }
 
-.phone-shell.fullscreen-mode .screen-container,
-.phone-shell.home-fullscreen-shell .screen-container,
-.screen-container.home-screen-container {
+.phone-shell.fullscreen-mode .screen-container {
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
-  justify-content: center !important;
-  padding: 0 !important;
-  overflow: hidden !important;
+  justify-content: flex-start !important;
+  padding: 14px 3vw !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   height: 100vh !important;
   width: 100vw !important;
   max-width: 100vw !important;
@@ -142,6 +141,13 @@ body:has(.home-screen) #bg-canvas {
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+.phone-shell.home-fullscreen-shell .screen-container,
+.screen-container.home-screen-container {
+  justify-content: center !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 
 .phone-shell.fullscreen-mode .home-screen,
@@ -236,18 +242,25 @@ body:has(.home-screen) #bg-canvas {
 
 /* Fullscreen mode shared vertical centering for all main screens */
 .phone-shell.fullscreen-mode .home-screen,
-.phone-shell.fullscreen-mode .subpage-screen,
 .phone-shell.fullscreen-mode .track-select-screen,
-.phone-shell.fullscreen-mode .leaderboard-screen,
-.phone-shell.fullscreen-mode .midi-import-screen,
 .phone-shell.fullscreen-mode .calibration-screen,
 .phone-shell.fullscreen-mode .free-synth-screen,
-.phone-shell.fullscreen-mode .result-screen,
-.phone-shell.fullscreen-mode .jingle-bells-screen {
+.phone-shell.fullscreen-mode .result-screen {
   margin: auto;
   height: auto;
   min-height: min-content;
   box-sizing: border-box;
+}
+
+.phone-shell.fullscreen-mode .subpage-screen,
+.phone-shell.fullscreen-mode .leaderboard-screen,
+.phone-shell.fullscreen-mode .midi-import-screen,
+.phone-shell.fullscreen-mode .jingle-bells-screen {
+  margin: 0 auto;
+  height: auto;
+  min-height: min-content;
+  box-sizing: border-box;
+  padding: 8px 0 36px;
 }
 
 /* Track Selection Screen (PILIH LAGU KOMPETISI) in Desktop Fullscreen */
@@ -310,20 +323,26 @@ body:has(.home-screen) #bg-canvas {
 /* Leaderboard Screen in Desktop Fullscreen */
 .phone-shell.fullscreen-mode .subpage-screen.leaderboard-screen,
 .phone-shell.fullscreen-mode .leaderboard-screen {
-  max-width: 1080px;
+  max-width: 1120px;
   width: 100%;
-  margin: auto;
+  margin: 0 auto;
   height: auto;
   min-height: min-content;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 12px 0;
+  justify-content: flex-start;
+  padding: 10px 0 40px;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .phone-shell.fullscreen-mode .leaderboard-container {
   max-width: 100%;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* MIDI Import Screen in Desktop Fullscreen */
