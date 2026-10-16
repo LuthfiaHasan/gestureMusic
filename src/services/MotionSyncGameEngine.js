@@ -304,12 +304,12 @@ class GestureMusicGameEngine {
     this.syncService.onGameOver = (stats) => this.showGameOverModal(stats);
     this.syncService.onVictory = (stats) => this.showVictoryModal(stats);
 
-    this.startCamera(false).catch(() => {});
+    this.startCamera(false).catch(() => { });
   }
 
   stop() {
     if (this.stream) {
-      try { this.stream.getTracks().forEach(t => t.stop()); } catch(e) {}
+      try { this.stream.getTracks().forEach(t => t.stop()); } catch (e) { }
       this.stream = null;
     }
     if (this.simInterval) { clearInterval(this.simInterval); this.simInterval = null; }
@@ -317,8 +317,8 @@ class GestureMusicGameEngine {
     this.syncService.onLifeLost = null;
     this.syncService.onGameOver = null;
     this.syncService.onVictory = null;
-    try { handTrackingService.stopTracking(); } catch(e) {}
-    try { this.syncService.restartGame(); } catch(e) {}
+    try { handTrackingService.stopTracking(); } catch (e) { }
+    try { this.syncService.restartGame(); } catch (e) { }
   }
 
   renderCyberHandSvg(fingerCount) {
@@ -348,7 +348,7 @@ class GestureMusicGameEngine {
       ${is4 ? `<path d="M 106 108 L 106 68 L 106 38" fill="none" stroke="${activeColor}" stroke-width="4" stroke-linecap="round" filter="url(#cyber-glow-${this.config.songId}-${fingerCount})"/>
         <circle cx="106" cy="38" r="5" fill="${activeColor}" filter="url(#cyber-glow-${this.config.songId}-${fingerCount})"/>
         <circle cx="106" cy="38" r="2" fill="#ffffff"/>` :
-       `<path d="M 106 108 Q 112 102 106 92" fill="none" stroke="${dimColor}" stroke-width="3" stroke-linecap="round"/>
+        `<path d="M 106 108 Q 112 102 106 92" fill="none" stroke="${dimColor}" stroke-width="3" stroke-linecap="round"/>
         <circle cx="106" cy="92" r="3.5" fill="${dimColor}"/>`}
     </svg>`;
   }
@@ -832,7 +832,7 @@ class GestureMusicGameEngine {
     if (!video || !canvas) return;
 
     try {
-      this.syncService.resumeAudioContext().catch(() => {});
+      this.syncService.resumeAudioContext().catch(() => { });
       this.syncService.initWebAudioGraph();
 
       if (this.isSimulating) this.stopSimulation();
@@ -908,7 +908,7 @@ class GestureMusicGameEngine {
 
   stopCamera() {
     if (this.stream) {
-      try { this.stream.getTracks().forEach(t => t.stop()); } catch(e) {}
+      try { this.stream.getTracks().forEach(t => t.stop()); } catch (e) { }
       this.stream = null;
     }
     cameraService.stop();
@@ -934,7 +934,7 @@ class GestureMusicGameEngine {
     if (stopBtn) stopBtn.style.display = 'block';
     if (canvas) { canvas.width = 640; canvas.height = 480; }
 
-    this.syncService.resumeAudioContext().catch(() => {});
+    this.syncService.resumeAudioContext().catch(() => { });
     this.syncService.initWebAudioGraph();
 
     let angle = 0;
@@ -1034,12 +1034,12 @@ class GestureMusicGameEngine {
 
   drawHandSkeleton(ctx, landmarks, w, h, isTargetMatch, video = null) {
     const CONNECTIONS = [
-      [0,1],[1,2],[2,3],[3,4],
-      [0,5],[5,6],[6,7],[7,8],
-      [0,9],[9,10],[10,11],[11,12],
-      [0,13],[13,14],[14,15],[15,16],
-      [0,17],[17,18],[18,19],[19,20],
-      [5,9],[9,13],[13,17]
+      [0, 1], [1, 2], [2, 3], [3, 4],
+      [0, 5], [5, 6], [6, 7], [7, 8],
+      [0, 9], [9, 10], [10, 11], [11, 12],
+      [0, 13], [13, 14], [14, 15], [15, 16],
+      [0, 17], [17, 18], [18, 19], [19, 20],
+      [5, 9], [9, 13], [13, 17]
     ];
 
     // Compute proper aspect-ratio cover projection so landmarks align precisely over webcam image
@@ -1264,7 +1264,7 @@ class GestureMusicGameEngine {
     if (scoreVal) scoreVal.innerText = Number(stats.score || 0).toLocaleString();
     if (timeVal) {
       const sec = Math.floor(stats.duration || 0), m = Math.floor(sec / 60), s = sec % 60;
-      timeVal.innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      timeVal.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
     if (stats.starRating) {
       if (starEl) starEl.innerText = stats.starRating.starIcons;

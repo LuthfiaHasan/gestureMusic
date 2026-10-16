@@ -98,6 +98,23 @@ body:has(.home-screen) #bg-canvas {
   align-items: center;
 }
 
+/* When Motion Sync Game is active, fill cleanly without cropping or forced centering */
+body:has(.gm-app-container) {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: block !important;
+  height: auto !important;
+  min-height: 100vh !important;
+}
+
+#app:has(.gm-app-container) {
+  display: block !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+}
+
 /* Mobile Simulator Phone Shell */
 .phone-shell {
   position: relative;

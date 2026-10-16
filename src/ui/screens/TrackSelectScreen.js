@@ -169,7 +169,7 @@ export class TrackSelectScreen {
     if (trackId === 'KOMANG' || trackId === 'NADIMU') {
       settingsManager.update('soundPreset', 'Acoustic Piano');
       audioManager.setPreset('Acoustic Piano');
-      audioManager.loadPianoSamples().catch(() => {});
+      audioManager.loadPianoSamples().catch(() => { });
     }
     switch (trackId) {
       case 'KOMANG':

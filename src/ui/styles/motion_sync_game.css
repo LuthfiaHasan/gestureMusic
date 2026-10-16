@@ -72,10 +72,10 @@ body, html {
   min-height: 100vh;
   height: auto;
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 6px 14px 24px 14px;
+  padding: 6px 14px 10px 14px;
   gap: 6px;
   background: radial-gradient(circle at 50% 0%, #1a0836 0%, #080314 100%);
   position: relative;
@@ -662,7 +662,7 @@ body, html {
 /* 4. LEFT PANEL: CAMERA STAGE */
 .camera-stage-frame {
   flex: 1;
-  min-height: 340px;
+  min-height: 280px;
   position: relative;
   border-radius: 8px;
   overflow: hidden;
@@ -895,7 +895,7 @@ body, html {
 
 .finger-arena-stage {
   flex: 1;
-  min-height: 340px;
+  min-height: 280px;
   position: relative;
   border-radius: 8px;
   overflow: hidden;
@@ -1200,7 +1200,7 @@ body, html {
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 180px;
+  min-height: 140px;
 }
 
 .holo-energy-halo {
@@ -1448,6 +1448,74 @@ body, html {
   font-weight: 800;
   color: var(--cyan);
   letter-spacing: 0.6px;
+}
+
+/* Bottom Utility Strip (Audio & Camera Tools) */
+.gm-bottom-strip {
+  flex-shrink: 0;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.audio-hud-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 10px;
+  background: rgba(5, 12, 32, 0.75);
+  border: 1px solid rgba(0, 247, 255, 0.2);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-sizing: border-box;
+}
+
+.waveform-box {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 247, 255, 0.25);
+  border-radius: 6px;
+  padding: 2px 8px;
+  height: 32px;
+}
+
+.volume-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vol-icon {
+  font-size: 14px;
+}
+
+.slider-cyber {
+  accent-color: var(--cyan);
+  cursor: pointer;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.btn-mode-toggle {
+  background: rgba(10, 24, 56, 0.85);
+  border: 1.2px solid rgba(0, 247, 255, 0.45);
+  color: #00f7ff;
+  font-family: var(--font-cyber);
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 5px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 10px rgba(0, 247, 255, 0.2);
+}
+
+.btn-mode-toggle:hover {
+  background: rgba(0, 247, 255, 0.25);
+  box-shadow: 0 0 16px rgba(0, 247, 255, 0.6);
+  transform: translateY(-1px);
 }
 
 /* 6. GAME OVER / LAGU HANGUS MODAL */

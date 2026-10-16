@@ -328,12 +328,12 @@ export class JatuhSukaAudioMotionService {
     }
   }
 
-    unlockAudio() {
+  unlockAudio() {
     if (this.audio) {
       this.audio.load();
     }
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume().catch(() => {});
+      this.audioCtx.resume().catch(() => { });
     }
   }
 
@@ -341,7 +341,7 @@ export class JatuhSukaAudioMotionService {
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
       try {
         await this.audioCtx.resume();
-      } catch (e) {}
+      } catch (e) { }
     }
     if (this.audio && this.audio.paused && !this.isGameOver) {
       // Unblock user gesture
@@ -400,7 +400,7 @@ export class JatuhSukaAudioMotionService {
     this.currentTarget = this.sequence[0];
 
     if (this.audio) {
-      try { this.audio.currentTime = 0; } catch (e) {}
+      try { this.audio.currentTime = 0; } catch (e) { }
       this.audio.playbackRate = 1.0;
       this.audio.pause();
     }
@@ -483,7 +483,7 @@ export class JatuhSukaAudioMotionService {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.32);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   playLifeLostSound() {
@@ -504,7 +504,7 @@ export class JatuhSukaAudioMotionService {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.35);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   playGameOverSound() {
@@ -527,7 +527,7 @@ export class JatuhSukaAudioMotionService {
         osc.start(ctx.currentTime + idx * 0.16);
         osc.stop(ctx.currentTime + idx * 0.16 + 0.45);
       });
-    } catch (e) {}
+    } catch (e) { }
   }
 
   getStarRating() {
@@ -672,7 +672,7 @@ export class JatuhSukaAudioMotionService {
         osc.start(ctx.currentTime + idx * 0.14);
         osc.stop(ctx.currentTime + idx * 0.14 + 0.4);
       });
-    } catch (e) {}
+    } catch (e) { }
   }
 
   triggerVictory() {
@@ -767,10 +767,10 @@ export class JatuhSukaAudioMotionService {
     const dMcpWrist = Math.hypot(thumbMcp.x - wrist.x, thumbMcp.y - wrist.y);
 
     // Jempol dianggap terbuka jika meregang keluar menjauhi pangkal telunjuk dan melampaui MCP jempol
-    const isThumb = (dThumbIndexMcp > 0.085) && 
-                    (dThumbIndexMcp > dThumbIpIndex * 1.1) && 
-                    (dThumbPinkyMcp > dMcpPinkyMcp * 1.1) && 
-                    (dThumbWrist > dMcpWrist * 1.15);
+    const isThumb = (dThumbIndexMcp > 0.085) &&
+      (dThumbIndexMcp > dThumbIpIndex * 1.1) &&
+      (dThumbPinkyMcp > dMcpPinkyMcp * 1.1) &&
+      (dThumbWrist > dMcpWrist * 1.15);
 
     const longFingersCount = (isIndex ? 1 : 0) + (isMiddle ? 1 : 0) + (isRing ? 1 : 0) + (isPinky ? 1 : 0);
     const count = (isThumb ? 1 : 0) + longFingersCount;
@@ -1016,7 +1016,7 @@ export class JatuhSukaAudioMotionService {
     // Langsung mulai saat jari diangkat & cocok!
     if (this.audio.paused && this.hasHand && isTargetMatch && !this.isGameOver && !this.isGameWon) {
       this.audio.playbackRate = 1.0;
-      this.audio.play().catch(() => {});
+      this.audio.play().catch(() => { });
     }
 
     if (isTargetMatch) {

@@ -138,7 +138,7 @@ class App {
         spread: 90,
         origin: { y: 0.6 }
       });
-    } catch (e) {}
+    } catch (e) { }
 
     setTimeout(() => {
       audioManager.speakAnnouncer(`Selamat kepada ${entry.playerName}! Skor berhasil masuk ke papan peringkat!`);
@@ -381,7 +381,8 @@ class App {
     try {
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      const isTvSong = gameEngine.currentState === GAME_STATES.KOMANG || gameEngine.currentState === GAME_STATES.NADIMU;
+      const isMotionSyncSong = gameEngine.currentState === GAME_STATES.JATUH_SUKA || gameEngine.currentState === GAME_STATES.TARAGAK_PULANG;
+      const isTvSong = gameEngine.currentState === GAME_STATES.KOMANG || gameEngine.currentState === GAME_STATES.NADIMU || isMotionSyncSong;
       const isHome = gameEngine.currentState === GAME_STATES.HOME;
       const isFullscreenActive = this.isFullscreen || isTvSong || isHome;
 
@@ -400,7 +401,7 @@ class App {
       }
 
       this.appEl.innerHTML = `
-        ${isHome ? '' : `
+        ${(isHome || isMotionSyncSong) ? '' : `
           <button class="viewport-toggle-btn" id="btn-toggle-viewport">
             ${this.isFullscreen ? '📱 Phone Frame' : '🖥️ Fullscreen'}
           </button>
@@ -470,7 +471,7 @@ class App {
         return this._templateNadimu();
       case GAME_STATES.JATUH_SUKA:
       case GAME_STATES.TARAGAK_PULANG:
-        return '<div id="motion-sync-game-root" style="width:100%; min-height:100vh;"></div>';
+        return '<div id="motion-sync-game-root" style="width:100%; height:100%; min-height:100%;"></div>';
       case GAME_STATES.MIDI_IMPORT:
         return MidiImportScreen.render();
       case GAME_STATES.LEADERBOARD:
@@ -514,7 +515,7 @@ class App {
 
     if (state !== GAME_STATES.JATUH_SUKA && state !== GAME_STATES.TARAGAK_PULANG) {
       if (this._currentMotionSyncGame && typeof this._currentMotionSyncGame.stop === 'function') {
-        try { this._currentMotionSyncGame.stop(); } catch (e) {}
+        try { this._currentMotionSyncGame.stop(); } catch (e) { }
         this._currentMotionSyncGame = null;
       }
     }
@@ -738,8 +739,8 @@ class App {
 
         <div class="levels-grid">
           ${LEVELS.map(lvl => {
-            const isUnlocked = lvl.level <= scoreManager.highestLevel;
-            return `
+      const isUnlocked = lvl.level <= scoreManager.highestLevel;
+      return `
               <div class="level-card ${isUnlocked ? '' : 'locked'}" data-level="${lvl.level}">
                 <div class="level-info">
                   <span class="level-title">Lv ${lvl.level}. ${lvl.title}</span>
@@ -750,7 +751,7 @@ class App {
                 </div>
               </div>
             `;
-          }).join('')}
+    }).join('')}
         </div>
       </div>
     `;
@@ -1215,15 +1216,15 @@ class App {
                 REKAP SKOR PER LEVEL:
               </div>
               <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;font-size:11px;text-align:center;">
-                ${[1,2,3,4,5,6,7,8].map(lvl => {
-                  const sc = scoreManager.campaignScores[lvl] !== undefined ? `${scoreManager.campaignScores[lvl]}%` : '--';
-                  return `
+                ${[1, 2, 3, 4, 5, 6, 7, 8].map(lvl => {
+        const sc = scoreManager.campaignScores[lvl] !== undefined ? `${scoreManager.campaignScores[lvl]}%` : '--';
+        return `
                     <div style="background:rgba(0,247,255,0.08);padding:5px 2px;border-radius:8px;border:1px solid rgba(0,247,255,0.25);">
                       <div style="color:var(--text-muted);font-size:9.5px;font-weight:700;">LV ${lvl}</div>
                       <div style="font-weight:900;color:#fff;font-family:var(--font-display);">${sc}</div>
                     </div>
                   `;
-                }).join('')}
+      }).join('')}
               </div>
             </div>
 
@@ -1649,9 +1650,9 @@ class App {
 
         // 4. Live camera evaluation for real-time rhythm & song challenges (low-latency)
         if (gameEngine.currentState === GAME_STATES.GAMEPLAY_PHASE ||
-            gameEngine.currentState === GAME_STATES.JINGLE_BELLS ||
-            gameEngine.currentState === GAME_STATES.KOMANG ||
-            gameEngine.currentState === GAME_STATES.NADIMU) {
+          gameEngine.currentState === GAME_STATES.JINGLE_BELLS ||
+          gameEngine.currentState === GAME_STATES.KOMANG ||
+          gameEngine.currentState === GAME_STATES.NADIMU) {
           gameEngine.handleLiveTracking(gestureResult);
         }
 
@@ -1906,7 +1907,7 @@ class App {
       try {
         audioManager.init();
         audioManager.playGoodHit();
-      } catch (e) {}
+      } catch (e) { }
 
       // Trigger pop jump animation
       mascotImg.classList.remove('mascot-pop');
@@ -1960,8 +1961,8 @@ class App {
     const levelPill = document.getElementById('hud-level-pill');
     if (levelPill) {
       if (frameData.mode === 'ENDLESS') {
-        const hearts = '❤️'.repeat(Math.max(0, frameData.lives !== undefined ? frameData.lives : 3)) + 
-                       '🖤'.repeat(Math.max(0, 3 - (frameData.lives !== undefined ? frameData.lives : 3)));
+        const hearts = '❤️'.repeat(Math.max(0, frameData.lives !== undefined ? frameData.lives : 3)) +
+          '🖤'.repeat(Math.max(0, 3 - (frameData.lives !== undefined ? frameData.lives : 3)));
         levelPill.innerHTML = `<span>♾️ STREAK ${frameData.streak || 0} • ${hearts} • ${frameData.bpm} BPM</span>`;
       } else if (frameData.mode === 'TIME_ATTACK') {
         levelPill.innerHTML = `<span>⚡ TIME ATTACK • ${frameData.bpm} BPM</span>`;
@@ -2215,7 +2216,7 @@ class App {
         }
         try {
           el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-        } catch (e) {}
+        } catch (e) { }
       } else if (pointer) {
         pointer.remove();
       }
@@ -2265,7 +2266,7 @@ class App {
         spread: 95,
         origin: { y: 0.55 },
       });
-    } catch (e) {}
+    } catch (e) { }
 
     const existing = document.getElementById('jingle-complete-modal');
     if (existing) existing.remove();
@@ -2400,9 +2401,9 @@ class App {
                 <span class="komang-logo-pulse">🌺</span> KOMANG — RAIM LAODE
               </div>
               <span class="komang-subtitle">
-                ${komangService.sessionMode === '30S_RANDOM' 
-                  ? `⏱️ SESI 45 DETIK (BAGIAN RANDOM: ${komangService.currentSegment?.title || 'Intro'}) • 130 BPM` 
-                  : '🎹 MODE LAGU PENUH (4:30) • Raim Laode • G Major'}
+                ${komangService.sessionMode === '30S_RANDOM'
+        ? `⏱️ SESI 45 DETIK (BAGIAN RANDOM: ${komangService.currentSegment?.title || 'Intro'}) • 130 BPM`
+        : '🎹 MODE LAGU PENUH (4:30) • Raim Laode • G Major'}
               </span>
             </div>
           </div>
@@ -2819,7 +2820,7 @@ class App {
       if (isCur) {
         try {
           box.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-        } catch (e) {}
+        } catch (e) { }
       }
     });
 
@@ -3059,7 +3060,7 @@ class App {
         spread: 110,
         origin: { y: 0.5 },
       });
-    } catch (e) {}
+    } catch (e) { }
 
     const existing = document.getElementById('komang-victory-backdrop');
     if (existing) existing.remove();
@@ -3255,9 +3256,9 @@ class App {
                 <span class="komang-logo-pulse">🎵</span> SELALU ADA DI NADIMU — OST JUMBO
               </div>
               <span class="komang-subtitle">
-                ${nadimuService.sessionMode === '30S_RANDOM' 
-                  ? `⏱️ SESI 45 DETIK (BAGIAN RANDOM: ${nadimuService.currentSegment?.title || 'Bait 1'}) • 78 BPM` 
-                  : '🎵 FULL SONG • OST JUMBO • KEY C MAJOR • 78 BPM'}
+                ${nadimuService.sessionMode === '30S_RANDOM'
+        ? `⏱️ SESI 45 DETIK (BAGIAN RANDOM: ${nadimuService.currentSegment?.title || 'Bait 1'}) • 78 BPM`
+        : '🎵 FULL SONG • OST JUMBO • KEY C MAJOR • 78 BPM'}
               </span>
             </div>
           </div>
@@ -3839,7 +3840,7 @@ class App {
         spread: 110,
         origin: { y: 0.5 },
       });
-    } catch (e) {}
+    } catch (e) { }
 
     const existing = document.getElementById('nadimu-victory-backdrop');
     if (existing) existing.remove();
@@ -3879,9 +3880,9 @@ class App {
         <div class="modal-confetti-badge">🎉 ${nadimuService.sessionMode === '30S_RANDOM' ? 'SESI 45 DETIK SELESAI!' : 'LAGU SELESAI!'} 🎉</div>
         <h2 class="modal-title-victory" style="color:#00f7ff;">VICTORY CLEAR!</h2>
         <p class="modal-subtitle-victory">
-          ${nadimuService.sessionMode === '30S_RANDOM' 
-            ? `Bagian: <strong>${nadimuService.currentSegment?.title || 'Bait 1'}</strong> ("${nadimuService.currentSegment?.lyricHint || ''}")` 
-            : 'Selalu Ada di Nadimu • OST Jumbo • Key C Major'}
+          ${nadimuService.sessionMode === '30S_RANDOM'
+        ? `Bagian: <strong>${nadimuService.currentSegment?.title || 'Bait 1'}</strong> ("${nadimuService.currentSegment?.lyricHint || ''}")`
+        : 'Selalu Ada di Nadimu • OST Jumbo • Key C Major'}
         </p>
 
         <!-- Grade & Star Celebration Banner -->
@@ -4006,17 +4007,17 @@ document.addEventListener('click', (e) => {
     audioManager.init();
     scoreManager.resetCampaign();
     const tempVideo = document.getElementById('camera-video');
-    cameraService.requestCamera(tempVideo).catch(() => {});
+    cameraService.requestCamera(tempVideo).catch(() => { });
     gameEngine.startRound(GAME_MODES.CLASSIC, 1);
   } else if (e.target.closest('#btn-home-timeattack')) {
     audioManager.init();
     const tempVideo = document.getElementById('camera-video');
-    cameraService.requestCamera(tempVideo).catch(() => {});
+    cameraService.requestCamera(tempVideo).catch(() => { });
     gameEngine.startRound(GAME_MODES.TIME_ATTACK, 4);
   } else if (e.target.closest('#btn-home-endless')) {
     audioManager.init();
     const tempVideo = document.getElementById('camera-video');
-    cameraService.requestCamera(tempVideo).catch(() => {});
+    cameraService.requestCamera(tempVideo).catch(() => { });
     gameEngine.startRound(GAME_MODES.ENDLESS, 1);
   } else if (e.target.closest('#btn-home-levels')) {
     audioManager.init();
@@ -4024,12 +4025,12 @@ document.addEventListener('click', (e) => {
   } else if (e.target.closest('#btn-home-free')) {
     audioManager.init();
     const tempVideo = document.getElementById('camera-video');
-    cameraService.requestCamera(tempVideo).catch(() => {});
+    cameraService.requestCamera(tempVideo).catch(() => { });
     gameEngine.setState(GAME_STATES.FREE_SYNTH);
   } else if (e.target.closest('#btn-home-calibration')) {
     audioManager.init();
     const tempVideo = document.getElementById('camera-video');
-    cameraService.requestCamera(tempVideo).catch(() => {});
+    cameraService.requestCamera(tempVideo).catch(() => { });
     window.app.calibStepIndex = 0;
     gameEngine.setState(GAME_STATES.CALIBRATION);
   } else if (e.target.closest('#btn-home-how')) {
@@ -4042,7 +4043,7 @@ document.addEventListener('click', (e) => {
     audioManager.init();
     audioManager.resume();
     const tempVideo = document.getElementById('camera-video');
-    cameraService.requestCamera(tempVideo).catch(() => {});
+    cameraService.requestCamera(tempVideo).catch(() => { });
     jingleBellsService.setMode('GUIDE');
     gameEngine.setState(GAME_STATES.JINGLE_BELLS);
   } else if (e.target.closest('#btn-home-komang')) {
@@ -4050,9 +4051,9 @@ document.addEventListener('click', (e) => {
     audioManager.resume();
     settingsManager.update('soundPreset', 'Acoustic Piano');
     audioManager.setPreset('Acoustic Piano');
-    audioManager.loadPianoSamples().catch(() => {});
+    audioManager.loadPianoSamples().catch(() => { });
     const tempVideo = document.getElementById('camera-video');
-    cameraService.requestCamera(tempVideo).catch(() => {});
+    cameraService.requestCamera(tempVideo).catch(() => { });
     komangService.setMode('PLAY_ALONG');
     gameEngine.setState(GAME_STATES.KOMANG);
   } else if (e.target.closest('#btn-home-midi')) {
@@ -4548,14 +4549,14 @@ document.addEventListener('click', (e) => {
     if (window.app) window.app.render();
   } else if (e.target.closest('#btn-komang-fullscreen-tv')) {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
       if (window.app) {
         window.app.isFullscreen = true;
         settingsManager.update('viewportMode', 'fullscreen');
         window.app.render();
       }
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
       if (window.app) window.app.render();
     }
   } else if (e.target.closest('#btn-show-phone-qr') || e.target.closest('#btn-home-show-qr')) {
