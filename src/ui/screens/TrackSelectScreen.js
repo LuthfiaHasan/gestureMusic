@@ -18,13 +18,17 @@ const TRACK_ICONS = {
 export class TrackSelectScreen {
   static render() {
     const tracks = Object.values(COMPETITION_TRACKS);
-    const isWallpaper = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+    const isWallpaper = localStorage.getItem('gestureMusic_useWallpaper') !== 'false';
+    const isBright = (localStorage.getItem('gestureMusic_themeMode') || 'bright') === 'bright';
     if (isWallpaper) {
       document.body.classList.add('with-custom-wallpaper');
     }
+    if (isBright) {
+      document.body.classList.add('outdoor-bright-mode');
+    }
 
     return `
-      <div class="subpage-screen track-select-screen">
+      <div class="subpage-screen track-select-screen${isBright ? ' outdoor-bright-mode' : ''}">
         <div class="subpage-header">
           <div style="display:flex;align-items:center;gap:10px;">
             <button class="btn-icon-back" id="btn-back-home">‹</button>
@@ -33,9 +37,14 @@ export class TrackSelectScreen {
               <span style="font-size:11px; color:var(--text-muted);">Pilih lagu favoritmu • Papan peringkat tetap 1 & setara untuk semua lagu!</span>
             </div>
           </div>
-          <button class="btn-toggle-wallpaper-chip ${isWallpaper ? 'active' : ''}" id="btn-toggle-wallpaper-track" title="Ganti Mode Latar Belakang (Flash Tech Wallpaper / Cyber Theme)">
-            <span>🖼️</span> <span id="track-wp-label">${isWallpaper ? 'Wallpaper: On ✦' : 'Wallpaper: Off'}</span>
-          </button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn-toggle-theme-chip ${isBright ? 'active-bright' : ''}" id="btn-toggle-theme-track" title="Ganti Mode Tampilan (Outdoor TV Terang / Cyber Gelap)">
+              <span>${isBright ? '☀️' : '🌙'}</span> <span id="track-theme-label">${isBright ? 'TV Outdoor: Terang' : 'Mode: Gelap'}</span>
+            </button>
+            <button class="btn-toggle-wallpaper-chip ${isWallpaper ? 'active' : ''}" id="btn-toggle-wallpaper-track" title="Ganti Mode Latar Belakang (Flash Tech Wallpaper / Cyber Theme)">
+              <span>🖼️</span> <span id="track-wp-label">${isWallpaper ? 'Wallpaper: On ✦' : 'Wallpaper: Off'}</span>
+            </button>
+          </div>
         </div>
 
         <div class="track-select-container">
@@ -151,10 +160,25 @@ export class TrackSelectScreen {
       };
     }
 
+    const themeBtn = document.getElementById('btn-toggle-theme-track');
+    if (themeBtn) {
+      themeBtn.onclick = () => {
+        const current = (localStorage.getItem('gestureMusic_themeMode') || 'bright') === 'bright';
+        const next = !current;
+        localStorage.setItem('gestureMusic_themeMode', next ? 'bright' : 'dark');
+        document.body.classList.toggle('outdoor-bright-mode', next);
+        themeBtn.classList.toggle('active-bright', next);
+        const lbl = document.getElementById('track-theme-label');
+        if (lbl) lbl.textContent = next ? 'TV Outdoor: Terang' : 'Mode: Gelap';
+        const icon = themeBtn.querySelector('span');
+        if (icon) icon.textContent = next ? '☀️' : '🌙';
+      };
+    }
+
     const wpBtn = document.getElementById('btn-toggle-wallpaper-track');
     if (wpBtn) {
       wpBtn.onclick = () => {
-        const current = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+        const current = localStorage.getItem('gestureMusic_useWallpaper') !== 'false';
         const next = !current;
         localStorage.setItem('gestureMusic_useWallpaper', next ? 'true' : 'false');
         document.body.classList.toggle('with-custom-wallpaper', next);

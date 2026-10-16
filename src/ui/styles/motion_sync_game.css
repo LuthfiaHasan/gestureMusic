@@ -280,6 +280,44 @@ body, html {
   box-shadow: 0 0 16px rgba(0, 247, 255, 0.55), inset 0 0 8px rgba(0, 247, 255, 0.2);
 }
 
+/* Theme Mode Toggle (Outdoor TV Terang / Cyber Gelap) */
+.btn-theme-toggle,
+.btn-toggle-theme-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 26, 62, 0.75);
+  border: 1.2px solid rgba(245, 158, 11, 0.45);
+  color: #fef08a;
+  font-family: var(--font-main);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-theme-toggle:hover,
+.btn-toggle-theme-chip:hover {
+  border-color: #f59e0b;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-theme-toggle.active-bright,
+.btn-toggle-theme-chip.active-bright {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+  color: #78350f;
+  font-weight: 800;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+}
+
 /* Kamera Aktif Pill Badge */
 .btn-camera-status {
   display: flex;
@@ -3701,5 +3739,561 @@ body, html {
   background: rgba(255, 215, 0, 0.25);
   border-color: #ffd700;
   transform: scale(1.02);
+}
+
+/* ==========================================================================
+   OUTDOOR TV BRIGHT MODE (MODE TV OUTDOOR - TERANG & ANTI-SILAU SIANG HARI)
+   Dirancang khusus untuk layar TV di luar ruangan (Outdoor Daylight High Contrast)
+   ========================================================================== */
+
+.gm-app-container.outdoor-bright-mode {
+  background: 
+    radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.88) 0%, rgba(224, 242, 254, 0.8) 50%, rgba(186, 230, 253, 0.9) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(240, 249, 255, 0.5) 100%),
+    url('/images/background.jpg') center center / cover no-repeat fixed !important;
+  color: #0f172a !important;
+}
+
+body.outdoor-bright-mode {
+  background: 
+    radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.88) 0%, rgba(224, 242, 254, 0.8) 50%, rgba(186, 230, 253, 0.9) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(240, 249, 255, 0.5) 100%),
+    url('/images/background.jpg') center center / cover no-repeat fixed !important;
+  color: #0f172a !important;
+}
+
+.gm-app-container.outdoor-bright-mode:not(.with-flashtech-bg) {
+  background: radial-gradient(circle at 50% 12%, #f0f9ff 0%, #e0f2fe 40%, #bae6fd 75%, #7dd3fc 100%) !important;
+}
+
+/* 1. Header Navbar */
+.gm-app-container.outdoor-bright-mode .gm-top-bar {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.45) !important;
+  border-radius: 12px;
+  padding: 6px 14px;
+  box-shadow: 0 6px 20px rgba(2, 44, 90, 0.1) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.gm-app-container.outdoor-bright-mode .neon-text-cyan {
+  color: #034694 !important;
+  -webkit-text-stroke: 1.2px #0284c7 !important;
+  text-shadow: 0 0 12px rgba(14, 165, 233, 0.45) !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .neon-text-magenta {
+  color: #be185d !important;
+  -webkit-text-stroke: 1.2px #ec4899 !important;
+  text-shadow: 0 0 12px rgba(236, 72, 153, 0.4) !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode.taragak-theme .neon-text-cyan {
+  color: #b45309 !important;
+  -webkit-text-stroke: 1.2px #d97706 !important;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.5) !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode.taragak-theme .neon-text-magenta {
+  color: #047857 !important;
+  -webkit-text-stroke: 1.2px #059669 !important;
+  text-shadow: 0 0 12px rgba(16, 185, 129, 0.5) !important;
+  font-weight: 900 !important;
+}
+
+/* Header Buttons */
+.gm-app-container.outdoor-bright-mode .btn-back-menu {
+  background: #ffffff !important;
+  color: #0369a1 !important;
+  border: 1.5px solid #0284c7 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .top-player-chip {
+  background: #fef3c7 !important;
+  border: 1.5px solid #f59e0b !important;
+  color: #b45309 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-top-leaderboard {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.45) !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 8px rgba(2, 44, 90, 0.08) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-theme-toggle {
+  background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+  border: 1.8px solid #f59e0b !important;
+  color: #92400e !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-bg-toggle {
+  background: #ffffff !important;
+  color: #0369a1 !important;
+  border: 1.5px solid #0284c7 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-bg-toggle.active {
+  background: #e0f2fe !important;
+  border-color: #0284c7 !important;
+  color: #0369a1 !important;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.3) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-camera-status {
+  background: #dcfce7 !important;
+  border: 1.5px solid #16a34a !important;
+  color: #15803d !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-camera-status .status-pulse-dot {
+  background-color: #16a34a !important;
+  box-shadow: 0 0 8px #16a34a !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-kembali {
+  background: #ffffff !important;
+  color: #64748b !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-weight: 800 !important;
+}
+
+/* 2. Sub Status Bar */
+.gm-app-container.outdoor-bright-mode .status-card-inner {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 2px solid rgba(14, 165, 233, 0.5) !important;
+  box-shadow: 0 8px 25px rgba(2, 44, 90, 0.1) !important;
+  backdrop-filter: blur(18px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .np-caption {
+  color: #0284c7 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .np-title {
+  color: #041e42 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .active-beat-indicator {
+  background: #e0f2fe !important;
+  border: 1.5px solid #0284c7 !important;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.25) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .abi-label {
+  color: #0369a1 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .abi-val {
+  color: #0c4a6e !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .lives-display-badge {
+  background: #fee2e2 !important;
+  border: 1.5px solid #f87171 !important;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .lives-caption {
+  color: #b91c1c !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .stars-display-badge {
+  background: #fef3c7 !important;
+  border: 1.5px solid #f59e0b !important;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.25) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .stars-caption {
+  color: #b45309 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .stars-val {
+  color: #78350f !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .score-caption {
+  color: #64748b !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .time-digit {
+  color: #0284c7 !important;
+  font-weight: 900 !important;
+  text-shadow: none !important;
+}
+
+.gm-app-container.outdoor-bright-mode .score-digit {
+  color: #0f172a !important;
+  font-weight: 900 !important;
+  text-shadow: none !important;
+}
+
+.gm-app-container.outdoor-bright-mode .progress-track-strip {
+  background: #e2e8f0 !important;
+}
+
+/* 3. Main Panels */
+.gm-app-container.outdoor-bright-mode .gm-panel,
+.gm-app-container.outdoor-bright-mode .camera-stage-panel,
+.gm-app-container.outdoor-bright-mode .guide-stage-panel {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 2px solid rgba(14, 165, 233, 0.45) !important;
+  box-shadow: 0 12px 35px rgba(2, 44, 90, 0.1), 0 0 20px rgba(56, 189, 248, 0.15) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .panel-box-header {
+  border-bottom: 1.5px solid rgba(14, 165, 233, 0.25) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .panel-title {
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .panel-tag-cyan {
+  background: #e0f2fe !important;
+  color: #0284c7 !important;
+  border: 1.5px solid #0284c7 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-guide-help {
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  border: 1.5px solid #0284c7 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .next-target-countdown {
+  background: #fef3c7 !important;
+  border: 1.5px solid #f59e0b !important;
+  color: #b45309 !important;
+  font-weight: 900 !important;
+}
+
+/* 4. Camera Viewport */
+.gm-app-container.outdoor-bright-mode .camera-stage-frame {
+  background: #061126 !important;
+  border: 2px solid #0284c7 !important;
+  box-shadow: inset 0 0 25px rgba(2, 132, 199, 0.2) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cyber-corner {
+  border-color: #00f7ff !important;
+  filter: drop-shadow(0 0 10px #00f7ff) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .hud-badge-tracking {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 2px solid #0284c7 !important;
+  color: #0369a1 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .hud-tracking-dot {
+  background-color: #0284c7 !important;
+  box-shadow: 0 0 8px #0284c7 !important;
+}
+
+/* 5. Right Panel - Finger Arena Stage */
+.gm-app-container.outdoor-bright-mode .finger-arena-stage {
+  background: radial-gradient(circle at 50% 50%, #ffffff 0%, #f0f7ff 100%) !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.3) !important;
+}
+
+/* 4 Upcoming Cue Cards */
+.gm-app-container.outdoor-bright-mode .cue-card {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.active {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  border: 2.5px solid #0284c7 !important;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.8) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.active .cue-pill-tag {
+  color: #0284c7 !important;
+  text-shadow: none !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.active .cue-fingers-title {
+  color: #032d60 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.active .cue-time-chip {
+  color: #0369a1 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.next {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border: 2px solid #f59e0b !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.next .cue-pill-tag {
+  color: #b45309 !important;
+  text-shadow: none !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.next .cue-fingers-title {
+  color: #78350f !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.next .cue-time-chip {
+  color: #b45309 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.future .cue-pill-tag {
+  color: #64748b !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.future .cue-fingers-title {
+  color: #1e293b !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.future .cue-time-chip {
+  color: #64748b !important;
+  font-weight: 800 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-hand-thumb-wrap {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.active .cue-hand-thumb-wrap {
+  border-color: #0284c7 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 8px rgba(2, 132, 199, 0.4) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-card.next .cue-hand-thumb-wrap {
+  border-color: #f59e0b !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .cue-lyric-hint {
+  color: #475569 !important;
+  font-weight: 700 !important;
+}
+
+/* Target Hero Badge */
+.gm-app-container.outdoor-bright-mode .target-hero-badge {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(224, 242, 254, 0.95)) !important;
+  border: 2px solid #0284c7 !important;
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.2) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .thb-thumb-wrap {
+  background: #ffffff !important;
+  border: 2px solid #0284c7 !important;
+  box-shadow: 0 0 12px rgba(2, 132, 199, 0.3) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .thb-title {
+  color: #032d60 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .thb-desc {
+  color: #0369a1 !important;
+  font-weight: 800 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .thb-lyric {
+  color: #b45309 !important;
+  font-weight: 800 !important;
+}
+
+/* Central Hologram Halo */
+.gm-app-container.outdoor-bright-mode .holo-energy-halo {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 35px rgba(2, 132, 199, 0.35), inset 0 0 30px rgba(2, 132, 199, 0.2) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .holo-energy-halo::before {
+  border-color: #f59e0b !important;
+}
+
+.gm-app-container.outdoor-bright-mode .holo-energy-halo::after {
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.25) 0%, rgba(245, 158, 11, 0.15) 50%, transparent 75%) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .hologram-img-wrapper {
+  filter: drop-shadow(0 6px 14px rgba(2, 132, 199, 0.4)) drop-shadow(0 0 30px rgba(14, 165, 233, 0.3)) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .hologram-pose-chip {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #38bdf8 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45) !important;
+}
+
+/* Rhythmic Beat Metronome Strip */
+.gm-app-container.outdoor-bright-mode .beat-rhythm-strip {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.35) !important;
+  box-shadow: 0 2px 10px rgba(2, 44, 90, 0.06) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .beat-strip-lbl {
+  color: #0369a1 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .beat-pill {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .beat-pill.active {
+  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(2, 132, 199, 0.7) !important;
+}
+
+.gm-app-container.outdoor-bright-mode.taragak-theme .beat-pill.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .bmi-wave {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border: 1.5px solid #f59e0b !important;
+  font-weight: 900 !important;
+}
+
+/* Live Finger Comparison Card */
+.gm-app-container.outdoor-bright-mode .live-finger-comparison-card {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.35) !important;
+  box-shadow: 0 2px 10px rgba(2, 44, 90, 0.06) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .comp-lbl {
+  color: #64748b !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .comp-val {
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .comp-status-badge.idle {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-weight: 800 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .comp-status-badge.match {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  border: 1.5px solid #16a34a !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .comp-status-badge.wrong {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border: 1.5px solid #ef4444 !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .motion-mini-track {
+  background: #e2e8f0 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .motion-mini-bar {
+  background: linear-gradient(90deg, #0284c7, #06b6d4) !important;
+}
+
+/* Bottom Bold Banner */
+.gm-app-container.outdoor-bright-mode .guide-bottom-banner {
+  background: linear-gradient(135deg, #032d60 0%, #0284c7 100%) !important;
+  border-top: 2px solid #38bdf8 !important;
+  box-shadow: 0 4px 15px rgba(2, 44, 90, 0.15) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .banner-heading {
+  color: #ffffff !important;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5) !important;
+  font-weight: 900 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .banner-sub {
+  color: #bae6fd !important;
+  font-weight: 800 !important;
+}
+
+/* 6. Bottom Utility Strip */
+.gm-app-container.outdoor-bright-mode .audio-hud-controls {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.45) !important;
+  box-shadow: 0 8px 25px rgba(2, 44, 90, 0.1) !important;
+}
+
+.gm-app-container.outdoor-bright-mode .waveform-box {
+  background: #ffffff !important;
+  border: 1.5px solid #0284c7 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .slider-cyber {
+  accent-color: #0284c7 !important;
+}
+
+.gm-app-container.outdoor-bright-mode .btn-mode-toggle {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.3) !important;
 }
 

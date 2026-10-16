@@ -68,6 +68,77 @@ body.with-custom-wallpaper {
     url('/images/background.jpg') center center / cover no-repeat fixed !important;
 }
 
+/* OUTDOOR TV BRIGHT THEME - High Luminance & Anti-Glare for Outdoor Daylight */
+body.outdoor-bright-mode,
+body.outdoor-bright-mode.with-custom-wallpaper {
+  background: 
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.75) 0%, rgba(240, 248, 255, 0.65) 60%, rgba(219, 234, 254, 0.85) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(224, 242, 254, 0.45) 50%, rgba(191, 219, 254, 0.65) 100%),
+    url('/images/background.jpg') center center / cover no-repeat fixed !important;
+  color: #0f172a !important;
+}
+
+body.outdoor-bright-mode:not(.with-custom-wallpaper) {
+  background: radial-gradient(circle at 50% 12%, #f0f9ff 0%, #e0f2fe 40%, #bae6fd 75%, #7dd3fc 100%) !important;
+  color: #0f172a !important;
+}
+
+body.outdoor-bright-mode .subpage-title {
+  color: #032d60 !important;
+}
+
+body.outdoor-bright-mode .track-select-screen .track-card,
+body.outdoor-bright-mode .phone-shell.fullscreen-mode .track-select-screen .track-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 2px solid rgba(14, 165, 233, 0.45) !important;
+  box-shadow: 0 8px 25px rgba(2, 44, 90, 0.1) !important;
+  color: #0f172a !important;
+}
+
+body.outdoor-bright-mode .track-select-screen .track-title,
+body.outdoor-bright-mode .phone-shell.fullscreen-mode .track-select-screen .track-title {
+  color: #032d60 !important;
+  font-weight: 900 !important;
+}
+
+body.outdoor-bright-mode .track-select-screen .track-artist,
+body.outdoor-bright-mode .phone-shell.fullscreen-mode .track-select-screen .track-artist {
+  color: #0284c7 !important;
+  font-weight: 800 !important;
+}
+
+body.outdoor-bright-mode .track-select-screen .track-desc,
+body.outdoor-bright-mode .phone-shell.fullscreen-mode .track-select-screen .track-desc {
+  color: #334155 !important;
+}
+
+body.outdoor-bright-mode .btn-toggle-theme-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1.5px solid #f59e0b;
+  color: #78350f;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+body.outdoor-bright-mode .btn-toggle-wallpaper-chip {
+  background: #ffffff !important;
+  border: 1.5px solid #0284c7 !important;
+  color: #0369a1 !important;
+  font-weight: 800 !important;
+}
+
+body.outdoor-bright-mode .btn-icon-back {
+  background: #ffffff !important;
+  border: 1.5px solid #0284c7 !important;
+  color: #0369a1 !important;
+}
+
 /* Background Ambient Canvas */
 #bg-canvas {
   position: fixed;

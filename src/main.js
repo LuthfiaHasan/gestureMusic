@@ -4674,8 +4674,12 @@ document.addEventListener('keydown', (e) => {
 
 // Boot app on DOMContentLoaded
 window.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('gestureMusic_useWallpaper') === 'true') {
+  if (localStorage.getItem('gestureMusic_useWallpaper') !== 'false') {
     document.body.classList.add('with-custom-wallpaper');
+  }
+  const themeMode = localStorage.getItem('gestureMusic_themeMode') || 'bright';
+  if (themeMode === 'bright') {
+    document.body.classList.add('outdoor-bright-mode');
   }
   window.app = new App();
 });

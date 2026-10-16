@@ -81,10 +81,11 @@ class SongMenuScreen {
       </div>
     `;
 
-    const isWallpaper = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+    const isWallpaper = localStorage.getItem('gestureMusic_useWallpaper') !== 'false';
+    const isBright = (localStorage.getItem('gestureMusic_themeMode') || 'bright') === 'bright';
 
     this.appEl.innerHTML = `
-      <div class="menu-screen${isWallpaper ? ' with-flashtech-bg' : ''}">
+      <div class="menu-screen${isBright ? ' outdoor-bright-mode' : ''}${isWallpaper ? ' with-flashtech-bg' : ''}">
         <div class="menu-particles" aria-hidden="true">${particles}</div>
 
         <header class="menu-header" role="banner">
@@ -281,7 +282,8 @@ class GestureMusicGameEngine {
     this.isSimulating = false;
     this.simInterval = null;
     this.lastSavedRecordId = null;
-    this.useWallpaper = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+    this.themeMode = localStorage.getItem('gestureMusic_themeMode') || 'bright';
+    this.useWallpaper = localStorage.getItem('gestureMusic_useWallpaper') !== 'false';
   }
 
   escapeHtml(str) {
@@ -295,6 +297,8 @@ class GestureMusicGameEngine {
   }
 
   start() {
+    document.body.classList.toggle('outdoor-bright-mode', this.themeMode === 'bright');
+    document.body.classList.toggle('with-custom-wallpaper', this.useWallpaper);
     this.syncService.restartGame();
     this.render();
     this.bindEvents();
@@ -402,10 +406,13 @@ class GestureMusicGameEngine {
   render() {
     const tel = this.syncService.getTelemetry();
     const curTarget = tel.currentTarget || this.syncService.currentTarget || this.syncService.sequence?.[0] || this.defaultSequence[0];
+    const isBright = this.themeMode === 'bright';
+    const brightCls = isBright ? ' outdoor-bright-mode' : '';
+    const wpCls = this.useWallpaper ? ' with-flashtech-bg' : '';
     const themeCls = this.config.themeClass ? ` ${this.config.themeClass}` : '';
 
     this.appEl.innerHTML = `
-      <div class="gm-app-container${themeCls}${this.useWallpaper ? ' with-flashtech-bg' : ''}">
+      <div class="gm-app-container${themeCls}${brightCls}${wpCls}">
         <header class="gm-top-bar">
           <div class="gm-logo-group">
             <button class="btn-back-menu" id="btn-back-menu">⬅ MENU</button>
@@ -419,6 +426,10 @@ class GestureMusicGameEngine {
             </div>
             <button class="btn-top-leaderboard" id="btn-top-leaderboard" title="Buka Papan Peringkat">
               <span>🏆</span> Leaderboard
+            </button>
+            <button class="btn-theme-toggle ${isBright ? 'active-bright' : ''}" id="btn-theme-toggle" title="Ganti Mode Tampilan (Outdoor TV Terang / Cyber Gelap)">
+              <span class="theme-icon">${isBright ? '☀️' : '🌙'}</span>
+              <span class="theme-label">${isBright ? 'TV Outdoor: Terang' : 'Mode: Gelap'}</span>
             </button>
             <button class="btn-bg-toggle ${this.useWallpaper ? 'active' : ''}" id="btn-bg-toggle" title="Ganti Mode Latar Belakang (Flash Tech Wallpaper / Cyber Theme)">
               <span class="bg-toggle-icon">🖼️</span>
@@ -716,6 +727,25 @@ class GestureMusicGameEngine {
 
     document.getElementById('btn-kembali')?.addEventListener('click', () => {
       this.syncService.restartGame();
+    });
+
+    document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
+      this.themeMode = this.themeMode === 'bright' ? 'dark' : 'bright';
+      localStorage.setItem('gestureMusic_themeMode', this.themeMode);
+      const isBright = this.themeMode === 'bright';
+      const container = this.appEl.querySelector('.gm-app-container');
+      if (container) {
+        container.classList.toggle('outdoor-bright-mode', isBright);
+      }
+      document.body.classList.toggle('outdoor-bright-mode', isBright);
+      const btn = document.getElementById('btn-theme-toggle');
+      if (btn) {
+        btn.classList.toggle('active-bright', isBright);
+        const icon = btn.querySelector('.theme-icon');
+        const lbl = btn.querySelector('.theme-label');
+        if (icon) icon.textContent = isBright ? '☀️' : '🌙';
+        if (lbl) lbl.textContent = isBright ? 'TV Outdoor: Terang' : 'Mode: Gelap';
+      }
     });
 
     document.getElementById('btn-bg-toggle')?.addEventListener('click', () => {
