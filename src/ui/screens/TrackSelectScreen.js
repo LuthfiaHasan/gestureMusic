@@ -3,6 +3,8 @@
 
 import { COMPETITION_TRACKS } from '../../services/CompetitionLeaderboardService.js';
 import { gameEngine, GAME_STATES } from '../../game/GameEngine.js';
+import { settingsManager } from '../../services/SettingsManager.js';
+import { audioManager } from '../../audio/AudioManager.js';
 
 const TRACK_ICONS = {
   KOMANG: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path><path d="M2 14h20"></path></svg>`,
@@ -142,6 +144,11 @@ export class TrackSelectScreen {
   }
 
   static startTrack(trackId, app) {
+    if (trackId === 'KOMANG' || trackId === 'NADIMU') {
+      settingsManager.update('soundPreset', 'Acoustic Piano');
+      audioManager.setPreset('Acoustic Piano');
+      audioManager.loadPianoSamples().catch(() => {});
+    }
     switch (trackId) {
       case 'KOMANG':
         gameEngine.setState(GAME_STATES.KOMANG);
@@ -151,6 +158,12 @@ export class TrackSelectScreen {
         break;
       case 'JINGLE_BELLS':
         gameEngine.setState(GAME_STATES.JINGLE_BELLS);
+        break;
+      case 'JATUH_SUKA':
+        gameEngine.setState(GAME_STATES.JATUH_SUKA);
+        break;
+      case 'TARAGAK_PULANG':
+        gameEngine.setState(GAME_STATES.TARAGAK_PULANG);
         break;
       case 'NEON_DAWN':
         gameEngine.startRound('CLASSIC', 1);

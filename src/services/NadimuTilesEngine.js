@@ -56,34 +56,66 @@ export class NadimuTilesEngine {
     this.animFrameId = null;
     this.isRunning = false;
 
-    // Highway Geometry & Elongated Grand Piano Keys
+    // Highway Geometry & Elongated Grand Piano Keys (Matching Komang)
     this.width = 600;
     this.height = 700;
     this.lanesCount = 4;
-    this.pianoKeyHeight = 110;
-    this.hitLineY = 560;
-    this.hitWindowSec = 0.55;
+    this.hitLineRatio = 0.65; // Elongated grand piano keys (~35% of highway height)
+    this.keyHeightModes = [
+      { ratio: 0.65, label: 'Panjang (35%)' },
+      { ratio: 0.55, label: 'Ekstra Panjang (45%)' },
+      { ratio: 0.78, label: 'Kompak (22%)' },
+    ];
+    this.currentKeyHeightModeIdx = 0;
+    this.hitLineY = 455;
+    this.hitWindowSec = 0.52; // Generous, comfortable hit window matching Komang
 
     // Visual Speed
-    this.travelTimeSec = 3.2;
+    this.baseTravelTimeSec = 4.2;
     this.speedMultiplier = 1.0;
+    this.travelTimeSec = 4.2;
 
     // Tile generation & state
     this.tiles = [];
     this.measureDurationSec = 3.076;
     this.cycleDurationSec = 49.23;
 
-    // Particles & Feedback FX
+    // Particles & Feedback FX (Matching Komang Visual Excellence)
     this.particles = [];
+    this.lightPillars = [0, 0, 0, 0]; // Intensity for each lane 0..3 (Vertical Glowing Neon Pillars)
+    this.floatingToasts = []; // Floating judgment toasts (+1000 PERFECT! ✨)
+    this.laneActiveStates = [false, false, false, false];
+    this.screenShakeTime = 0;
+    this.redVignetteAlpha = 0;
     this.hitEffects = [];
     this.lanePressAnim = [0, 0, 0, 0];
 
-    // High Precision Interpolation
-    this._lastAudioTime = 0;
-    this._lastPerfTime = 0;
+    // High Precision Interpolation (Monotonic anchor with gentle drift damping)
+    this._audioAnchorTime = 0;
+    this._audioAnchorPerf = 0;
+    this._lastRawAudioTime = -1;
     this._smoothSongTime = 0;
 
     this._boundOnFrame = this._onFrame.bind(this);
+  }
+
+  triggerMissEffect() {
+    this.screenShakeTime = 14;
+    this.redVignetteAlpha = 0.55;
+  }
+
+  setHitLineRatio(ratio) {
+    this.hitLineRatio = Math.max(0.50, Math.min(0.85, ratio));
+  }
+
+  cycleKeyHeightMode() {
+    this.currentKeyHeightModeIdx = (this.currentKeyHeightModeIdx + 1) % this.keyHeightModes.length;
+    this.hitLineRatio = this.keyHeightModes[this.currentKeyHeightModeIdx].ratio;
+    return this.keyHeightModes[this.currentKeyHeightModeIdx].label;
+  }
+
+  getKeyHeightLabel() {
+    return this.keyHeightModes[this.currentKeyHeightModeIdx]?.label || 'Panjang (35%)';
   }
 
   init(canvas, nadimuService) {
@@ -99,7 +131,7 @@ export class NadimuTilesEngine {
 
   setSpeed(multiplier = 1.0) {
     this.speedMultiplier = Math.max(0.6, Math.min(2.0, multiplier));
-    this.travelTimeSec = 3.2 / this.speedMultiplier;
+    this.travelTimeSec = this.baseTravelTimeSec / this.speedMultiplier;
   }
 
   resize() {
@@ -122,15 +154,45 @@ export class NadimuTilesEngine {
     const bpm = this.nadimuService?.bpm || 78;
     const beatSec = 60 / bpm;
     this.measureDurationSec = beatSec * 4;
+    this.halfMeasureSec = beatSec * 2; // ~1.538s (creates dense, continuous flow matching Komang!)
     this.cycleDurationSec = this.measureDurationSec * NADIMU_MEASURES.length;
 
+    // Sweet sparkling 3-note open piano voicings in octaves 4-5 (matching Komang's luminous sound)
     const sweetVoicings = {
-      'C': ['C4', 'E4', 'G4', 'C5'],
-      'F': ['F4', 'A4', 'C5', 'F5'],
-      'Em': ['E4', 'G4', 'B4', 'E5'],
-      'Am': ['A4', 'C5', 'E5', 'A5'],
-      'Dm': ['D4', 'F4', 'A4', 'D5'],
-      'G': ['G4', 'B4', 'D5', 'G5'],
+      'C': ['G4', 'C5', 'E5'],
+      'F': ['A4', 'C5', 'F5'],
+      'Em': ['G4', 'B4', 'E5'],
+      'Am': ['A4', 'C5', 'E5'],
+      'Dm': ['A4', 'D5', 'F5'],
+      'G': ['G4', 'B4', 'D5'],
+    };
+
+    const sweetVoicingsHigh = {
+      'C': ['C5', 'E5', 'G5'],
+      'F': ['C5', 'F5', 'A5'],
+      'Em': ['B4', 'E5', 'G5'],
+      'Am': ['C5', 'E5', 'A5'],
+      'Dm': ['D5', 'F5', 'A5'],
+      'G': ['B4', 'D5', 'G5'],
+    };
+
+    const splitLyrics = {
+      0: ["Kala nanti...", "badai 'kan datang ⛈️"],
+      1: ["Angin akan...", "buat kau goyah 🍃"],
+      2: ["Maafkan...", "hidup memang 🕊️"],
+      3: ["Ingin kau...", "lebih kuat... ✨"],
+      4: ["Andaikan...", "saat itu datang..."],
+      5: ["Kami tak ada...", "menemani... 🕊️"],
+      6: ["Aku ingin...", "kamu mendengar..."],
+      7: ["Nyanyianku...", "di sini... 🕊️"],
+      8: ["Sedikit demi...", "sedikit... ✨"],
+      9: ["Lelah tak akan...", "tersia... 💖"],
+      10: ["Selalu ada...", "di nadimu... ✨"],
+      11: ["Mengalir dalam...", "jiwamu... 🌸"],
+      12: ["Tersenyumlah...", "hari ini... ☀️"],
+      13: ["Esok kita...", "'kan melangkah... 🚀"],
+      14: ["Selalu ada...", "di nadimu... ✨"],
+      15: ["Keluarga abadi...", "selamanya... ❤️"],
     };
 
     const totalCycles = 10;
@@ -150,7 +212,10 @@ export class NadimuTilesEngine {
 
         const mainMelody = (m.melodyNotes && m.melodyNotes[0]) ? m.melodyNotes[0] : 'C4';
         const chordVoicing = sweetVoicings[m.chord] || ['C4', 'E4', 'G4', 'C5'];
+        const chordVoicingHigh = sweetVoicingsHigh[m.chord] || chordVoicing;
+        const lyrics = splitLyrics[m.index] || [m.lyric, ''];
 
+        // 1. Beat 1 Primary Downbeat Tile (Matching Komang's elongated grand piano tile)
         this.tiles.push({
           id: `tile_${globalId++}`,
           cycle,
@@ -161,14 +226,35 @@ export class NadimuTilesEngine {
           fingerCount: m.fingerCount,
           emoji: m.emoji,
           lane: laneIndex,
-          lyric: m.lyric,
+          lyric: lyrics[0],
           displayNote: mainMelody,
           melodyNotes: chordVoicing,
           timeSec: targetTimeSec,
-          durationSec: this.measureDurationSec * 0.85,
+          durationSec: this.halfMeasureSec * 0.85,
           status: 'PENDING',
           hitRating: null,
           isMelodySubtile: false,
+        });
+
+        // 2. Beat 3 Secondary Flow Tile (Fills highway so tiles flow continuously like Komang, no single lonely tiles!)
+        this.tiles.push({
+          id: `tile_${globalId++}`,
+          cycle,
+          measureIndex: m.index,
+          measureNum: m.measure,
+          chord: m.chord,
+          chordDesc: `${m.chord} (Alunan Melodi)`,
+          fingerCount: m.fingerCount,
+          emoji: m.emoji,
+          lane: laneIndex,
+          lyric: lyrics[1] || lyrics[0],
+          displayNote: (m.melodyNotes && m.melodyNotes[2]) ? m.melodyNotes[2] : 'G4',
+          melodyNotes: chordVoicingHigh,
+          timeSec: targetTimeSec + this.halfMeasureSec,
+          durationSec: this.halfMeasureSec * 0.85,
+          status: 'PENDING',
+          hitRating: null,
+          isMelodySubtile: true,
         });
       });
     }
@@ -191,11 +277,13 @@ export class NadimuTilesEngine {
   }
 
   start() {
-    if (this.isRunning) return;
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
     this.isRunning = true;
     this._lastAudioTime = 0;
     this._lastPerfTime = performance.now();
-    this._smoothSongTime = 0;
     this.animFrameId = requestAnimationFrame(this._boundOnFrame);
   }
 
@@ -205,6 +293,7 @@ export class NadimuTilesEngine {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
     }
+    this.draw();
   }
 
   reset() {
@@ -213,15 +302,25 @@ export class NadimuTilesEngine {
       t.hitRating = null;
     });
     this.particles = [];
+    this.lightPillars = [0, 0, 0, 0];
+    this.floatingToasts = [];
+    this.laneActiveStates = [false, false, false, false];
+    this.screenShakeTime = 0;
+    this.redVignetteAlpha = 0;
     this.hitEffects = [];
     this.lanePressAnim = [0, 0, 0, 0];
+    this._audioAnchorTime = 0;
+    this._audioAnchorPerf = 0;
+    this._lastRawAudioTime = -1;
     this._smoothSongTime = 0;
+    this.draw();
   }
 
   seekTime(targetSec) {
     this._smoothSongTime = targetSec;
-    this._lastAudioTime = targetSec;
-    this._lastPerfTime = performance.now();
+    this._audioAnchorTime = targetSec;
+    this._audioAnchorPerf = performance.now();
+    this._lastRawAudioTime = targetSec;
     this.tiles.forEach(t => {
       if (t.timeSec + t.durationSec < targetSec - 0.2) {
         t.status = 'MISSED';
@@ -282,95 +381,145 @@ export class NadimuTilesEngine {
   triggerLaneAction(laneIndex, isManualClick = false, isWildcard = false) {
     if (!this.nadimuService) return null;
 
-    this.lanePressAnim[laneIndex] = 1.0;
     const songTime = this.getCurrentSongTime();
-
     let closestTile = null;
     let minDelta = Infinity;
 
     for (let i = 0; i < this.tiles.length; i++) {
       const t = this.tiles[i];
-      if (t.lane === laneIndex && t.status === 'PENDING') {
-        const delta = Math.abs(t.timeSec - songTime);
-        if (delta <= this.hitWindowSec && delta < minDelta) {
-          minDelta = delta;
-          closestTile = t;
-        }
+      if (t.timeSec > songTime + this.hitWindowSec + 0.5) break;
+      if (t.status !== 'PENDING') continue;
+      if (t.lane !== laneIndex) continue;
+
+      const delta = Math.abs(t.timeSec - songTime);
+      if (delta <= this.hitWindowSec && delta < minDelta) {
+        minDelta = delta;
+        closestTile = t;
       }
     }
 
-    if (!closestTile) {
-      if (isManualClick) {
-        this.nadimuService.playChordNotes(NADIMU_LANES[laneIndex].chord);
+    if (closestTile) {
+      // Light up glowing vertical light pillar and receptor key
+      this.lightPillars[laneIndex] = 1.0;
+      this.laneActiveStates[laneIndex] = true;
+      setTimeout(() => {
+        this.laneActiveStates[laneIndex] = false;
+      }, 160);
+
+      return this._executeHit(closestTile, minDelta, isManualClick, isWildcard);
+    } else if (isManualClick) {
+      this.lightPillars[laneIndex] = 0.55;
+      this.laneActiveStates[laneIndex] = true;
+      if (!this.isRunning) {
+        this.draw();
       }
-      return null;
+      setTimeout(() => {
+        this.laneActiveStates[laneIndex] = false;
+        if (!this.isRunning) this.draw();
+      }, 120);
+
+      const lanePreviewNotes = ['C4', 'F4', 'E4', 'G4'];
+      const previewNote = lanePreviewNotes[laneIndex] || 'C4';
+      audioManager.init();
+      audioManager.resume();
+      audioManager.playKomangMelodyNote(previewNote, {
+        duration: 1.1,
+        lane: laneIndex,
+        isPerfect: false,
+        preset: 'Acoustic Piano',
+      });
     }
 
-    const absDelta = minDelta;
-    let rating = 'GOOD';
-    let baseScore = 300;
+    return null;
+  }
 
-    if (absDelta <= 0.16) {
+  _executeHit(tile, timeDiffSec, isManualClick, isWildcard = false) {
+    tile.status = 'HIT';
+
+    let rating = 'PERFECT';
+    let baseScore = 1000;
+    if (timeDiffSec <= 0.18) {
       rating = 'PERFECT';
       baseScore = 1000;
-    } else if (absDelta <= 0.32) {
+    } else if (timeDiffSec <= 0.35) {
       rating = 'GREAT';
       baseScore = 600;
     } else {
       rating = 'GOOD';
       baseScore = 300;
     }
+    tile.hitRating = rating;
 
-    closestTile.status = 'HIT';
-    closestTile.hitRating = rating;
+    // 1. Play crystal-pure, sweet singing Steinway Grand Piano melody chord with stereo pan & sparkle overtone!
+    audioManager.init();
+    audioManager.resume();
+    audioManager.playKomangMelodyNote(tile.melodyNotes || tile.displayNote || 'C5', {
+      duration: 1.6,
+      isPerfect: rating === 'PERFECT',
+      lane: tile.lane,
+      preset: 'Acoustic Piano',
+    });
 
-    this._spawnHitParticles(laneIndex, rating);
-    this._addHitFeedback(laneIndex, rating);
-
-    this.nadimuService.combo++;
-    if (this.nadimuService.combo > this.nadimuService.maxCombo) {
-      this.nadimuService.maxCombo = this.nadimuService.combo;
+    // 2. Spawn Particle Burst & Animated Floating Toast
+    const laneWidth = this.width / 4;
+    const hitX = (tile.lane + 0.5) * laneWidth;
+    const hitY = this.height * this.hitLineRatio;
+    this._spawnHitParticles(hitX, hitY, isWildcard ? '#ffd700' : NADIMU_LANES[tile.lane].color);
+    if (isWildcard) {
+      this._spawnToast(hitX, hitY - 30, 'WILDCARD! ✨', baseScore, '#ffd700');
+    } else {
+      this._spawnToast(hitX, hitY - 30, rating, baseScore, NADIMU_LANES[tile.lane].color);
     }
 
-    if (rating === 'PERFECT') this.nadimuService.perfectHits++;
-    else if (rating === 'GREAT') this.nadimuService.greatHits++;
-    else if (rating === 'GOOD') this.nadimuService.goodHits++;
+    // 3. Update NadimuService Score & State with Dynamic Multiplier
+    if (this.nadimuService) {
+      this.nadimuService.combo++;
+      if (this.nadimuService.combo > this.nadimuService.maxCombo) {
+        this.nadimuService.maxCombo = this.nadimuService.combo;
+      }
 
-    let multiplier = 1.0;
-    if (this.nadimuService.combo >= 20) multiplier = 2.5;
-    else if (this.nadimuService.combo >= 10) multiplier = 2.0;
-    else if (this.nadimuService.combo >= 5) multiplier = 1.5;
+      if (rating === 'PERFECT') this.nadimuService.perfectHits++;
+      else if (rating === 'GREAT') this.nadimuService.greatHits++;
+      else if (rating === 'GOOD') this.nadimuService.goodHits++;
 
-    const earnedPoints = Math.round(baseScore * multiplier);
-    this.nadimuService.score += earnedPoints;
+      let multiplier = 1.0;
+      if (this.nadimuService.combo >= 20) multiplier = 2.5;
+      else if (this.nadimuService.combo >= 10) multiplier = 2.0;
+      else if (this.nadimuService.combo >= 5) multiplier = 1.5;
 
-    if (this.nadimuService.combo > 0 && this.nadimuService.combo % 6 === 0) {
-      this.nadimuService.recoverLife(1);
+      const earnedPoints = Math.round(baseScore * multiplier);
+      this.nadimuService.score += earnedPoints;
+
+      if (this.nadimuService.combo > 0 && this.nadimuService.combo % 6 === 0) {
+        this.nadimuService.recoverLife(1);
+        this._spawnToast(hitX, hitY - 45, '+1 NYAWA! ❤️', 0, '#00ffaa');
+      }
+
+      this.nadimuService.evaluatedMeasures.add(tile.measureIndex);
+
+      if (this.nadimuService.onChordHit) {
+        this.nadimuService.onChordHit({
+          tile,
+          rating,
+          measure: NADIMU_MEASURES[tile.measureIndex],
+          measureIndex: tile.measureIndex,
+          earnedPoints,
+          multiplier,
+          combo: this.nadimuService.combo,
+          maxCombo: this.nadimuService.maxCombo,
+          score: this.nadimuService.score,
+          lives: this.nadimuService.lives,
+          isUserAction: true,
+          isWildcard,
+        });
+      }
     }
 
-    this.nadimuService.evaluatedMeasures.add(closestTile.measureIndex);
+    return { tile, rating, score: baseScore, isWildcard };
+  }
 
-    if (this.nadimuService.onChordHit) {
-      this.nadimuService.onChordHit({
-        tile: closestTile,
-        rating,
-        measure: NADIMU_MEASURES[closestTile.measureIndex],
-        earnedPoints,
-        combo: this.nadimuService.combo,
-        maxCombo: this.nadimuService.maxCombo,
-        score: this.nadimuService.score,
-        lives: this.nadimuService.lives,
-        isWildcard,
-      });
-    }
-
-    this.nadimuService.playChordNotes(closestTile.chord);
-
-    return {
-      tile: closestTile,
-      rating,
-      score: earnedPoints,
-    };
+  _getCurrentSongTime() {
+    return this.getCurrentSongTime();
   }
 
   getCurrentSongTime() {
@@ -378,23 +527,39 @@ export class NadimuTilesEngine {
 
     if (this.nadimuService.mode === 'PLAY_ALONG' && this.nadimuService.audioEl) {
       const audio = this.nadimuService.audioEl;
-      const audioTime = audio.currentTime;
+      const rawTime = audio.currentTime;
       const now = performance.now();
 
-      if (audio.paused) {
-        return Math.max(0, audioTime - this.nadimuService.audioOffsetSec);
-      }
-
-      if (audioTime !== this._lastAudioTime) {
-        this._lastAudioTime = audioTime;
-        this._lastPerfTime = now;
-        this._smoothSongTime = audioTime;
+      if (audio.paused || audio.seeking || audio.playbackRate === 0) {
+        this._audioAnchorTime = rawTime;
+        this._audioAnchorPerf = now;
+        this._lastRawAudioTime = rawTime;
+        this._smoothSongTime = rawTime;
       } else {
-        const deltaSec = (now - this._lastPerfTime) / 1000;
-        if (deltaSec < 0.25) {
-          this._smoothSongTime = audioTime + deltaSec;
+        if (!this._audioAnchorPerf || this._audioAnchorPerf === 0) {
+          this._audioAnchorTime = rawTime;
+          this._audioAnchorPerf = now;
+          this._lastRawAudioTime = rawTime;
+        }
+
+        const elapsedSec = (now - this._audioAnchorPerf) / 1000;
+        const rate = audio.playbackRate || 1.0;
+        const predictedTime = this._audioAnchorTime + elapsedSec * rate;
+
+        if (rawTime !== this._lastRawAudioTime) {
+          this._lastRawAudioTime = rawTime;
+          const drift = rawTime - predictedTime;
+
+          if (Math.abs(drift) > 0.16) {
+            this._audioAnchorTime = rawTime;
+            this._audioAnchorPerf = now;
+            this._smoothSongTime = rawTime;
+          } else {
+            this._audioAnchorTime += drift * 0.04;
+            this._smoothSongTime = predictedTime;
+          }
         } else {
-          this._smoothSongTime = audioTime;
+          this._smoothSongTime = predictedTime;
         }
       }
 
@@ -405,114 +570,171 @@ export class NadimuTilesEngine {
     return ms / 1000;
   }
 
+  /**
+   * Integrated distance metric S(t) for butter-smooth acceleration without any tile stutter
+   */
+  _getIntegratedSongTime(t) {
+    if (!this.nadimuService || this.nadimuService.sessionMode !== '30S_RANDOM') {
+      return t;
+    }
+    const start = this.nadimuService.sessionStartSec;
+    const dur = this.nadimuService.sessionDurationSec || 45.0;
+    const maxBoost = 0.85;
+
+    if (t <= start) {
+      return t;
+    }
+
+    const u = Math.min(dur, t - start);
+    const integralInSession = u + (maxBoost / (2 * dur)) * (u * u);
+
+    if (t > start + dur) {
+      const extra = t - (start + dur);
+      return start + integralInSession + extra * (1.0 + maxBoost);
+    }
+
+    return start + integralInSession;
+  }
+
+  getSpeedMultiplier(curTime = this.getCurrentSongTime()) {
+    if (!this.nadimuService || this.nadimuService.sessionMode !== '30S_RANDOM') {
+      return 1.0;
+    }
+    const start = this.nadimuService.sessionStartSec;
+    const dur = this.nadimuService.sessionDurationSec || 45.0;
+    const u = curTime - start;
+    if (u <= 0) return 1.0;
+    const progress = Math.min(1.0, u / dur);
+    return 1.0 + progress * 0.85;
+  }
+
   _onFrame(now) {
     if (!this.isRunning) return;
 
-    this.resize();
-    const songTime = this.getCurrentSongTime();
+    try {
+      const songTime = this.getCurrentSongTime();
+      this.speedMultiplier = this.getSpeedMultiplier(songTime);
 
-    this._updateTiles(songTime);
-    this._updateParticles();
-    this._renderHighway(songTime);
+      this._updateTiles(songTime);
+      this._updateParticles();
+      this._renderHighway(songTime);
+    } catch (err) {
+      console.error('NadimuTilesEngine frame loop error:', err);
+    }
 
     this.animFrameId = requestAnimationFrame(this._boundOnFrame);
   }
 
   _updateTiles(songTime) {
+    const laneWidth = this.width / 4;
+    const hitY = this.height * this.hitLineRatio;
+
     for (let i = 0; i < this.tiles.length; i++) {
       const tile = this.tiles[i];
 
+      if (tile.timeSec > songTime + 1.0) break;
+      if (tile.status !== 'PENDING') continue;
+
       if (this.nadimuService && this.nadimuService.sessionMode === '30S_RANDOM') {
         if (tile.timeSec < this.nadimuService.sessionStartSec - 0.1) {
-          if (tile.status === 'PENDING') {
-            tile.status = 'MISSED';
-          }
+          tile.status = 'PAST';
           continue;
         }
       }
 
-      if (tile.status === 'PENDING' && songTime > tile.timeSec + this.hitWindowSec) {
+      if ((songTime - tile.timeSec) > this.hitWindowSec) {
         tile.status = 'MISSED';
         if (this.nadimuService) {
-          this.nadimuService.missHits++;
-          if (!this.nadimuService.isNoFail) {
-            this.nadimuService.loseLife('CHORD_MISSED');
+          if (!tile.isMelodySubtile) {
+            this.nadimuService.missHits++;
+            if (!this.nadimuService.isNoFail) {
+              this.nadimuService.loseLife('CHORD_MISSED');
+            }
+            const hitX = (tile.lane + 0.5) * laneWidth;
+            this._spawnToast(hitX, hitY - 25, 'MISS! 💔 -1 NYAWA', 0, '#ff3b3b');
+            this.triggerMissEffect();
+            this.lightPillars[tile.lane] = 0.75;
+            this.laneActiveStates[tile.lane] = true;
+            setTimeout(() => {
+              this.laneActiveStates[tile.lane] = false;
+            }, 200);
+
+            if (this.nadimuService.onLifeLost) {
+              this.nadimuService.onLifeLost({
+                tile,
+                lives: this.nadimuService.lives,
+                maxLives: this.nadimuService.maxLives,
+                reason: 'CHORD_MISSED',
+              });
+            }
+          } else {
+            // Melodic continuation subtile: resets combo but does not lose life
+            this.nadimuService.combo = 0;
+            const comboEl = document.getElementById('nadimu-cur-combo');
+            if (comboEl) comboEl.innerText = 'x0 COMBO';
           }
-          if (this.nadimuService.onLifeLost) {
-            this.nadimuService.onLifeLost({
-              tile,
-              lives: this.nadimuService.lives,
-              maxLives: this.nadimuService.maxLives,
-              reason: 'CHORD_MISSED',
-            });
-          }
-          this.nadimuService.combo = 0;
         }
-        this._addHitFeedback(tile.lane, 'MISS');
       }
     }
   }
 
   _updateParticles() {
+    // Fade light pillars
+    for (let l = 0; l < 4; l++) {
+      this.lightPillars[l] = Math.max(0, this.lightPillars[l] - 0.045);
+    }
+
+    // Update particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.15;
+      p.vy += 0.15; // subtle gravity
       p.alpha -= p.fade;
       if (p.alpha <= 0) {
         this.particles.splice(i, 1);
       }
     }
 
-    for (let i = this.hitEffects.length - 1; i >= 0; i--) {
-      const ef = this.hitEffects[i];
-      ef.alpha -= 0.04;
-      ef.scale += 0.03;
-      if (ef.alpha <= 0) {
-        this.hitEffects.splice(i, 1);
-      }
-    }
-
-    for (let l = 0; l < 4; l++) {
-      if (this.lanePressAnim[l] > 0) {
-        this.lanePressAnim[l] = Math.max(0, this.lanePressAnim[l] - 0.06);
+    // Update floating toasts
+    for (let i = this.floatingToasts.length - 1; i >= 0; i--) {
+      const t = this.floatingToasts[i];
+      t.y -= 1.4;
+      t.alpha -= 0.024;
+      t.scale += 0.015;
+      if (t.alpha <= 0) {
+        this.floatingToasts.splice(i, 1);
       }
     }
   }
 
-  _spawnHitParticles(laneIndex, rating) {
-    const laneWidth = this.width / 4;
-    const cx = (laneIndex + 0.5) * laneWidth;
-    const cy = this.hitLineY;
-    const count = rating === 'PERFECT' ? 24 : rating === 'GREAT' ? 16 : 10;
-    const baseColor = NADIMU_LANES[laneIndex].color;
-
+  _spawnHitParticles(x, y, color) {
+    const count = 22;
     for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 7 + 2;
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5);
+      const speed = Math.random() * 6 + 2.5;
       this.particles.push({
-        x: cx + (Math.random() - 0.5) * 30,
-        y: cy + (Math.random() - 0.5) * 15,
+        x,
+        y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - 2.5,
         radius: Math.random() * 4 + 2,
-        color: baseColor,
+        color,
         alpha: 1.0,
-        fade: Math.random() * 0.035 + 0.02,
+        fade: Math.random() * 0.03 + 0.02,
       });
     }
   }
 
-  _addHitFeedback(laneIndex, rating) {
-    const laneWidth = this.width / 4;
-    const cx = (laneIndex + 0.5) * laneWidth;
-    this.hitEffects.push({
-      x: cx,
-      y: this.hitLineY - 35,
+  _spawnToast(x, y, rating, points, color) {
+    this.floatingToasts.push({
+      x,
+      y,
       rating,
+      points,
+      color,
       alpha: 1.0,
-      scale: 0.8,
+      scale: 1.0,
     });
   }
 
@@ -521,94 +743,169 @@ export class NadimuTilesEngine {
     const w = this.width;
     const h = this.height;
     const laneW = w / 4;
-    this.hitLineY = h - this.pianoKeyHeight;
+    this.hitLineY = h * this.hitLineRatio;
+    const hitY = this.hitLineY;
 
     ctx.clearRect(0, 0, w, h);
 
-    // Highway Background Gradient
+    ctx.save();
+
+    // Screen Shake effect on damage / miss (matching Komang!)
+    if (this.screenShakeTime > 0) {
+      const shakeMag = (this.screenShakeTime / 14) * 8;
+      const ox = (Math.random() - 0.5) * shakeMag;
+      const oy = (Math.random() - 0.5) * shakeMag;
+      ctx.translate(ox, oy);
+      this.screenShakeTime--;
+    }
+
+    // Deep neon highway gradient matching Komang
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, '#060a14');
-    bgGrad.addColorStop(0.7, '#0b162c');
-    bgGrad.addColorStop(1, '#050c1b');
+    bgGrad.addColorStop(0, 'rgba(8, 4, 18, 0.95)');
+    bgGrad.addColorStop(0.7, 'rgba(16, 8, 32, 0.96)');
+    bgGrad.addColorStop(1, 'rgba(28, 12, 48, 0.98)');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Lane Dividers & Glow
-    for (let l = 0; l <= 4; l++) {
-      const lx = l * laneW;
-      ctx.strokeStyle = 'rgba(0, 247, 255, 0.22)';
-      ctx.lineWidth = l === 0 || l === 4 ? 2 : 1.2;
+    // 2. Draw 4 Lanes and Light Pillars
+    for (let i = 0; i < 4; i++) {
+      const lx = i * laneW;
+      const lane = NADIMU_LANES[i];
+
+      // Lane divider lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(lx, 0);
       ctx.lineTo(lx, h);
       ctx.stroke();
-    }
 
-    // Lane Press Backdrops
-    for (let l = 0; l < 4; l++) {
-      const press = this.lanePressAnim[l];
-      if (press > 0) {
-        ctx.fillStyle = NADIMU_LANES[l].glowColor;
-        ctx.globalAlpha = press * 0.45;
-        ctx.fillRect(l * laneW, 0, laneW, this.hitLineY);
+      // Light Pillar when lane is pressed/hit (Spectacular vertical neon column!)
+      if (this.lightPillars[i] > 0.01) {
+        const pillarGrad = ctx.createLinearGradient(0, hitY, 0, 0);
+        pillarGrad.addColorStop(0, lane.color);
+        pillarGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = pillarGrad;
+        ctx.globalAlpha = this.lightPillars[i] * 0.45;
+        ctx.fillRect(lx + 2, 0, laneW - 4, hitY);
         ctx.globalAlpha = 1.0;
       }
     }
+    // Rightmost lane border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.moveTo(w, 0);
+    ctx.lineTo(w, h);
+    ctx.stroke();
 
-    // Render Falling Tiles
-    const visibleMinTime = songTime - 0.5;
-    const visibleMaxTime = songTime + this.travelTimeSec + 0.3;
+    // Render Falling Tiles using Integrated Distance Metric
+    const S_now = this._getIntegratedSongTime(songTime);
+    this.speedMultiplier = this.getSpeedMultiplier(songTime);
+
+    // Visual distance between bars in the same lane (using halfMeasureSec so 2-3 tiles are continuously visible!)
+    const subMeasureSec = this.halfMeasureSec || (this.measureDurationSec / 2);
+    const measureDistance = (subMeasureSec / this.baseTravelTimeSec) * hitY;
+    // Grand elongated piano tile height with clean spacing, matching Komang!
+    const tileHeight = Math.max(105, Math.min(185, Math.round(measureDistance - 20)));
 
     for (let i = 0; i < this.tiles.length; i++) {
       const tile = this.tiles[i];
       if (tile.status === 'HIT') continue;
-      if (tile.timeSec < visibleMinTime || tile.timeSec > visibleMaxTime) continue;
+      if (tile.status === 'MISSED') {
+        const elapsedMiss = songTime - tile.timeSec - this.hitWindowSec;
+        if (elapsedMiss > 0.22) continue;
+      }
 
-      const timeUntilHit = tile.timeSec - songTime;
-      const progress = 1.0 - (timeUntilHit / this.travelTimeSec);
-      const targetY = progress * this.hitLineY;
-      const tileH = Math.max(38, Math.min(75, (tile.durationSec / this.travelTimeSec) * this.hitLineY * 0.35));
-      const tileY = targetY - tileH;
+      const S_tile = this._getIntegratedSongTime(tile.timeSec);
+      const deltaS = S_tile - S_now;
+      if (deltaS < -0.45) continue;
+      if (deltaS > this.baseTravelTimeSec + 0.35) break; // Future tiles are beyond top horizon, stop early!
 
-      if (tileY + tileH < 0 || tileY > h + 50) continue;
+      const progress = 1.0 - (deltaS / this.baseTravelTimeSec);
+      const targetY = progress * hitY;
+      const topY = targetY - tileHeight;
 
-      this._renderSingleTile(ctx, tile, tileY, tileH, laneW);
+      if (topY + tileHeight < 0 || topY > h + 50) continue;
+
+      this._renderSingleTile(ctx, tile, topY, tileHeight, laneW, songTime);
     }
 
     // Render Elongated Grand Piano Keys
     this._renderPianoKeys(ctx, w, h, laneW);
 
-    // Render Particles & Feedback
+    // Render Particles
     this._renderParticles(ctx);
-    this._renderHitFeedback(ctx);
+
+    // Render Floating Judgment Toasts (+1000 PERFECT! ✨)
+    this._renderFloatingToasts(ctx);
+
+    // Red Vignette on damage / miss
+    if (this.redVignetteAlpha > 0.01) {
+      ctx.save();
+      const vigGrad = ctx.createRadialGradient(w / 2, h / 2, h * 0.2, w / 2, h / 2, h * 0.7);
+      vigGrad.addColorStop(0, 'rgba(255, 0, 0, 0)');
+      vigGrad.addColorStop(1, `rgba(255, 0, 40, ${this.redVignetteAlpha * 0.45})`);
+      ctx.fillStyle = vigGrad;
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+      this.redVignetteAlpha = Math.max(0, this.redVignetteAlpha - 0.03);
+    }
+
+    ctx.restore();
   }
 
-  _renderSingleTile(ctx, tile, y, height, laneW) {
+
+
+  _renderSingleTile(ctx, tile, topY, tileHeight, laneW) {
     const laneConfig = NADIMU_LANES[tile.lane];
-    const x = tile.lane * laneW + 5;
-    const w = laneW - 10;
-    const radius = 10;
+    const lx = tile.lane * laneW + 4;
+    const lWidth = laneW - 8;
 
     ctx.save();
 
-    // Tile Glow
-    ctx.shadowColor = laneConfig.color;
-    ctx.shadowBlur = 16;
+    if (tile.status === 'MISSED') {
+      ctx.globalAlpha = 0.4;
+    } else {
+      ctx.globalAlpha = 0.96;
+    }
 
-    // Tile Body Gradient
-    const grad = ctx.createLinearGradient(x, y, x + w, y + height);
-    grad.addColorStop(0, laneConfig.color);
-    grad.addColorStop(0.5, '#ffffff');
-    grad.addColorStop(1, laneConfig.color);
+    // Subtle Motion Flow Trail above falling tile (creates liquid-smooth perception!)
+    if (tile.status === 'PENDING' && topY > 0) {
+      const trailH = Math.min(48, tileHeight * 0.2);
+      const trailGrad = ctx.createLinearGradient(0, topY - trailH, 0, topY);
+      trailGrad.addColorStop(0, 'transparent');
+      trailGrad.addColorStop(1, laneConfig.glowColor || 'rgba(0, 247, 255, 0.25)');
+      ctx.fillStyle = trailGrad;
+      ctx.fillRect(lx + 4, topY - trailH, lWidth - 8, trailH);
+    }
 
-    ctx.fillStyle = grad;
-    this._roundRect(ctx, x, y, w, height, radius);
-    ctx.fill();
+    // Draw Piano Tile body (Glossy dark glass with glowing neon borders matching Komang)
+    const tileGrad = ctx.createLinearGradient(lx, topY, lx, topY + tileHeight);
+    if (tile.isMelodySubtile) {
+      tileGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      tileGrad.addColorStop(0.35, 'rgba(28, 16, 48, 0.95)');
+      tileGrad.addColorStop(1, laneConfig.color);
+    } else {
+      tileGrad.addColorStop(0, laneConfig.glowColor || 'rgba(0, 247, 255, 0.35)');
+      tileGrad.addColorStop(0.35, 'rgba(28, 16, 48, 0.95)');
+      tileGrad.addColorStop(1, laneConfig.color);
+    }
 
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = tileGrad;
+    this._roundRect(ctx, lx, topY, lWidth, tileHeight, 9, true, false);
+
+    // High-Performance Dual-Pass Neon Glow (Zero CPU Blur, 100% GPU accelerated!)
+    ctx.strokeStyle = tile.status === 'MISSED' ? 'rgba(255, 59, 59, 0.35)' : (laneConfig.glowColor || 'rgba(0, 247, 255, 0.35)');
+    ctx.lineWidth = 5;
+    this._roundRect(ctx, lx, topY, lWidth, tileHeight, 9, false, true);
+
+    ctx.strokeStyle = tile.status === 'MISSED' ? '#ff3b3b' : laneConfig.color;
     ctx.lineWidth = 2;
-    ctx.stroke();
+    this._roundRect(ctx, lx, topY, lWidth, tileHeight, 9, false, true);
+
+    // Top Glass Shine Accent
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    this._roundRect(ctx, lx + 5, topY + 3, lWidth - 10, 4, 2, true, false);
 
     // Inner Chord & Gesture Text
     ctx.fillStyle = '#060a14';
@@ -625,59 +922,160 @@ export class NadimuTilesEngine {
   }
 
   _renderPianoKeys(ctx, w, h, laneW) {
-    const keyY = this.hitLineY;
-    const keyH = this.pianoKeyHeight;
+    const hitY = this.hitLineY;
 
-    // Hit Line Bar
-    ctx.strokeStyle = '#00f7ff';
-    ctx.lineWidth = 3;
-    ctx.shadowColor = 'rgba(0, 247, 255, 0.8)';
-    ctx.shadowBlur = 10;
+    ctx.save();
+
+    // A. Piano Fallboard / Header Bar above the keys (Wooden Cyber Trim)
+    const headerH = 10;
+    const fallboardGrad = ctx.createLinearGradient(0, hitY - headerH, 0, hitY);
+    fallboardGrad.addColorStop(0, 'rgba(6, 10, 20, 0.98)');
+    fallboardGrad.addColorStop(0.5, 'rgba(16, 26, 50, 0.95)');
+    fallboardGrad.addColorStop(1, 'rgba(8, 14, 30, 1)');
+    ctx.fillStyle = fallboardGrad;
+    ctx.fillRect(0, hitY - headerH, w, headerH);
+
+    // B. Acoustic Grand Piano Red Velvet Felt Damper Strip
+    ctx.fillStyle = '#b91c1c'; // Crimson red felt damper
+    ctx.fillRect(0, hitY - 3, w, 4);
+    // Gold felt stitch accent line
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.7)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, keyY);
-    ctx.lineTo(w, keyY);
+    ctx.moveTo(0, hitY - 1);
+    ctx.lineTo(w, hitY - 1);
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
-    for (let l = 0; l < 4; l++) {
-      const kx = l * laneW + 4;
-      const kw = laneW - 8;
-      const lane = NADIMU_LANES[l];
-      const isPressed = this.lanePressAnim[l] > 0.1;
+    // C. Glowing Receptor Neon Line
+    ctx.strokeStyle = 'rgba(0, 247, 255, 0.35)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, hitY);
+    ctx.lineTo(w, hitY);
+    ctx.stroke();
 
-      // Piano Key Surface
-      const keyGrad = ctx.createLinearGradient(kx, keyY, kx, keyY + keyH);
-      if (isPressed) {
-        keyGrad.addColorStop(0, lane.color);
-        keyGrad.addColorStop(1, '#0c1a36');
+    ctx.strokeStyle = '#00f7ff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, hitY);
+    ctx.lineTo(w, hitY);
+    ctx.stroke();
+
+    // D. 4 Elongated Grand Piano Keys (Matching Komang)
+    const padHeight = h - hitY;
+    const keyRadius = 8;
+
+    for (let i = 0; i < 4; i++) {
+      const lx = i * laneW + 4;
+      const lWidth = laneW - 8;
+      const lane = NADIMU_LANES[i];
+      const isActive = this.laneActiveStates[i] || (this.lightPillars[i] > 0.15);
+
+      // Key Press 3D travel animation
+      const pressOffset = isActive ? 3 : 0;
+      const keyTop = hitY + 2 + pressOffset;
+      const keyH = padHeight - 6 - pressOffset;
+
+      ctx.save();
+
+      // Soft drop shadow beneath active key
+      if (isActive) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        this._roundRect(ctx, lx, keyTop + keyH - 4, lWidth, 6, 4, true, false);
+      }
+
+      // Grand Piano Key Body Gradient
+      const keyGrad = ctx.createLinearGradient(lx, keyTop, lx, keyTop + keyH);
+      if (isActive) {
+        keyGrad.addColorStop(0, '#ffffff');
+        keyGrad.addColorStop(0.18, lane.color);
+        keyGrad.addColorStop(0.72, lane.color);
+        keyGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
       } else {
-        keyGrad.addColorStop(0, '#101c38');
-        keyGrad.addColorStop(0.7, '#0c162c');
-        keyGrad.addColorStop(1, '#060a14');
+        keyGrad.addColorStop(0, 'rgba(240, 244, 255, 0.95)'); // Polished ivory key head
+        keyGrad.addColorStop(0.10, 'rgba(215, 225, 248, 0.88)');
+        keyGrad.addColorStop(0.40, 'rgba(20, 30, 60, 0.92)'); // Deep reflective key body
+        keyGrad.addColorStop(0.80, 'rgba(12, 18, 36, 0.98)');
+        keyGrad.addColorStop(1, 'rgba(6, 10, 22, 1)'); // Dark weighted key base
       }
 
       ctx.fillStyle = keyGrad;
-      this._roundRect(ctx, kx, keyY + 4, kw, keyH - 8, 8);
-      ctx.fill();
+      this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, true, false);
 
-      ctx.strokeStyle = isPressed ? lane.color : 'rgba(0, 247, 255, 0.3)';
-      ctx.lineWidth = isPressed ? 2.5 : 1.2;
+      // Ivory Vertical Reflection Strip
+      if (!isActive) {
+        const shineGrad = ctx.createLinearGradient(lx + 4, 0, lx + 18, 0);
+        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = shineGrad;
+        this._roundRect(ctx, lx + 4, keyTop + 6, 12, keyH - 16, 2, true, false);
+      }
+
+      // 3D Bevel: Left Edge Highlight & Right Edge Shadow
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(lx + 2, keyTop + 4);
+      ctx.lineTo(lx + 2, keyTop + keyH - 4);
       ctx.stroke();
 
       // Key Labels
       ctx.fillStyle = isPressed ? '#ffffff' : lane.color;
       ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${lane.emoji} ${lane.name}`, kx + kw / 2, keyY + 36);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(lane.chord, centerX, keyTop + keyH * 0.25);
 
-      ctx.font = '700 11px Outfit, sans-serif';
-      ctx.fillStyle = '#a6b8db';
-      ctx.fillText(`${lane.fingerCount} JARI`, kx + kw / 2, keyY + 58);
+      // 3. Gesture Badge with Finger Count & Emoji
+      const badgeY = keyTop + keyH * 0.50;
+      const badgeW = lWidth - 18;
+      const badgeH = 26;
 
-      ctx.font = '600 10px monospace';
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.fillText(`Key: ${lane.keyHint}`, kx + kw / 2, keyY + 78);
+      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.55)';
+      this._roundRect(ctx, centerX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6, true, false);
+
+      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.6)' : lane.color;
+      ctx.lineWidth = 1;
+      this._roundRect(ctx, centerX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6, false, true);
+
+      ctx.fillStyle = isActive ? '#000000' : lane.color;
+      ctx.font = 'bold 12.5px Outfit, sans-serif';
+      ctx.fillText(`${lane.emoji} ${lane.fingerCount} JARI`, centerX, badgeY);
+
+      // 4. Subtitle / Harmonic Role
+      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.75)' : 'rgba(255, 255, 255, 0.75)';
+      ctx.font = '600 11px Outfit, sans-serif';
+      ctx.fillText(lane.name, centerX, keyTop + keyH * 0.72);
+
+      // 5. Keyboard Key Hint
+      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '600 10.5px monospace';
+      ctx.fillText(`Key: ${lane.keyHint}`, centerX, keyTop + keyH * 0.88);
+
+      ctx.restore();
     }
+
+    // Dynamic Speed HUD Badge on Highway
+    if (this.speedMultiplier && this.speedMultiplier > 1.02) {
+      ctx.save();
+      const badgeText = `⚡ SPEED ${this.speedMultiplier.toFixed(1)}x`;
+      ctx.font = '900 11px Orbitron, sans-serif';
+      const textW = ctx.measureText(badgeText).width;
+      const bx = w - textW - 20;
+      const by = 16;
+      ctx.fillStyle = 'rgba(10, 5, 25, 0.75)';
+      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, true, false);
+      ctx.strokeStyle = this.speedMultiplier >= 1.8 ? '#ff2d75' : (this.speedMultiplier >= 1.4 ? '#ffd700' : '#00f7ff');
+      ctx.lineWidth = 1;
+      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, false, true);
+      ctx.fillStyle = this.speedMultiplier >= 1.8 ? '#ff2d75' : (this.speedMultiplier >= 1.4 ? '#ffd700' : '#00f7ff');
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeText, bx, by);
+      ctx.restore();
+    }
+
+    ctx.restore();
   }
 
   _renderParticles(ctx) {
@@ -695,39 +1093,48 @@ export class NadimuTilesEngine {
     }
   }
 
-  _renderHitFeedback(ctx) {
-    for (let i = 0; i < this.hitEffects.length; i++) {
-      const ef = this.hitEffects[i];
+  _renderFloatingToasts(ctx) {
+    for (let i = 0; i < this.floatingToasts.length; i++) {
+      const t = this.floatingToasts[i];
       ctx.save();
-      ctx.globalAlpha = Math.max(0, ef.alpha);
-      ctx.font = `900 ${Math.round(22 * ef.scale)}px Orbitron, sans-serif`;
-      ctx.textAlign = 'center';
+      ctx.globalAlpha = Math.max(0, t.alpha);
+      ctx.translate(t.x, t.y);
+      ctx.scale(t.scale, t.scale);
 
-      if (ef.rating === 'PERFECT') {
-        ctx.fillStyle = '#00ffaa';
-        ctx.shadowColor = '#00ffaa';
-        ctx.shadowBlur = 14;
-        ctx.fillText('✨ PERFECT! ✨', ef.x, ef.y);
-      } else if (ef.rating === 'GREAT') {
-        ctx.fillStyle = '#00f7ff';
-        ctx.shadowColor = '#00f7ff';
-        ctx.shadowBlur = 10;
-        ctx.fillText('GREAT!', ef.x, ef.y);
-      } else if (ef.rating === 'GOOD') {
-        ctx.fillStyle = '#ffd700';
-        ctx.shadowColor = '#ffd700';
-        ctx.shadowBlur = 8;
-        ctx.fillText('GOOD', ef.x, ef.y);
-      } else {
-        ctx.fillStyle = '#ff2d75';
-        ctx.fillText('MISS', ef.x, ef.y);
+      ctx.font = '900 16px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const toastColor = t.rating === 'PERFECT' ? '#ffd700' : t.rating === 'GREAT' ? '#00f7ff' : t.rating.includes('WILDCARD') ? '#ffd700' : t.rating.includes('NYAWA') ? '#00ffaa' : t.rating.includes('MISS') ? '#ff3b3b' : '#00ffaa';
+
+      // Crisp contrast outline (Zero GPU blur stall!)
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.lineWidth = 3;
+      const text = t.rating.endsWith('!') || t.rating.endsWith('✨') ? t.rating : `${t.rating}!`;
+      ctx.strokeText(text, 0, -8);
+      ctx.fillStyle = toastColor;
+      ctx.fillText(text, 0, -8);
+
+      if (t.points > 0) {
+        ctx.font = 'bold 11px Orbitron, sans-serif';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeText(`+${t.points} PTS`, 0, 10);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`+${t.points} PTS`, 0, 10);
       }
 
       ctx.restore();
     }
   }
 
-  _roundRect(ctx, x, y, width, height, radius) {
+  _roundRect(ctx, x, y, width, height, radius, fill = true, stroke = false) {
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+      return;
+    }
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.lineTo(x + width - radius, y);
@@ -739,6 +1146,8 @@ export class NadimuTilesEngine {
     ctx.lineTo(x, y + radius);
     ctx.quadraticCurveTo(x, y, x + radius, y);
     ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
   }
 }
 

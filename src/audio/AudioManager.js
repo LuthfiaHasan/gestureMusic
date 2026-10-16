@@ -19,7 +19,7 @@ class AudioManager {
     this.analyser = null;
 
     this.activeVoices = [];
-    this.currentPreset = 'Dreamy Piano';
+    this.currentPreset = 'Acoustic Piano';
 
     // Settings default
     this.volumes = {
@@ -281,12 +281,17 @@ class AudioManager {
 
     const now = this.ctx.currentTime;
     const holdDuration = options.duration || 1.1;
-    const adsr = this._getPresetADSR();
+    const preset = options.preset || this.currentPreset;
+    const adsr = this._getPresetADSR(preset);
     const panOffset = options.pan !== undefined ? options.pan : 0;
 
     let voice;
-    if (this.instrumentsLoaded.piano) {
+    if (preset === 'Acoustic Piano' && this.instrumentsLoaded.piano) {
       voice = this._createSamplePianoVoice(midi, freq, now, panOffset, holdDuration);
+    } else if (preset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) {
+      voice = this._createSampleAcousticGuitarVoice(midi, freq, now, panOffset, holdDuration);
+    } else if (preset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar) {
+      voice = this._createSampleNylonGuitarVoice(midi, freq, now, panOffset, holdDuration);
     } else {
       voice = this._createPianoVoice(freq, now, adsr, panOffset, holdDuration);
     }
@@ -303,9 +308,7 @@ class AudioManager {
   }
 
   /**
-   * Play crystal-clear, singing Steinway Grand Piano melody note(s) for Komang.
-   * Carefully voiced in sweet singing registers (Octave 4-6) to harmonize perfectly
-   * with Andre Panggabean's backing track without distortion, boomy bass, or clipping.
+   * Play melody note(s) using the active or requested instrument preset (Piano, Guitar, Synth, etc.)
    */
   playKomangMelodyNote(noteOrNotes, options = {}) {
     const tAudioStart = performance.now();
@@ -323,6 +326,8 @@ class AudioManager {
     const duration = options.duration || 1.4;
     const isPerfect = !!options.isPerfect;
     const baseGain = options.gainScale || (isPerfect ? 0.40 : 0.35);
+    const preset = options.preset || this.currentPreset;
+    const adsr = this._getPresetADSR(preset);
 
     // Subtle stereo pan by lane (Lane 0: -0.18, Lane 1: -0.06, Lane 2: +0.06, Lane 3: +0.18)
     let pan = options.pan;
@@ -363,10 +368,13 @@ class AudioManager {
       const noteGain = baseGain / Math.sqrt(Math.max(1, notes.length));
 
       let voice;
-      if (this.instrumentsLoaded.piano) {
+      if (preset === 'Acoustic Piano' && this.instrumentsLoaded.piano) {
         voice = this._createSamplePianoVoice(midi, freq, noteTime, pan + (idx * 0.03), duration, noteGain);
+      } else if (preset === 'Acoustic Guitar' && this.instrumentsLoaded.acousticGuitar) {
+        voice = this._createSampleAcousticGuitarVoice(midi, freq, noteTime, pan + (idx * 0.03), duration);
+      } else if (preset === 'Nylon Guitar' && this.instrumentsLoaded.nylonGuitar) {
+        voice = this._createSampleNylonGuitarVoice(midi, freq, noteTime, pan + (idx * 0.03), duration);
       } else {
-        const adsr = { attack: 0.01, decay: 0.32, sustain: 0.28, release: 0.85, filterFreq: 3400 };
         voice = this._createPianoVoice(freq, noteTime, adsr, pan, duration);
         if (voice && voice.gain) {
           voice.gain.gain.setValueAtTime(noteGain, noteTime);
@@ -467,8 +475,8 @@ class AudioManager {
     });
   }
 
-  _getPresetADSR() {
-    switch (this.currentPreset) {
+  _getPresetADSR(preset = this.currentPreset) {
+    switch (preset) {
       case 'Acoustic Piano':
         return { attack: 0.01, decay: 0.25, sustain: 0.55, release: 1.0, filterFreq: 3200 };
       case 'Acoustic Guitar':
