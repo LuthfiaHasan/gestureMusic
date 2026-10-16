@@ -4673,5 +4673,8 @@ document.addEventListener('keydown', (e) => {
 
 // Boot app on DOMContentLoaded
 window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('gestureMusic_useWallpaper') === 'true') {
+    document.body.classList.add('with-custom-wallpaper');
+  }
   window.app = new App();
 });

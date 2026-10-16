@@ -81,14 +81,21 @@ class SongMenuScreen {
       </div>
     `;
 
+    const isWallpaper = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+
     this.appEl.innerHTML = `
-      <div class="menu-screen">
+      <div class="menu-screen${isWallpaper ? ' with-flashtech-bg' : ''}">
         <div class="menu-particles" aria-hidden="true">${particles}</div>
 
         <header class="menu-header" role="banner">
-          <div class="menu-logo">
-            <span class="neon-text-cyan">GESTURE</span>
-            <span class="neon-text-magenta">MUSIK</span>
+          <div class="menu-header-row" style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:980px;margin:0 auto 8px;">
+            <div class="menu-logo">
+              <span class="neon-text-cyan">GESTURE</span>
+              <span class="neon-text-magenta">MUSIK</span>
+            </div>
+            <button class="btn-menu-wallpaper-chip ${isWallpaper ? 'active' : ''}" id="btn-menu-wp-toggle" title="Ganti Mode Latar Belakang (Flash Tech Wallpaper / Cyber Theme)">
+              <span>🖼️</span> <span id="menu-wp-label">${isWallpaper ? 'Wallpaper: Flash Tech ✦' : 'Wallpaper: Off'}</span>
+            </button>
           </div>
           <p class="menu-tagline">🎵 Kendalikan Musik Dengan Gerakan Tanganmu!</p>
         </header>
@@ -238,6 +245,22 @@ class SongMenuScreen {
     document.getElementById('btn-mps-leaderboard')?.addEventListener('click', () => {
       leaderboardUI.openLeaderboard();
     });
+
+    // Tombol wallpaper di menu
+    document.getElementById('btn-menu-wp-toggle')?.addEventListener('click', () => {
+      const cur = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+      const nxt = !cur;
+      localStorage.setItem('gestureMusic_useWallpaper', nxt ? 'true' : 'false');
+      document.body.classList.toggle('with-custom-wallpaper', nxt);
+      const menuEl = this.appEl.querySelector('.menu-screen');
+      if (menuEl) menuEl.classList.toggle('with-flashtech-bg', nxt);
+      const btn = document.getElementById('btn-menu-wp-toggle');
+      if (btn) {
+        btn.classList.toggle('active', nxt);
+        const lbl = document.getElementById('menu-wp-label');
+        if (lbl) lbl.textContent = nxt ? 'Wallpaper: Flash Tech ✦' : 'Wallpaper: Off';
+      }
+    });
   }
 }
 
@@ -258,6 +281,7 @@ class GestureMusicGameEngine {
     this.isSimulating = false;
     this.simInterval = null;
     this.lastSavedRecordId = null;
+    this.useWallpaper = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
   }
 
   escapeHtml(str) {
@@ -381,7 +405,7 @@ class GestureMusicGameEngine {
     const themeCls = this.config.themeClass ? ` ${this.config.themeClass}` : '';
 
     this.appEl.innerHTML = `
-      <div class="gm-app-container${themeCls}">
+      <div class="gm-app-container${themeCls}${this.useWallpaper ? ' with-flashtech-bg' : ''}">
         <header class="gm-top-bar">
           <div class="gm-logo-group">
             <button class="btn-back-menu" id="btn-back-menu">⬅ MENU</button>
@@ -395,6 +419,10 @@ class GestureMusicGameEngine {
             </div>
             <button class="btn-top-leaderboard" id="btn-top-leaderboard" title="Buka Papan Peringkat">
               <span>🏆</span> Leaderboard
+            </button>
+            <button class="btn-bg-toggle ${this.useWallpaper ? 'active' : ''}" id="btn-bg-toggle" title="Ganti Mode Latar Belakang (Flash Tech Wallpaper / Cyber Theme)">
+              <span class="bg-toggle-icon">🖼️</span>
+              <span class="bg-toggle-label">${this.useWallpaper ? 'Wallpaper: On ✦' : 'Wallpaper: Off'}</span>
             </button>
             <button class="btn-camera-status ${this.isCameraActive ? 'online' : ''}" id="btn-camera-status-toggle">
               <span class="status-pulse-dot"></span>
@@ -688,6 +716,22 @@ class GestureMusicGameEngine {
 
     document.getElementById('btn-kembali')?.addEventListener('click', () => {
       this.syncService.restartGame();
+    });
+
+    document.getElementById('btn-bg-toggle')?.addEventListener('click', () => {
+      this.useWallpaper = !this.useWallpaper;
+      localStorage.setItem('gestureMusic_useWallpaper', this.useWallpaper ? 'true' : 'false');
+      const container = this.appEl.querySelector('.gm-app-container');
+      if (container) {
+        container.classList.toggle('with-flashtech-bg', this.useWallpaper);
+      }
+      const btn = document.getElementById('btn-bg-toggle');
+      if (btn) {
+        btn.classList.toggle('active', this.useWallpaper);
+        const lbl = btn.querySelector('.bg-toggle-label');
+        if (lbl) lbl.textContent = this.useWallpaper ? 'Wallpaper: On ✦' : 'Wallpaper: Off';
+      }
+      document.body.classList.toggle('with-custom-wallpaper', this.useWallpaper);
     });
 
     document.getElementById('btn-mirror-toggle')?.addEventListener('click', () => {

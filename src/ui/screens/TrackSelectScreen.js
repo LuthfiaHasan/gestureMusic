@@ -17,16 +17,24 @@ const TRACK_ICONS = {
 
 export class TrackSelectScreen {
   static render() {
-    const tracks = Object.values(COMPETITION_TRACKS);
+    const isWallpaper = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+    if (isWallpaper) {
+      document.body.classList.add('with-custom-wallpaper');
+    }
 
     return `
       <div class="subpage-screen track-select-screen">
         <div class="subpage-header">
-          <button class="btn-icon-back" id="btn-back-home">‹</button>
-          <div>
-            <h2 class="subpage-title">PILIH LAGU KOMPETISI</h2>
-            <span style="font-size:11px; color:var(--text-muted);">Pilih lagu favoritmu • Papan peringkat tetap 1 & setara untuk semua lagu!</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="btn-icon-back" id="btn-back-home">‹</button>
+            <div>
+              <h2 class="subpage-title">PILIH LAGU KOMPETISI</h2>
+              <span style="font-size:11px; color:var(--text-muted);">Pilih lagu favoritmu • Papan peringkat tetap 1 & setara untuk semua lagu!</span>
+            </div>
           </div>
+          <button class="btn-toggle-wallpaper-chip ${isWallpaper ? 'active' : ''}" id="btn-toggle-wallpaper-track" title="Ganti Mode Latar Belakang (Flash Tech Wallpaper / Cyber Theme)">
+            <span>🖼️</span> <span id="track-wp-label">${isWallpaper ? 'Wallpaper: On ✦' : 'Wallpaper: Off'}</span>
+          </button>
         </div>
 
         <div class="track-select-container">
@@ -139,6 +147,19 @@ export class TrackSelectScreen {
     if (homeBtn) {
       homeBtn.onclick = () => {
         gameEngine.setState(GAME_STATES.HOME);
+      };
+    }
+
+    const wpBtn = document.getElementById('btn-toggle-wallpaper-track');
+    if (wpBtn) {
+      wpBtn.onclick = () => {
+        const current = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
+        const next = !current;
+        localStorage.setItem('gestureMusic_useWallpaper', next ? 'true' : 'false');
+        document.body.classList.toggle('with-custom-wallpaper', next);
+        wpBtn.classList.toggle('active', next);
+        const lbl = document.getElementById('track-wp-label');
+        if (lbl) lbl.textContent = next ? 'Wallpaper: On ✦' : 'Wallpaper: Off';
       };
     }
   }

@@ -80,6 +80,43 @@ body, html {
   background: radial-gradient(circle at 50% 0%, #1a0836 0%, #080314 100%);
   position: relative;
   box-sizing: border-box;
+  transition: background 0.35s ease;
+}
+
+/* FLASH TECH INDONESIA WALLPAPER THEME (OPTIONAL DYNAMIC BG) */
+.gm-app-container.with-flashtech-bg,
+.menu-screen.with-flashtech-bg {
+  background: 
+    radial-gradient(circle at 50% 30%, rgba(6, 24, 64, 0.72) 0%, rgba(3, 13, 38, 0.86) 65%, rgba(1, 6, 20, 0.95) 100%),
+    linear-gradient(180deg, rgba(3, 8, 22, 0.65) 0%, rgba(6, 17, 45, 0.45) 50%, rgba(2, 6, 18, 0.82) 100%),
+    url('/images/background.jpg') center center / cover no-repeat fixed !important;
+}
+
+/* Glassmorphism treatment when wallpaper is active */
+.gm-app-container.with-flashtech-bg .gm-panel,
+.gm-app-container.with-flashtech-bg .camera-stage-panel,
+.gm-app-container.with-flashtech-bg .guide-stage-panel {
+  background: rgba(8, 22, 54, 0.68) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  border: 1.5px solid rgba(0, 247, 255, 0.38) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 247, 255, 0.15) !important;
+}
+
+.gm-app-container.with-flashtech-bg .status-card-inner {
+  background: rgba(7, 18, 46, 0.75) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  border: 1.5px solid rgba(0, 247, 255, 0.35) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.gm-app-container.with-flashtech-bg .finger-arena-stage {
+  background: radial-gradient(circle at 50% 50%, rgba(13, 24, 60, 0.75) 0%, rgba(4, 9, 28, 0.92) 100%) !important;
+}
+
+.gm-app-container.with-flashtech-bg .camera-stage-frame {
+  background: rgba(3, 7, 20, 0.82) !important;
 }
 
 /* 1. TOP NAVBAR */
@@ -94,12 +131,38 @@ body, html {
 .gm-logo-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-family: var(--font-cyber);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 900;
   letter-spacing: 1.5px;
   user-select: none;
+}
+
+.btn-back-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(10, 26, 62, 0.72);
+  border: 1.2px solid rgba(0, 247, 255, 0.35);
+  color: #ffffff;
+  font-family: var(--font-cyber);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  letter-spacing: 0.6px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-back-menu:hover {
+  background: rgba(0, 247, 255, 0.18);
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px rgba(0, 247, 255, 0.45);
+  transform: translateY(-1px);
 }
 
 .neon-text-cyan {
@@ -114,10 +177,107 @@ body, html {
   text-shadow: 0 0 10px var(--magenta), 0 0 20px var(--magenta-glow);
 }
 
+/* Minang Classic Taragak Pulang Theme Accents */
+.gm-app-container.taragak-theme .neon-text-cyan {
+  -webkit-text-stroke: 1.2px #ffd700;
+  text-shadow: 0 0 10px #ffd700, 0 0 20px rgba(255, 215, 0, 0.6);
+}
+
+.gm-app-container.taragak-theme .neon-text-magenta {
+  -webkit-text-stroke: 1.2px #00ff88;
+  text-shadow: 0 0 10px #00ff88, 0 0 20px rgba(0, 255, 136, 0.6);
+}
+
 .gm-header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+/* Player Chip in Header */
+.top-player-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 26, 62, 0.75);
+  border: 1.2px solid rgba(255, 215, 0, 0.35);
+  color: #ffd700;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.top-player-chip:hover {
+  border-color: #ffd700;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Leaderboard Button in Header */
+.btn-top-leaderboard {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1.2px solid #ffd700;
+  color: #ffffff;
+  font-family: var(--font-main);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-top-leaderboard:hover {
+  background: rgba(255, 215, 0, 0.22);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Wallpaper Toggle Button */
+.btn-bg-toggle,
+.btn-menu-wallpaper-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 26, 62, 0.75);
+  border: 1.2px solid rgba(0, 247, 255, 0.35);
+  color: #bfd9ee;
+  font-family: var(--font-main);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-bg-toggle:hover,
+.btn-menu-wallpaper-chip:hover {
+  border-color: #00f7ff;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(0, 247, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-bg-toggle.active,
+.btn-menu-wallpaper-chip.active {
+  background: linear-gradient(135deg, rgba(0, 247, 255, 0.22) 0%, rgba(11, 95, 165, 0.3) 100%);
+  border-color: #00f7ff;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(0, 247, 255, 0.55), inset 0 0 8px rgba(0, 247, 255, 0.2);
 }
 
 /* Kamera Aktif Pill Badge */
@@ -136,10 +296,14 @@ body, html {
   cursor: pointer;
   box-shadow: 0 0 10px rgba(0, 255, 136, 0.25);
   transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .btn-camera-status:hover {
   background: rgba(0, 255, 136, 0.22);
+  transform: translateY(-1px);
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.45);
 }
 
 .status-pulse-dot {
@@ -171,10 +335,14 @@ body, html {
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .btn-kembali:hover {
   background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
 }
 
 .kembali-arrow {
@@ -990,8 +1158,16 @@ body, html {
   background: linear-gradient(135deg, #00f7ff, #0088ff);
   color: #060b18;
   border-color: #ffffff;
-  box-shadow: 0 0 12px var(--cyan), 0 0 20px var(--cyan-glow);
-  transform: translateY(-2px) scale(1.1);
+  box-shadow: 0 0 14px var(--cyan), 0 0 24px var(--cyan-glow);
+  transform: translateY(-3px) scale(1.15);
+}
+
+.gm-app-container.taragak-theme .beat-pill.active {
+  background: linear-gradient(135deg, #ffd700, #ff9900) !important;
+  color: #0a0500 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 16px #ffd700, 0 0 28px rgba(255, 215, 0, 0.7) !important;
+  transform: translateY(-3px) scale(1.18) !important;
 }
 
 .beat-motion-indicator {
@@ -1029,13 +1205,47 @@ body, html {
 
 .holo-energy-halo {
   position: absolute;
-  width: 145px;
-  height: 145px;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
-  border: 1.5px dashed rgba(0, 247, 255, 0.4);
-  box-shadow: 0 0 24px rgba(0, 247, 255, 0.25), inset 0 0 24px rgba(0, 247, 255, 0.15);
+  border: 2px dashed rgba(0, 247, 255, 0.55);
+  box-shadow: 0 0 35px rgba(0, 247, 255, 0.35), inset 0 0 30px rgba(0, 247, 255, 0.2);
   animation: halo-rotate 12s linear infinite;
   pointer-events: none;
+}
+
+.holo-energy-halo::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1.5px dotted rgba(255, 215, 0, 0.45);
+  animation: halo-rotate-rev 16s linear infinite;
+}
+
+.holo-energy-halo::after {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 247, 255, 0.2) 0%, rgba(255, 215, 0, 0.1) 50%, transparent 75%);
+  filter: blur(10px);
+  animation: halo-pulse 2s infinite ease-in-out;
+}
+
+@keyframes halo-rotate-rev {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes halo-pulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.gm-app-container.taragak-theme .holo-energy-halo {
+  border-color: rgba(255, 215, 0, 0.65);
+  box-shadow: 0 0 35px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(255, 215, 0, 0.25);
 }
 
 @keyframes halo-rotate {
