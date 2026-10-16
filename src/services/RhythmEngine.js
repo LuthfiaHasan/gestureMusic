@@ -27,6 +27,8 @@ export class RhythmEngine {
     this.startTime = 0;
     this.currentTimeMs = 0;
     this.isPlaying = false;
+    this.isPaused = false;
+    this.pausedAt = 0;
     this.animFrameId = null;
 
     // Targets on the timeline
@@ -50,6 +52,7 @@ export class RhythmEngine {
     this.onTargetHit = null;        // Called when a target is hit or missed
     this.onSongCompleted = null;    // Called when the song reaches the end
     this.onEndlessPhraseEnd = null; // Called in ENDLESS mode when phrase completes
+    this.onPauseChange = null;      // Called when game pauses or resumes
   }
 
   /**
@@ -193,9 +196,14 @@ export class RhythmEngine {
   /**
    * Start the rhythm challenge timeline
    */
+  /**
+   * Start the rhythm challenge timeline
+   */
   start() {
     this.stop();
     this.isPlaying = true;
+    this.isPaused = false;
+    this.pausedAt = 0;
     this.startTime = performance.now();
     this.currentTimeMs = 0;
     this.currentTargetIndex = 0;
@@ -206,9 +214,61 @@ export class RhythmEngine {
     audioManager.init();
     audioManager.resume();
 
-    // Start high-precision animation loop
+    this._startLoop();
+  }
+
+  /**
+   * Pause the active rhythm gameplay without losing progress, score, or timing sync
+   */
+  pause() {
+    if (!this.isPlaying || this.isPaused) return;
+    this.isPaused = true;
+    this.pausedAt = performance.now();
+
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+
+    audioManager.stopPreviousVoices();
+
+    if (this.onPauseChange) {
+      this.onPauseChange(true);
+    }
+  }
+
+  /**
+   * Resume the active rhythm gameplay with precise time-offset compensation
+   */
+  resume() {
+    if (!this.isPlaying || !this.isPaused) return;
+    const pauseDuration = performance.now() - this.pausedAt;
+    this.startTime += pauseDuration;
+    this.isPaused = false;
+
+    audioManager.resume();
+
+    if (this.onPauseChange) {
+      this.onPauseChange(false);
+    }
+
+    this._startLoop();
+  }
+
+  togglePause() {
+    if (this.isPaused) {
+      this.resume();
+    } else {
+      this.pause();
+    }
+    return this.isPaused;
+  }
+
+  _startLoop() {
+    if (!this.isPlaying || this.isPaused) return;
+
     const loop = (now) => {
-      if (!this.isPlaying) return;
+      if (!this.isPlaying || this.isPaused) return;
 
       this.currentTimeMs = now - this.startTime;
       this._updateBeatAccompaniment();
@@ -221,7 +281,6 @@ export class RhythmEngine {
       }
 
       // Check if all targets have been evaluated (either HIT or MISS)
-      // Transition promptly after a 1.2s graceful ring-out period for the final chord!
       const allEvaluated = this.targets.length > 0 && this.targets.every(t => t.isEvaluated);
       if (allEvaluated) {
         if (!this.allEvaluatedTime) {
@@ -254,9 +313,14 @@ export class RhythmEngine {
 
   stop() {
     this.isPlaying = false;
+    this.isPaused = false;
     if (this.animFrameId) {
       cancelAnimationFrame(this.animFrameId);
       this.animFrameId = null;
+    }
+    audioManager.stopPreviousVoices();
+    if (this.onPauseChange) {
+      this.onPauseChange(false);
     }
   }
 
