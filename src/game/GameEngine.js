@@ -43,6 +43,7 @@ export const GAME_MODES = {
 export class GameEngine {
   constructor() {
     this.currentState = GAME_STATES.HOME;
+    this.previousState = null;
     this.currentMode = GAME_MODES.CLASSIC;
 
     // Active round state
@@ -73,6 +74,9 @@ export class GameEngine {
     }
     if (this.currentState === GAME_STATES.NADIMU && newState !== GAME_STATES.NADIMU) {
       nadimuService.stop();
+    }
+    if (this.currentState !== newState) {
+      this.previousState = this.currentState;
     }
     this.currentState = newState;
     if (this.onStateChange) {

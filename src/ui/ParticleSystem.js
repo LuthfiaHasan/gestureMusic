@@ -22,22 +22,40 @@ export class ParticleSystem {
 
   resize() {
     if (!this.canvas) return;
-    this.canvas.width = this.canvas.parentElement ? this.canvas.parentElement.clientWidth : window.innerWidth;
-    this.canvas.height = this.canvas.parentElement ? this.canvas.parentElement.clientHeight : window.innerHeight;
+    this.dpr = window.devicePixelRatio || 1;
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+    this.canvas.width = Math.round(this.width * this.dpr);
+    this.canvas.height = Math.round(this.height * this.dpr);
+    this.canvas.style.width = this.width + 'px';
+    this.canvas.style.height = this.height + 'px';
+    this._initParticles();
   }
 
-  _initParticles(count = (this.isEcoMode ? 12 : 35)) {
+  _initParticles(customCount) {
     this.particles = [];
+    const w = this.width || window.innerWidth || 1280;
+    const h = this.height || window.innerHeight || 800;
+    const isDesktop = w > 850;
+    const count = customCount || (this.isEcoMode ? 20 : (isDesktop ? 65 : 35));
+    const symbols = ['♪', '♫', '♬', '♩', '✦', '✧', '★', '🎵', '🎶'];
+    const colors = ['#00f7ff', '#38bdf8', '#fbbf24', '#f43f5e', '#34d399', '#a78bfa', '#f472b6'];
+
     for (let i = 0; i < count; i++) {
+      const sym = symbols[Math.floor(Math.random() * symbols.length)];
+      const isNote = ['♪', '♫', '♬', '♩', '🎵', '🎶'].includes(sym);
+
       this.particles.push({
-        x: Math.random() * (this.canvas.width || 800),
-        y: Math.random() * (this.canvas.height || 600),
-        size: Math.random() * 2.5 + 1.2,
+        x: Math.random() * w,
+        y: Math.random() * h,
+        size: isNote ? (Math.random() * 12 + 20) : (Math.random() * 8 + 12),
         speedX: (Math.random() - 0.5) * 0.4,
-        speedY: -Math.random() * 0.6 - 0.2, // slow rise
-        color: Math.random() > 0.5 ? '#00f7ff' : '#ff007f',
-        alpha: Math.random() * 0.5 + 0.2,
-        symbol: Math.random() > 0.7 ? this.notes[Math.floor(Math.random() * this.notes.length)] : null,
+        speedY: -Math.random() * 0.5 - 0.25,
+        swayPhase: Math.random() * Math.PI * 2,
+        swaySpeed: Math.random() * 0.02 + 0.01,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.35 + 0.65, // Bright, crisp visibility (0.65 - 1.0)
+        symbol: sym,
       });
     }
   }
@@ -47,6 +65,7 @@ export class ParticleSystem {
   }
 
   start() {
+    if (this.animationId) return; // Prevent multiple concurrent RAF loops
     const loop = () => {
       this.draw();
       this.animationId = requestAnimationFrame(loop);
@@ -62,63 +81,52 @@ export class ParticleSystem {
   }
 
   draw() {
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = this.width || window.innerWidth;
+    const h = this.height || window.innerHeight;
+    const dpr = this.dpr || 1;
+
+    this.ctx.save();
+    this.ctx.scale(dpr, dpr);
     this.ctx.clearRect(0, 0, w, h);
 
-    // Subtle background cyber grid at the bottom
-    this._drawPerspectiveGrid(w, h);
-
-    // Pulse decay
+    // Subtle ambient flash on hit pulse
     if (this.pulseGlow > 0) {
       this.ctx.save();
-      const grad = this.ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, Math.max(w, h) * 0.75);
-      grad.addColorStop(0, `rgba(0, 247, 255, ${0.12 * this.pulseGlow})`);
-      grad.addColorStop(0.5, `rgba(255, 0, 127, ${0.08 * this.pulseGlow})`);
-      grad.addColorStop(1, 'rgba(10, 5, 25, 0)');
+      const grad = this.ctx.createRadialGradient(w / 2, h / 2, 80, w / 2, h / 2, Math.max(w, h) * 0.7);
+      grad.addColorStop(0, `rgba(20, 179, 212, ${0.12 * this.pulseGlow})`);
+      grad.addColorStop(1, 'rgba(6, 21, 45, 0)');
       this.ctx.fillStyle = grad;
       this.ctx.fillRect(0, 0, w, h);
       this.ctx.restore();
-      this.pulseGlow = Math.max(0, this.pulseGlow - 0.03);
+      this.pulseGlow = Math.max(0, this.pulseGlow - 0.04);
     }
 
-    // Render particles
+    // Render crisp, sharp particles (NO BLUR, NO FUZZY SHADOWS)
     this.particles.forEach(p => {
-      p.x += p.speedX;
+      p.swayPhase += p.swaySpeed;
+      p.x += p.speedX + Math.sin(p.swayPhase) * 0.4;
       p.y += p.speedY;
 
-      if (p.y < -20) {
-        p.y = h + 10;
+      if (p.y < -35) {
+        p.y = h + 20;
         p.x = Math.random() * w;
       }
-      if (p.x < -20) p.x = w + 10;
-      if (p.x > w + 20) p.x = -10;
+      if (p.x < -35) p.x = w + 20;
+      if (p.x > w + 35) p.x = -20;
 
       this.ctx.save();
-
-      if (p.symbol) {
-        this.ctx.font = `${Math.floor(p.size * 5 + 9)}px 'Outfit', sans-serif`;
-        this.ctx.fillStyle = p.color;
-        this.ctx.globalAlpha = p.alpha;
-        this.ctx.fillText(p.symbol, p.x, p.y);
-      } else {
-        // High-performance soft outer glow without CPU shadowBlur
-        this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, p.size * 2.2, 0, Math.PI * 2);
-        this.ctx.fillStyle = p.color;
-        this.ctx.globalAlpha = p.alpha * 0.28;
-        this.ctx.fill();
-
-        // Bright inner core
-        this.ctx.beginPath();
-        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.globalAlpha = p.alpha;
-        this.ctx.fill();
-      }
-
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.font = `bold ${Math.round(p.size)}px "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Plus Jakarta Sans", sans-serif`;
+      this.ctx.shadowColor = p.color;
+      this.ctx.shadowBlur = 6;
+      this.ctx.fillStyle = p.color;
+      this.ctx.globalAlpha = p.alpha;
+      this.ctx.fillText(p.symbol, p.x, p.y);
       this.ctx.restore();
     });
+
+    this.ctx.restore();
   }
 
   _drawPerspectiveGrid(w, h) {

@@ -11,8 +11,8 @@ export const NADIMU_LANES = [
     chord: 'C',
     fingerCount: 1,
     emoji: '☝️',
-    color: '#00f7ff',
-    glowColor: 'rgba(0, 247, 255, 0.45)',
+    color: '#14b3d4',
+    glowColor: 'rgba(20, 179, 212, 0.45)',
     name: 'C (Do)',
     keyHint: '1 / D',
   },
@@ -21,8 +21,8 @@ export const NADIMU_LANES = [
     chord: 'F',
     fingerCount: 2,
     emoji: '✌️',
-    color: '#00ffaa',
-    glowColor: 'rgba(0, 255, 170, 0.45)',
+    color: '#3b82f6',
+    glowColor: 'rgba(59, 130, 246, 0.45)',
     name: 'F / Dm',
     keyHint: '2 / F',
   },
@@ -31,8 +31,8 @@ export const NADIMU_LANES = [
     chord: 'Em',
     fingerCount: 3,
     emoji: '🤟',
-    color: '#ff2d75',
-    glowColor: 'rgba(255, 45, 117, 0.45)',
+    color: '#fbb040',
+    glowColor: 'rgba(251, 176, 64, 0.45)',
     name: 'Em / Am',
     keyHint: '3 / J',
   },
@@ -41,8 +41,8 @@ export const NADIMU_LANES = [
     chord: 'G',
     fingerCount: 4,
     emoji: '🖐️',
-    color: '#ffd700',
-    glowColor: 'rgba(255, 215, 0, 0.45)',
+    color: '#10b981',
+    glowColor: 'rgba(16, 185, 129, 0.45)',
     name: 'G Dominan',
     keyHint: '4 / K',
   },
@@ -126,13 +126,7 @@ export class NadimuTilesEngine {
     this.resize();
     this._generateTileSchedule();
     this._bindEvents();
-    this.draw();
-  }
-
-  draw() {
-    if (!this.ctx) return;
-    const songTime = this.getCurrentSongTime();
-    this._renderHighway(songTime);
+    this._renderHighway(0);
   }
 
   setSpeed(multiplier = 1.0) {
@@ -913,36 +907,16 @@ export class NadimuTilesEngine {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     this._roundRect(ctx, lx + 5, topY + 3, lWidth - 10, 4, 2, true, false);
 
-    // Tile Text & Info
-    if (tileHeight >= 36) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 20px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+    // Inner Chord & Gesture Text
+    ctx.fillStyle = '#060a14';
+    ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${tile.emoji} ${tile.chord}`, x + w / 2, y + height / 2 - 4);
 
-      // Big Chord Name near top
-      ctx.fillText(tile.chord, lx + lWidth / 2, topY + 34);
-
-      // Finger Icon & Gesture hint below chord
-      ctx.font = 'bold 12.5px Outfit, sans-serif';
-      ctx.fillStyle = laneConfig.color;
-      ctx.fillText(`${tile.emoji} ${tile.fingerCount} JARI`, lx + lWidth / 2, topY + 58);
-
-      // Chord description in middle of long tile
-      if (tile.chordDesc && tileHeight >= 130) {
-        ctx.font = '600 11px Outfit, sans-serif';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.fillText(tile.chordDesc, lx + lWidth / 2, topY + 84);
-      }
-
-      // Lyric preview near bottom of the long tile
-      if (tile.lyric) {
-        ctx.font = '600 12px Outfit, sans-serif';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-        const shortLyric = tile.lyric.length > 20 ? tile.lyric.substring(0, 19) + '…' : tile.lyric;
-        ctx.fillText(`"${shortLyric}"`, lx + lWidth / 2, topY + tileHeight - 16);
-      }
-    }
+    ctx.font = '600 9.5px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#111827';
+    ctx.fillText(tile.lyric ? tile.lyric.slice(0, 18) : `${tile.fingerCount} JARI`, x + w / 2, y + height / 2 + 10);
 
     ctx.restore();
   }
@@ -1045,42 +1019,9 @@ export class NadimuTilesEngine {
       ctx.lineTo(lx + 2, keyTop + keyH - 4);
       ctx.stroke();
 
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
-      ctx.beginPath();
-      ctx.moveTo(lx + lWidth - 2, keyTop + 4);
-      ctx.lineTo(lx + lWidth - 2, keyTop + keyH - 4);
-      ctx.stroke();
-
-      // Outer Key Border & Neon Underglow
-      if (isActive) {
-        ctx.strokeStyle = lane.glowColor || 'rgba(0, 247, 255, 0.45)';
-        ctx.lineWidth = 6;
-        this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2.5;
-        this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
-      } else {
-        ctx.strokeStyle = lane.color;
-        ctx.lineWidth = 1.5;
-        this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
-      }
-
-      // Bottom Keycap Lip
-      ctx.fillStyle = isActive ? lane.color : 'rgba(0, 0, 0, 0.5)';
-      this._roundRect(ctx, lx + 2, keyTop + keyH - 6, lWidth - 4, 4, 2, true, false);
-
-      // --- KEY LABELS & NOTATION ---
-      const centerX = lx + lWidth / 2;
-
-      // 1. Top Target Cue Dot
-      ctx.fillStyle = isActive ? '#ffffff' : lane.color;
-      ctx.beginPath();
-      ctx.arc(centerX, keyTop + 14, 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 2. Large Bold Chord Name
-      ctx.fillStyle = isActive ? '#000000' : '#ffffff';
-      ctx.font = 'bold 20px Orbitron, sans-serif';
+      // Key Labels
+      ctx.fillStyle = isPressed ? '#ffffff' : lane.color;
+      ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(lane.chord, centerX, keyTop + keyH * 0.25);

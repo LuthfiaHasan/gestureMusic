@@ -72,8 +72,8 @@ export class WaveformVisualizer {
       const y = h - barHeight;
 
       const grad = this.ctx.createLinearGradient(0, y, 0, h);
-      grad.addColorStop(0, 'rgba(255, 0, 127, 0.4)');
-      grad.addColorStop(1, 'rgba(0, 247, 255, 0.05)');
+      grad.addColorStop(0, 'rgba(251, 176, 64, 0.45)');
+      grad.addColorStop(1, 'rgba(20, 179, 212, 0.06)');
 
       this.ctx.fillStyle = grad;
       this.ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
@@ -82,8 +82,8 @@ export class WaveformVisualizer {
     // 2. Draw glowing oscilloscope waveform line
     this.ctx.save();
     this.ctx.lineWidth = 2.5;
-    this.ctx.strokeStyle = '#00f7ff';
-    this.ctx.shadowColor = '#00f7ff';
+    this.ctx.strokeStyle = '#14b3d4';
+    this.ctx.shadowColor = '#14b3d4';
     this.ctx.shadowBlur = 12;
 
     this.ctx.beginPath();
@@ -112,8 +112,8 @@ export class WaveformVisualizer {
     const time = performance.now() * 0.002;
     this.ctx.save();
     this.ctx.lineWidth = 1.5;
-    this.ctx.strokeStyle = 'rgba(0, 247, 255, 0.35)';
-    this.ctx.shadowColor = '#00f7ff';
+    this.ctx.strokeStyle = 'rgba(20, 179, 212, 0.45)';
+    this.ctx.shadowColor = '#14b3d4';
     this.ctx.shadowBlur = 6;
 
     this.ctx.beginPath();

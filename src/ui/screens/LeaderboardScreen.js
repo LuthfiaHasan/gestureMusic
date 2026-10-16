@@ -214,12 +214,33 @@ export class LeaderboardScreen {
 
           <!-- Bottom Action Buttons -->
           <div class="leaderboard-bottom-row">
-            <button class="btn-primary" id="btn-lead-play-again" style="padding:12px 24px;">
-              <span>🎵</span> PILIH LAGU & TANTANG SKOR INI
+            <button class="lead-footer-btn challenge-btn" id="btn-lead-play-again">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon>
+              </svg>
+              <span>PILIH LAGU & TANTANG SKOR INI</span>
             </button>
-            <button class="btn-secondary" id="btn-lead-refresh">
-              <span>↻</span> SEGARKAN DATA
-            </button>
+
+            <div style="display:flex; gap:12px; align-items:center;">
+              <button class="lead-footer-btn refresh-btn" id="btn-lead-refresh">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 2v6h-6"></path>
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                  <path d="M3 22v-6h6"></path>
+                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                </svg>
+                <span>SEGARKAN DATA</span>
+              </button>
+
+              <button class="lead-footer-btn home-btn" id="btn-lead-goto-home">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                <span>KEMBALI KE HOME</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -364,6 +385,14 @@ export class LeaderboardScreen {
     if (refreshBtn) {
       refreshBtn.onclick = () => {
         app.render();
+      };
+    }
+
+    // 4. Return to Home
+    const leadHomeBtn = document.getElementById('btn-lead-goto-home');
+    if (leadHomeBtn) {
+      leadHomeBtn.onclick = () => {
+        gameEngine.setState(GAME_STATES.HOME);
       };
     }
 
