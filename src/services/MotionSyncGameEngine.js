@@ -1437,9 +1437,11 @@ window.addEventListener('pointerdown', () => {
   taragakPulangSyncService.unlockAudio();
 });
 
-// Initialize
-window.addEventListener('DOMContentLoaded', () => {
-  window.app = new GestureMusikApp();
-});
+// Initialize (only if running as standalone app)
+if (typeof window !== 'undefined' && window.__STANDALONE_GESTURE_MUSIK__) {
+  window.addEventListener('DOMContentLoaded', () => {
+    window.app = new GestureMusikApp();
+  });
+}
 
 export { SongMenuScreen, GestureMusicGameEngine, JatuhSukaGame, TaragakPulangGame, GestureMusikApp };

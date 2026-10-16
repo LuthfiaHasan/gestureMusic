@@ -17,6 +17,7 @@ const TRACK_ICONS = {
 
 export class TrackSelectScreen {
   static render() {
+    const tracks = Object.values(COMPETITION_TRACKS);
     const isWallpaper = localStorage.getItem('gestureMusic_useWallpaper') === 'true';
     if (isWallpaper) {
       document.body.classList.add('with-custom-wallpaper');
