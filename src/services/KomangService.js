@@ -6,7 +6,7 @@ import { audioManager } from '../audio/AudioManager.js';
 import { competitionLeaderboardService } from './CompetitionLeaderboardService.js';
 
 export const KOMANG_MEASURES = [
-  // SYSTEM 1 (Measures 1 - 4: Intro & Opening Theme)
+  // SYSTEM 1 (Measures 1 - 4: Bait 1: G ➔ D/F#)
   {
     index: 0,
     measure: 1,
@@ -15,7 +15,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 1,
     emoji: '☝️',
     label: '1 Jari: G (Do)',
-    lyric: 'Sebab kau terlalu indah',
+    lyric: 'Dari kejauhan, tergambar cerita tentang kita',
     notes: 'B4 - D5 - B4 - D5 - G5',
     melodyNotes: ['B4', 'D5', 'B4', 'D5', 'G5'],
     bassNote: 'G2',
@@ -30,7 +30,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 1,
     emoji: '☝️',
     label: '1 Jari: G (Do)',
-    lyric: 'dari sekadar kata',
+    lyric: 'Dari kejauhan, tergambar cerita tentang kita',
     notes: 'E5 - D5 - B4 - A4 - G4',
     melodyNotes: ['E5', 'D5', 'B4', 'A4', 'G4'],
     bassNote: 'G2',
@@ -45,7 +45,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 2,
     emoji: '✌️',
     label: '2 Jari: D/F# (Transisi)',
-    lyric: 'Dunia berputar',
+    lyric: 'Terpisah jarak dan waktu',
     notes: 'A4 - D5 - A4 - D5 - F#5',
     melodyNotes: ['A4', 'D5', 'A4', 'D5', 'F#5'],
     bassNote: 'F#2',
@@ -60,7 +60,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 2,
     emoji: '✌️',
     label: '2 Jari: D/F# (Transisi)',
-    lyric: 'menatap dirimu',
+    lyric: 'Terpisah jarak dan waktu',
     notes: 'E5 - D5 - A4 - F#4',
     melodyNotes: ['E5', 'D5', 'A4', 'F#4'],
     bassNote: 'F#2',
@@ -68,7 +68,7 @@ export const KOMANG_MEASURES = [
     keys: ['F#3', 'D4', 'F#4', 'A4'],
   },
 
-  // SYSTEM 2 (Measures 5 - 8: Melancholic Turn & Modal Interchange)
+  // SYSTEM 2 (Measures 5 - 8: Bait 1 Lanjutan: Am ➔ Cm)
   {
     index: 4,
     measure: 5,
@@ -77,7 +77,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 3,
     emoji: '🤟',
     label: '3 Jari: Am (Lembut)',
-    lyric: 'Kusampaikan rasa ini',
+    lyric: 'Ingin kuungkapkan rindu lewat kata indah',
     notes: 'C5 - E5 - C5 - E5 - A5',
     melodyNotes: ['C5', 'E5', 'C5', 'E5', 'A5'],
     bassNote: 'A2',
@@ -92,7 +92,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 3,
     emoji: '🤟',
     label: '3 Jari: Am (Lembut)',
-    lyric: 'kepada sang angin',
+    lyric: 'Ingin kuungkapkan rindu lewat kata indah',
     notes: 'G5 - E5 - D5 - C5',
     melodyNotes: ['G5', 'E5', 'D5', 'C5'],
     bassNote: 'A2',
@@ -107,7 +107,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 4,
     emoji: '🖐️',
     label: '4 Jari: Cm (Syahdu)',
-    lyric: 'Hingga tiba saatnya',
+    lyric: 'Tak cukup untuk dirimu',
     notes: 'Eb5 - G5 - Eb5 - G5 - C6',
     melodyNotes: ['Eb5', 'G5', 'Eb5', 'G5', 'C6'],
     bassNote: 'C2',
@@ -122,7 +122,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 4,
     emoji: '🖐️',
     label: '4 Jari: Cm (Syahdu)',
-    lyric: 'kau kan menyadari',
+    lyric: 'Tak cukup untuk dirimu',
     notes: 'Bb5 - G5 - Eb5 - D5',
     melodyNotes: ['Bb5', 'G5', 'Eb5', 'D5'],
     bassNote: 'C2',
@@ -130,7 +130,7 @@ export const KOMANG_MEASURES = [
     keys: ['C3', 'C4', 'Eb4', 'G4', 'C5'],
   },
 
-  // SYSTEM 3 (Measures 9 - 12: Main Chorus Theme)
+  // SYSTEM 3 (Measures 9 - 12: Pre-Chorus: G ➔ D/F#)
   {
     index: 8,
     measure: 9,
@@ -139,7 +139,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 1,
     emoji: '☝️',
     label: '1 Jari: G (Do)',
-    lyric: 'Sebab kau terlalu indah',
+    lyric: 'Sebab kau terlalu indah dari sekedar kata',
     notes: 'B4 - D5 - B4 - D5 - G5',
     melodyNotes: ['B4', 'D5', 'B4', 'D5', 'G5'],
     bassNote: 'G2',
@@ -154,7 +154,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 1,
     emoji: '☝️',
     label: '1 Jari: G (Do)',
-    lyric: 'dari sekadar kata',
+    lyric: 'Sebab kau terlalu indah dari sekedar kata',
     notes: 'E5 - D5 - B4 - A4 - G4',
     melodyNotes: ['E5', 'D5', 'B4', 'A4', 'G4'],
     bassNote: 'G2',
@@ -169,7 +169,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 2,
     emoji: '✌️',
     label: '2 Jari: D/F# (Transisi)',
-    lyric: 'Dunia berputar',
+    lyric: 'Dunia berhenti sejenak menikmati indahmu',
     notes: 'A4 - D5 - A4 - D5 - F#5',
     melodyNotes: ['A4', 'D5', 'A4', 'D5', 'F#5'],
     bassNote: 'F#2',
@@ -184,7 +184,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 2,
     emoji: '✌️',
     label: '2 Jari: D/F# (Transisi)',
-    lyric: 'menatap senyummu',
+    lyric: 'Dunia berhenti sejenak menikmati indahmu',
     notes: 'E5 - D5 - A4 - F#4',
     melodyNotes: ['E5', 'D5', 'A4', 'F#4'],
     bassNote: 'F#2',
@@ -192,7 +192,7 @@ export const KOMANG_MEASURES = [
     keys: ['F#3', 'D4', 'F#4', 'A4'],
   },
 
-  // SYSTEM 4 (Measures 13 - 16: Grand Climax & Resolution)
+  // SYSTEM 4 (Measures 13 - 16: Reff Utama: Am ➔ Cm ➔ G)
   {
     index: 12,
     measure: 13,
@@ -201,7 +201,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 3,
     emoji: '🤟',
     label: '3 Jari: Am (Lembut)',
-    lyric: 'Kan ku jaga selalu',
+    lyric: 'Dan apabila tak bersamamu',
     notes: 'C5 - E5 - C5 - E5 - A5',
     melodyNotes: ['C5', 'E5', 'C5', 'E5', 'A5'],
     bassNote: 'A2',
@@ -216,7 +216,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 3,
     emoji: '🤟',
     label: '3 Jari: Am (Lembut)',
-    lyric: 'cinta yang kau beri',
+    lyric: 'Kupastikan kujalani dunia tak seindah kemarin',
     notes: 'G5 - E5 - D5 - C5',
     melodyNotes: ['G5', 'E5', 'D5', 'C5'],
     bassNote: 'A2',
@@ -231,7 +231,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 4,
     emoji: '🖐️',
     label: '4 Jari: Cm (Syahdu)',
-    lyric: 'Dan kau adalah Komang',
+    lyric: 'Sederhana, tertawamu sudah cukup',
     notes: 'Eb5 - G5 - Eb5 - G5 - D6',
     melodyNotes: ['Eb5', 'G5', 'Eb5', 'G5', 'D6'],
     bassNote: 'C2',
@@ -246,7 +246,7 @@ export const KOMANG_MEASURES = [
     fingerCount: 1,
     emoji: '☝️',
     label: '1 Jari: G (Resolusi)',
-    lyric: 'terindah bagiku... ✨',
+    lyric: 'Lengkapi sempurnanya hidup bersamamu... ✨',
     notes: 'B5 - G5 - D5 - B4 - G4',
     melodyNotes: ['B5', 'G5', 'D5', 'B4', 'G4'],
     bassNote: 'G2',
@@ -275,104 +275,444 @@ export const KOMANG_PIANO_KEYS = [
   { note: 'D5', label: 'D5', isBlack: false },
 ];
 
-// 30-Second Song Segments for Random Play Sessions
-// Transcribed with different starting measures, chords, and hand gestures so each session is unique!
+// Official Timeline Lyrics for Raim Laode's "Komang" (Key G Major • 4/4 Ballad ~84.2 BPM)
+// Synchronized accurately with the 16.5s Intro and authentic song timeline matching all 24 lyric lines!
+export const KOMANG_TIMELINE_LYRICS = [
+  // --- INTRO (0.00s - 16.50s) ---
+  {
+    startSec: 0.00,
+    endSec: 16.50,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: '🎵 [Intro Piano Akustik - Bersiap 1 Jari: G]',
+    chordDesc: 'G Major (Intro Piano Akustik)',
+    melodyNotes: ['G4', 'B4', 'D5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+
+  // --- BAIT 1 (16.50s - 39.30s) ---
+  // Line 1: Dari kejauhan, tergambar cerita tentang kita
+  {
+    startSec: 16.50,
+    endSec: 22.20,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: 'Dari kejauhan, tergambar cerita tentang kita',
+    chordDesc: 'G Major (Cerita Tentang Kita)',
+    melodyNotes: ['B4', 'D5', 'G5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+  // Line 2: Terpisah jarak dan waktu
+  {
+    startSec: 22.20,
+    endSec: 27.90,
+    chord: 'D/F#',
+    fingerCount: 2,
+    emoji: '✌️',
+    lyric: 'Terpisah jarak dan waktu',
+    chordDesc: 'D Major / Bass F# (Transisi Nada Turun)',
+    melodyNotes: ['A4', 'D5', 'F#5'],
+    keys: ['F#3', 'D4', 'F#4', 'A4'],
+  },
+  // Line 3: Ingin kuungkapkan rindu lewat kata indah
+  {
+    startSec: 27.90,
+    endSec: 33.60,
+    chord: 'Am',
+    fingerCount: 3,
+    emoji: '🤟',
+    lyric: 'Ingin kuungkapkan rindu lewat kata indah',
+    chordDesc: 'A Minor (Sentuhan Emosional)',
+    melodyNotes: ['C5', 'E5', 'A5'],
+    keys: ['A3', 'E4', 'A4', 'C5'],
+  },
+  // Line 4: Tak cukup untuk dirimu
+  {
+    startSec: 33.60,
+    endSec: 39.30,
+    chord: 'Cm',
+    fingerCount: 4,
+    emoji: '🖐️',
+    lyric: 'Tak cukup untuk dirimu',
+    chordDesc: 'C Minor (Minor Plagal Syahdu)',
+    melodyNotes: ['Eb5', 'G5', 'C6'],
+    keys: ['C3', 'C4', 'Eb4', 'G4', 'C5'],
+  },
+
+  // --- PRE-CHORUS (39.30s - 50.70s) ---
+  // Line 5: Sebab kau terlalu indah dari sekedar kata
+  {
+    startSec: 39.30,
+    endSec: 45.00,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: 'Sebab kau terlalu indah dari sekedar kata',
+    chordDesc: 'G Major (Harmoni Manis)',
+    melodyNotes: ['B4', 'D5', 'G5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+  // Line 6: Dunia berhenti sejenak menikmati indahmu
+  {
+    startSec: 45.00,
+    endSec: 50.70,
+    chord: 'D/F#',
+    fingerCount: 2,
+    emoji: '✌️',
+    lyric: 'Dunia berhenti sejenak menikmati indahmu',
+    chordDesc: 'D Major / Bass F# (Menikmati Indahmu)',
+    melodyNotes: ['A4', 'D5', 'F#5'],
+    keys: ['F#3', 'D4', 'F#4', 'A4'],
+  },
+
+  // --- REFF 1 / CHORUS 1 (50.70s - 73.50s) ---
+  // Line 7: Dan apabila tak bersamamu
+  {
+    startSec: 50.70,
+    endSec: 56.40,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: 'Dan apabila tak bersamamu',
+    chordDesc: 'G Major (Reff Ikonik Komang)',
+    melodyNotes: ['B4', 'D5', 'G5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+  // Line 8: Kupastikan kujalani dunia tak seindah kemarin
+  {
+    startSec: 56.40,
+    endSec: 62.10,
+    chord: 'D/F#',
+    fingerCount: 2,
+    emoji: '✌️',
+    lyric: 'Kupastikan kujalani dunia tak seindah kemarin',
+    chordDesc: 'D Major / Bass F# (Alunan Tulus)',
+    melodyNotes: ['A4', 'D5', 'F#5'],
+    keys: ['F#3', 'D4', 'F#4', 'A4'],
+  },
+  // Line 9: Sederhana, tertawamu sudah cukup
+  {
+    startSec: 62.10,
+    endSec: 67.80,
+    chord: 'Am',
+    fingerCount: 3,
+    emoji: '🤟',
+    lyric: 'Sederhana, tertawamu sudah cukup',
+    chordDesc: 'A Minor (Janji Cinta Lembut)',
+    melodyNotes: ['C5', 'E5', 'A5'],
+    keys: ['A3', 'E4', 'A4', 'C5'],
+  },
+  // Line 10: Lengkapi sempurnanya hidup bersamamu
+  {
+    startSec: 67.80,
+    endSec: 73.50,
+    chord: 'Cm',
+    fingerCount: 4,
+    emoji: '🖐️',
+    lyric: 'Lengkapi sempurnanya hidup bersamamu',
+    chordDesc: 'C Minor (Puncak Emosional Reff)',
+    melodyNotes: ['Eb5', 'G5', 'C6'],
+    keys: ['C3', 'C4', 'Eb4', 'G4', 'C5'],
+  },
+
+  // --- INTERLUDE (73.50s - 79.20s) ---
+  {
+    startSec: 73.50,
+    endSec: 79.20,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: '🎵 [Melodi Piano Interlude - G]',
+    chordDesc: 'G Major (Interlude Alunan Piano)',
+    melodyNotes: ['G4', 'B4', 'D5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+
+  // --- BRIDGE (79.20s - 90.60s) ---
+  // Line 11: Jika hari kulalui tanpa hawamu
+  {
+    startSec: 79.20,
+    endSec: 84.90,
+    chord: 'Am',
+    fingerCount: 3,
+    emoji: '🤟',
+    lyric: 'Jika hari kulalui tanpa hawamu',
+    chordDesc: 'A Minor (Bridge Penuh Penghayatan)',
+    melodyNotes: ['C5', 'E5', 'A5'],
+    keys: ['A3', 'E4', 'A4', 'C5'],
+  },
+  // Line 12: Percuma senyumku dengan dia, oh
+  {
+    startSec: 84.90,
+    endSec: 90.60,
+    chord: 'Cm',
+    fingerCount: 4,
+    emoji: '🖐️',
+    lyric: 'Percuma senyumku dengan dia, oh',
+    chordDesc: 'C Minor (Klimaks Bridge)',
+    melodyNotes: ['Eb5', 'G5', 'C6'],
+    keys: ['C3', 'C4', 'Eb4', 'G4', 'C5'],
+  },
+
+  // --- REFF 2 (CHORUS 2: 90.60s - 113.40s) ---
+  // Line 13: Dan apabila tak bersamamu
+  {
+    startSec: 90.60,
+    endSec: 96.30,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: 'Dan apabila tak bersamamu',
+    chordDesc: 'G Major (Reff Ke-2)',
+    melodyNotes: ['B4', 'D5', 'G5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+  // Line 14: Kupastikan kujalani dunia tak seindah kemarin
+  {
+    startSec: 96.30,
+    endSec: 102.00,
+    chord: 'D/F#',
+    fingerCount: 2,
+    emoji: '✌️',
+    lyric: 'Kupastikan kujalani dunia tak seindah kemarin',
+    chordDesc: 'D Major / Bass F# (Alunan Mengalun)',
+    melodyNotes: ['A4', 'D5', 'F#5'],
+    keys: ['F#3', 'D4', 'F#4', 'A4'],
+  },
+  // Line 15: Sederhana, tertawamu sudah cukup
+  {
+    startSec: 102.00,
+    endSec: 107.70,
+    chord: 'Am',
+    fingerCount: 3,
+    emoji: '🤟',
+    lyric: 'Sederhana, tertawamu sudah cukup',
+    chordDesc: 'A Minor (Ketulusan Hati)',
+    melodyNotes: ['C5', 'E5', 'A5'],
+    keys: ['A3', 'E4', 'A4', 'C5'],
+  },
+  // Line 16: Lengkapi sempurnanya hidup bersamamu
+  {
+    startSec: 107.70,
+    endSec: 113.40,
+    chord: 'Cm',
+    fingerCount: 4,
+    emoji: '🖐️',
+    lyric: 'Lengkapi sempurnanya hidup bersamamu',
+    chordDesc: 'C Minor (Menuju Puncak Modulasi)',
+    melodyNotes: ['Eb5', 'G5', 'C6'],
+    keys: ['C3', 'C4', 'Eb4', 'G4', 'C5'],
+  },
+
+  // --- REFF 3 / MODULASI KLIMAKS (113.40s - 136.20s) ---
+  // Line 17: Apabila tak bersamamu
+  {
+    startSec: 113.40,
+    endSec: 119.10,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: 'Apabila tak bersamamu',
+    chordDesc: 'G Major (Puncak Klimaks Lagu)',
+    melodyNotes: ['B4', 'D5', 'G5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+  // Line 18: Kupastikan kujalani dunia tak seindah kemarin
+  {
+    startSec: 119.10,
+    endSec: 124.80,
+    chord: 'D/F#',
+    fingerCount: 2,
+    emoji: '✌️',
+    lyric: 'Kupastikan kujalani dunia tak seindah kemarin',
+    chordDesc: 'D Major / Bass F# (Klimaks Penghayatan)',
+    melodyNotes: ['A4', 'D5', 'F#5'],
+    keys: ['F#3', 'D4', 'F#4', 'A4'],
+  },
+  // Line 19: Sederhana, tertawamu sudah cukup
+  {
+    startSec: 124.80,
+    endSec: 130.50,
+    chord: 'Am',
+    fingerCount: 3,
+    emoji: '🤟',
+    lyric: 'Sederhana, tertawamu sudah cukup',
+    chordDesc: 'A Minor (Getaran Cinta Mendalam)',
+    melodyNotes: ['C5', 'E5', 'A5'],
+    keys: ['A3', 'E4', 'A4', 'C5'],
+  },
+  // Line 20: Lengkapi sempurnanya hidup bersamamu
+  {
+    startSec: 130.50,
+    endSec: 136.20,
+    chord: 'Cm',
+    fingerCount: 4,
+    emoji: '🖐️',
+    lyric: 'Lengkapi sempurnanya hidup bersamamu',
+    chordDesc: 'C Minor (Resolusi Klimaks Tertinggi)',
+    melodyNotes: ['Eb5', 'G5', 'C6'],
+    keys: ['C3', 'C4', 'Eb4', 'G4', 'C5'],
+  },
+
+  // --- CODA (136.20s - 147.60s) ---
+  // Line 21: Hu-uh-uh
+  {
+    startSec: 136.20,
+    endSec: 141.90,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: 'Hu-uh-uh',
+    chordDesc: 'G Major (Coda Harmoni Vokal)',
+    melodyNotes: ['B4', 'D5', 'G5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+  // Line 22: Hu, hu-uh-uh
+  {
+    startSec: 141.90,
+    endSec: 147.60,
+    chord: 'D/F#',
+    fingerCount: 2,
+    emoji: '✌️',
+    lyric: 'Hu, hu-uh-uh',
+    chordDesc: 'D Major / Bass F# (Alunan Lembut Penutup)',
+    melodyNotes: ['A4', 'D5', 'F#5'],
+    keys: ['F#3', 'D4', 'F#4', 'A4'],
+  },
+
+  // --- OUTRO (147.60s - 260.00s+) ---
+  // Line 23: Sebab kau terlalu indah dari sekedar kata
+  {
+    startSec: 147.60,
+    endSec: 156.00,
+    chord: 'G',
+    fingerCount: 1,
+    emoji: '☝️',
+    lyric: 'Sebab kau terlalu indah dari sekedar kata',
+    chordDesc: 'G Major (Outro Penutup Syahdu)',
+    melodyNotes: ['B4', 'D5', 'G5'],
+    keys: ['G3', 'D4', 'G4', 'B4'],
+  },
+  // Line 24: Dunia berhenti sejenak menikmati indahmu
+  {
+    startSec: 156.00,
+    endSec: 260.00,
+    chord: 'Cm',
+    fingerCount: 4,
+    emoji: '🖐️',
+    lyric: 'Dunia berhenti sejenak menikmati indahmu... ✨',
+    chordDesc: 'C Minor (Dunia Berhenti Sejenak)',
+    melodyNotes: ['Eb5', 'G5', 'C6'],
+    keys: ['C3', 'C4', 'Eb4', 'G4', 'C5'],
+  },
+];
+
+export function getKomangTimelineItemAtTime(timeSec) {
+  if (typeof timeSec !== 'number' || isNaN(timeSec) || timeSec < 0) {
+    return KOMANG_TIMELINE_LYRICS[0];
+  }
+  const match = KOMANG_TIMELINE_LYRICS.find(item => timeSec >= item.startSec && timeSec < item.endSec);
+  if (match) return match;
+  return KOMANG_TIMELINE_LYRICS[KOMANG_TIMELINE_LYRICS.length - 1];
+}
+
+export function getKomangLyricAtTime(timeSec) {
+  const item = getKomangTimelineItemAtTime(timeSec);
+  return item ? item.lyric : 'Dunia berhenti sejenak menikmati indahmu... ✨';
+}
+
+// 45-Second Song Segments for Random Play Sessions
+// Transcribed with authentic starting points, chords, and genuine lyrics matching each section!
 export const KOMANG_SEGMENTS = [
   {
     id: 0,
-    cycle: 0,
     startMeasureIndex: 0,
     measureNum: 1,
     startChord: 'G',
     fingerCount: 1,
-    title: 'Bait 1 & Pembuka (G Major)',
+    title: 'Intro Piano: Melodi Pembuka (G)',
     startSec: 0.0,
-    lyricHint: 'Sebab kau terlalu indah…',
-    desc: '☝️ 1 Jari (G) • Intro Nada Manis',
+    lyricHint: '🎵 Intro Piano Akustik (Siapkan 1 Jari: G)…',
+    desc: '☝️ 1 Jari (G) • Intro Piano Akustik',
   },
   {
     id: 1,
-    cycle: 0,
+    startMeasureIndex: 0,
+    measureNum: 1,
+    startChord: 'G',
+    fingerCount: 1,
+    title: 'Bait 1: Cerita Tentang Kita (G)',
+    startSec: 16.5,
+    lyricHint: 'Dari kejauhan, tergambar cerita tentang kita…',
+    desc: '☝️ 1 Jari (G) • Cerita Tentang Kita',
+  },
+  {
+    id: 2,
     startMeasureIndex: 2,
     measureNum: 3,
     startChord: 'D/F#',
     fingerCount: 2,
-    title: 'Bait 2 & Transisi (D/F#)',
-    startSec: 3.69,
-    lyricHint: 'Dunia berputar menatap dirimu…',
+    title: 'Bait 1: Terpisah Jarak (D/F#)',
+    startSec: 22.2,
+    lyricHint: 'Terpisah jarak dan waktu…',
     desc: '✌️ 2 Jari (D/F#) • Transisi Nada Turun',
   },
   {
-    id: 2,
-    cycle: 0,
+    id: 3,
     startMeasureIndex: 4,
     measureNum: 5,
     startChord: 'Am',
     fingerCount: 3,
-    title: 'Sentuhan Syahdu (A Minor)',
-    startSec: 7.38,
-    lyricHint: 'Kusampaikan rasa ini kepada sang angin…',
+    title: 'Bait 1: Ungkapkan Rindu (Am)',
+    startSec: 27.9,
+    lyricHint: 'Ingin kuungkapkan rindu lewat kata indah…',
     desc: '🤟 3 Jari (Am) • Sentuhan Lembut Emosional',
   },
   {
-    id: 3,
-    cycle: 0,
+    id: 4,
     startMeasureIndex: 6,
     measureNum: 7,
     startChord: 'Cm',
     fingerCount: 4,
-    title: 'Modal Khas Komang (C Minor)',
-    startSec: 11.08,
-    lyricHint: 'Hingga tiba saatnya kau kan menyadari…',
-    desc: '🖐️ 4 Jari (Cm) • Akor Minor Paling Ikonik',
+    title: 'Bait 1: Tak Cukup Untuk Dirimu (Cm)',
+    startSec: 33.6,
+    lyricHint: 'Tak cukup untuk dirimu…',
+    desc: '🖐️ 4 Jari (Cm) • Minor Plagal Syahdu',
   },
   {
-    id: 4,
-    cycle: 1,
+    id: 5,
     startMeasureIndex: 8,
     measureNum: 9,
     startChord: 'G',
     fingerCount: 1,
-    title: 'Reff Utama Komang (G Major)',
-    startSec: 44.31,
-    lyricHint: 'Reff Utama: Sebab kau terlalu indah…',
-    desc: '☝️ 1 Jari (G) • Reff Melodi Utama Mengalun',
-  },
-  {
-    id: 5,
-    cycle: 1,
-    startMeasureIndex: 10,
-    measureNum: 11,
-    startChord: 'D/F#',
-    fingerCount: 2,
-    title: 'Reff Part 2 & Senyummu (D/F#)',
-    startSec: 48.00,
-    lyricHint: 'Reff: Dunia berputar menatap senyummu…',
-    desc: '✌️ 2 Jari (D/F#) • Melodi Senyummu',
+    title: 'Pre-Chorus: Terlalu Indah (G)',
+    startSec: 39.3,
+    lyricHint: 'Sebab kau terlalu indah dari sekedar kata…',
+    desc: '☝️ 1 Jari (G) • Menikmati Indahmu',
   },
   {
     id: 6,
-    cycle: 2,
     startMeasureIndex: 12,
     measureNum: 13,
-    startChord: 'Am',
-    fingerCount: 3,
-    title: 'Puncak Emosi Climax (Am)',
-    startSec: 81.23,
-    lyricHint: 'Climax: Kan ku jaga selalu cinta yang kau beri…',
-    desc: '🤟 3 Jari (Am) • Janji Cinta Penuh Emosi',
+    startChord: 'G',
+    fingerCount: 1,
+    title: 'Reff Utama: Tak Bersamamu (G)',
+    startSec: 50.7,
+    lyricHint: 'Dan apabila tak bersamamu, kupastikan…',
+    desc: '☝️ 1 Jari (G) • Reff Ikonik Komang',
   },
   {
     id: 7,
-    cycle: 2,
-    startMeasureIndex: 14,
-    measureNum: 15,
-    startChord: 'Cm',
-    fingerCount: 4,
-    title: 'Klimaks Komang & Resolusi (Cm)',
-    startSec: 84.92,
-    lyricHint: 'Dan kau adalah Komang terindah bagiku… ✨',
-    desc: '🖐️ 4 Jari (Cm) • Puncak Tertinggi Lagu Komang',
+    startMeasureIndex: 4,
+    measureNum: 5,
+    startChord: 'Am',
+    fingerCount: 3,
+    title: 'Bridge: Tanpa Hawamu (Am)',
+    startSec: 79.2,
+    lyricHint: 'Jika hari kulalui tanpa hawamu…',
+    desc: '🤟 3 Jari (Am) • Bagian Bridge Penuh Penghayatan',
   },
 ];
 
@@ -381,17 +721,18 @@ export class KomangService {
     this.measures = KOMANG_MEASURES;
     this.currentMeasureIndex = 0;
     this.mode = 'PLAY_ALONG'; // 'PLAY_ALONG' (MP3 sync), 'GUIDE' (Step by Step), 'TEMPO' (Metronome synth)
-    this.bpm = 130; // Tempo from sheet music
-    this.beatDurationSec = 60 / this.bpm; // ~0.4615s
-    this.measureDurationSec = this.beatDurationSec * 4; // ~1.84615s
-    this.cycleDurationSec = this.measureDurationSec * 16; // ~29.538s
+    this.bpm = 84.21; // Ballad Tempo of Komang (~2.85s per measure)
+    this.beatDurationSec = 60 / this.bpm; // ~0.7125s
+    this.measureDurationSec = 2.85; // Exactly 2.85s per measure
+    this.cycleDurationSec = this.measureDurationSec * 16; // ~45.6s
+    this.introDurationSec = 16.5; // 16.5s Piano Intro Prelude
 
     // Audio Backing Track
     this.audioEl = null;
     this.audioSrc = '/sounds/komang_piano.mp3'; // Piano Karaoke by Andre Panggabean
     this.audioOffsetSec = 0.0; // Adjustable sync offset in seconds
     this.backingVolume = 0.82;
-    this.playerVolume = 0.50;
+    this.playerVolume = 0.0; // Default muted so pure song plays without artificial sound clash
 
     // 45-Second Random Session Mode
     this.sessionMode = '30S_RANDOM'; // '30S_RANDOM' (45 Detik per main) or 'FULL_SONG'
@@ -425,7 +766,7 @@ export class KomangService {
     this.maxLives = 5;
     this.lives = 5;
     this.isNoFail = false; // Mode Santai (lagu jalan terus tanpa terhenti)
-    this.introShieldDurationSec = 4.0; // 4 detik awal sebagai periode pemanasan aman
+    this.introShieldDurationSec = 2.0; // Toleransi 2 detik awal saja
     this.isGameOver = false;
     this.isFinished = false;
     this.gameResult = null;
@@ -512,23 +853,16 @@ export class KomangService {
   }
 
   recoverLife(amount = 1) {
-    if (this.lives < this.maxLives) {
-      this.lives = Math.min(this.maxLives, this.lives + amount);
-      if (this.onLifeRecovered) {
-        this.onLifeRecovered({
-          lives: this.lives,
-          maxLives: this.maxLives,
-        });
-      }
-    }
+    // Disabled: lives cannot be recovered during gameplay
+    return;
   }
 
   loseLife(reason = 'TILE_MISSED') {
     if (this.isGameOver || this.isFinished || this.isNoFail) return;
 
-    // Warmup Shield: Jangan kurangi nyawa di 4 detik pertama segmen / lagu agar pemain bisa bersiap santai
+    // Warmup Shield: Toleransi 2 detik awal saja agar pemain bisa bersiap santai
     if (this.sessionMode === '30S_RANDOM') {
-      if (this.sessionElapsedSec < 4.0) {
+      if (this.sessionElapsedSec < 2.0) {
         this.combo = 0;
         return;
       }
@@ -573,7 +907,7 @@ export class KomangService {
     audioManager.playGameOverSound();
 
     const totalNotes = Math.max(1, this.perfectHits + this.greatHits + this.goodHits + this.missHits);
-    const accuracy = Math.round(((this.perfectHits * 1.0 + this.greatHits * 0.8 + this.goodHits * 0.5) / totalNotes) * 100);
+    const accuracy = Math.min(100, Math.round(((this.perfectHits * 1.0 + this.greatHits * 0.88 + this.goodHits * 0.75) / totalNotes) * 100));
 
     this.gameResult = {
       isWin: false,
@@ -654,11 +988,40 @@ export class KomangService {
   }
 
   getCurrentMeasure() {
-    return this.measures[this.currentMeasureIndex] || this.measures[0];
+    const curTime = this.getCurrentSongTime();
+    const item = getKomangTimelineItemAtTime(curTime);
+    const base = this.measures[this.currentMeasureIndex % this.measures.length] || this.measures[0];
+    return {
+      ...base,
+      index: this.currentMeasureIndex,
+      measure: this.currentMeasureIndex + 1,
+      chord: item.chord,
+      fingerCount: item.fingerCount,
+      emoji: item.emoji,
+      lyric: item.lyric,
+      chordDesc: item.chordDesc || base.chordDesc,
+      melodyNotes: item.melodyNotes || base.melodyNotes,
+      keys: item.keys || base.keys,
+    };
   }
 
   getNextMeasure() {
-    return this.measures[(this.currentMeasureIndex + 1) % this.measures.length];
+    const curTime = this.getCurrentSongTime();
+    const nextTime = curTime + this.measureDurationSec;
+    const item = getKomangTimelineItemAtTime(nextTime);
+    const base = this.measures[(this.currentMeasureIndex + 1) % this.measures.length] || this.measures[0];
+    return {
+      ...base,
+      index: this.currentMeasureIndex + 1,
+      measure: this.currentMeasureIndex + 2,
+      chord: item.chord,
+      fingerCount: item.fingerCount,
+      emoji: item.emoji,
+      lyric: item.lyric,
+      chordDesc: item.chordDesc || base.chordDesc,
+      melodyNotes: item.melodyNotes || base.melodyNotes,
+      keys: item.keys || base.keys,
+    };
   }
 
   play() {
@@ -845,9 +1208,16 @@ export class KomangService {
           }
         }
 
-        // Calculate measure position relative to tempo and sync offset
-        const cycleSec = currentTimeSec % this.cycleDurationSec;
-        const measureIdx = Math.min(15, Math.floor(cycleSec / this.measureDurationSec));
+        // Calculate measure position relative to tempo and sync offset (Accounting for 16.5s intro)
+        let cycleSec, measureIdx;
+        if (currentTimeSec < 16.5) {
+          cycleSec = currentTimeSec;
+          measureIdx = Math.min(15, Math.floor(currentTimeSec / this.measureDurationSec));
+        } else {
+          const songSec = currentTimeSec - 16.5;
+          cycleSec = songSec % this.cycleDurationSec;
+          measureIdx = Math.min(15, Math.floor(cycleSec / this.measureDurationSec));
+        }
         const measureProgress = (cycleSec % this.measureDurationSec) / this.measureDurationSec;
         const timeToNextMeasureSec = Math.max(0, this.measureDurationSec * (1 - measureProgress));
 
@@ -975,13 +1345,14 @@ export class KomangService {
       'Am': ['A4', 'C5', 'E5'],
       'Cm': ['G4', 'C5', 'Eb5'],
     };
-    const voicing = sweetVoicings[measure.chord] || (measure.melodyNotes && measure.melodyNotes.slice(0, 2)) || ['G4', 'B4', 'D5'];
-    audioManager.playKomangMelodyNote(voicing, {
-      duration: 2.2,
-      gainScale: 0.38,
-      isPerfect: true,
-      preset: 'Acoustic Piano',
-    });
+    if (this.playerVolume > 0.01) {
+      audioManager.playKomangMelodyNote(voicing, {
+        duration: 1.6,
+        gainScale: this.playerVolume * 0.25,
+        isPerfect: false,
+        preset: 'Acoustic Piano',
+      });
+    }
 
     // 2. Evaluate timing rating in PLAY_ALONG mode
     let rating = 'PERFECT';
@@ -1085,8 +1456,9 @@ export class KomangService {
         'Am': ['A4', 'C5', 'E5'],
         'Cm': ['G4', 'C5', 'Eb5'],
       };
-      const notes = sweetVoicings[measure.chord] || ['G4', 'B4', 'D5'];
-      audioManager.playKomangMelodyNote(notes, { duration: 1.6, gainScale: 0.38, preset: 'Acoustic Piano' });
+      if (this.playerVolume > 0.01) {
+        audioManager.playKomangMelodyNote(notes, { duration: 1.6, gainScale: this.playerVolume * 0.25, preset: 'Acoustic Piano' });
+      }
 
       if (this.mode === 'PLAY_ALONG' && this.audioEl) {
         // Seek audio to this measure start in the cycle
@@ -1115,33 +1487,51 @@ export class KomangService {
     this.stop();
 
     const totalNotes = Math.max(1, this.perfectHits + this.greatHits + this.goodHits + this.missHits);
-    const accuracy = Math.min(100, Math.round(((this.perfectHits * 1.0 + this.greatHits * 0.8 + this.goodHits * 0.5) / totalNotes) * 100));
+    // Fair Accuracy Calculation: Perfect = 1.0, Great = 0.88, Good = 0.75, Miss = 0.0
+    const accuracy = Math.min(100, Math.round(((this.perfectHits * 1.0 + this.greatHits * 0.88 + this.goodHits * 0.75) / totalNotes) * 100));
 
-    // Stars Rating (1 - 3 Stars)
+    const isFullCombo = (this.missHits === 0 && (this.perfectHits + this.greatHits + this.goodHits) > 0);
+
+    // Stars Rating (1 - 3 Stars):
+    // ⭐⭐⭐: Full Combo, OR Accuracy >= 80%, OR 4+ lives left, OR 3+ lives with >= 70% accuracy
     let stars = 1;
-    if (accuracy >= 90 && this.missHits === 0) stars = 3;
-    else if (accuracy >= 85) stars = 3;
-    else if (accuracy >= 70) stars = 2;
-    else stars = 1;
+    if (isFullCombo || accuracy >= 80 || (this.lives >= 4 && this.missHits <= 2) || (this.lives >= 3 && accuracy >= 70)) {
+      stars = 3;
+    } else if (accuracy >= 60 || this.lives >= 2 || this.missHits <= 4) {
+      stars = 2;
+    } else {
+      stars = 1;
+    }
 
-    // Grade Determination (S+, S, A, B, C)
+    // Grade Determination (S+, S, A, B, C):
+    // S+: Full combo with very high accuracy
+    // S: Master (accuracy >= 88% OR accuracy >= 80% with 4+ lives)
+    // A: Pianis Mahir (accuracy >= 74% OR 3+ lives with <= 2 misses)
+    // B: Pianis Berbakat (accuracy >= 58% OR 2+ lives)
+    // C: Pianis Pemula
     let grade = 'B';
-    if (accuracy >= 98 && this.missHits === 0) grade = 'S+';
-    else if (accuracy >= 92) grade = 'S';
-    else if (accuracy >= 82) grade = 'A';
-    else if (accuracy >= 70) grade = 'B';
-    else grade = 'C';
-
-    const isFullCombo = (this.missHits === 0 && (this.perfectHits + this.greatHits) > 0);
+    if (isFullCombo && accuracy >= 94) {
+      grade = 'S+';
+    } else if (accuracy >= 88 || (accuracy >= 80 && this.lives >= 4 && this.missHits <= 1)) {
+      grade = 'S';
+    } else if (accuracy >= 74 || (this.lives >= 3 && this.missHits <= 2)) {
+      grade = 'A';
+    } else if (accuracy >= 58 || this.lives >= 2) {
+      grade = 'B';
+    } else {
+      grade = 'C';
+    }
 
     audioManager.playLevelComplete();
     setTimeout(() => {
       if (isFullCombo) {
-        audioManager.speakAnnouncer('Luar biasa! Perfect Full Combo! Anda adalah Master Pianis Komang!');
+        audioManager.speakMascot('Yaaay! Kereen banget! Full combo tanpa cela! Kamu jagoan banget deh!');
       } else if (stars === 3) {
-        audioManager.speakAnnouncer('Hebat sekali! Bintang tiga diraih dengan sangat indah!');
+        audioManager.speakMascot('Waaah hebat banget! Tiga bintang diraih dengan lincah! Flix bangga deh!');
+      } else if (stars === 2) {
+        audioManager.speakMascot('Yeay seru banget! Jarimu lincah deh, ayo main lagi bareng Flix!');
       } else {
-        audioManager.speakAnnouncer('Lagu Komang berhasil diselesaikan!');
+        audioManager.speakMascot('Horeee! Lagunya selesai! Kamu hebat!');
       }
     }, 450);
 

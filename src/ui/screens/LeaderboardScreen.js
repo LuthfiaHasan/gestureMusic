@@ -17,6 +17,7 @@ export class LeaderboardScreen {
     const scores = competitionLeaderboardService.getLeaderboard(filter);
     const isPanitia = this.isPanitiaMode;
     const kioskHost = competitionLeaderboardService.getKioskHost();
+    const universalEventUrl = competitionLeaderboardService.getUniversalEventQrUrl();
 
     return `
       <div class="subpage-screen leaderboard-screen">
@@ -48,7 +49,7 @@ export class LeaderboardScreen {
               <div>
                 <h3 class="prize-banner-title">KOMPETISI BERHADIAH EVENT</h3>
                 <p class="prize-banner-desc">
-                  Mainkan lagu apa pun (Komang, Jingle Bells, Pop Tracks)! Skor dinilai secara adil dengan standar 100k poin. 
+                  Mainkan lagu apa pun (Komang, Selalu Ada di Nadimu, Jatuh Suka, Taragak Pulang)! Skor dinilai secara adil dengan standar 100k poin. 
                   Peserta dengan skor tertinggi di papan peringkat berhak membawa pulang hadiah!
                 </p>
               </div>
@@ -98,14 +99,11 @@ export class LeaderboardScreen {
               <button class="lead-tab-btn ${filter === 'NADIMU' ? 'active' : ''}" data-filter="NADIMU">
                 🎵 NADIMU
               </button>
-              <button class="lead-tab-btn ${filter === 'JINGLE_BELLS' ? 'active' : ''}" data-filter="JINGLE_BELLS">
-                🔔 JINGLE BELLS
+              <button class="lead-tab-btn ${filter === 'JATUH_SUKA' ? 'active' : ''}" data-filter="JATUH_SUKA">
+                ✨ JATUH SUKA
               </button>
-              <button class="lead-tab-btn ${filter === 'NEON_DAWN' ? 'active' : ''}" data-filter="NEON_DAWN">
-                ⭐ NEON DAWN
-              </button>
-              <button class="lead-tab-btn ${filter === 'CYBER_GROOVE' ? 'active' : ''}" data-filter="CYBER_GROOVE">
-                ⚡ CYBER GROOVE
+              <button class="lead-tab-btn ${filter === 'TARAGAK_PULANG' ? 'active' : ''}" data-filter="TARAGAK_PULANG">
+                🌾 TARAGAK PULANG
               </button>
             </div>
 
@@ -118,10 +116,12 @@ export class LeaderboardScreen {
           <div class="leaderboard-card">
             <div class="table-container">
               ${scores.length === 0 ? `
-                <div class="empty-scores-state">
-                  <span>🎵</span>
-                  <p>Belum ada peserta yang mendaftarkan skor untuk kategori ini.</p>
-                  <small>Jadilah yang pertama mencatatkan namamu di papan peringkat!</small>
+                <div class="empty-scores-state" style="padding:45px 20px;text-align:center;">
+                  <span style="font-size:42px;display:block;margin-bottom:10px;">🏆</span>
+                  <h3 style="color:#fff;font-size:18px;margin-bottom:6px;">Belum Ada Peserta Terdaftar</h3>
+                  <p style="color:var(--text-muted);font-size:13px;max-width:440px;margin:0 auto 14px;line-height:1.5;">
+                    Papan peringkat bersih dan siap mencatat peserta nyata! Mainkan salah satu dari 4 lagu (Komang, Selalu Ada di Nadimu, Jatuh Suka, Taragak Pulang) untuk memuncaki klasemen!
+                  </p>
                   <button class="btn-play-now-lead" id="btn-play-from-lead">
                     <span>▶</span> PILIH LAGU & MAIN SEKARANG
                   </button>
@@ -259,18 +259,26 @@ export class LeaderboardScreen {
             </div>
 
             <div style="background:rgba(0,247,255,0.12);border:1px solid rgba(0,247,255,0.4);border-radius:8px;padding:8px 12px;margin:8px 0;text-align:left;font-size:11.5px;color:#00f7ff;line-height:1.45;">
-              <strong>🔒 KONEKSI ONLINE RESMI (CLOUDFLARE SSL):</strong><br/>
-              Bisa di-scan dari HP mana saja dengan <strong>Paket Data 4G/5G apa pun maupun Wi-Fi mana saja</strong>! Koneksi 100% aman (gembok hijau resmi, bebas peringatan browser).
+              <strong>🌐 QR REGISTRASI EVENT TERPADU (SEMUA GAME):</strong><br/>
+              QR ini dapat disatukan untuk seluruh game di event (dibuat oleh Panitia/Teman Anda). Masukkan tautan form panitia pada kolom pengaturan di bawah agar QR otomatis mengarah ke form tersebut!
             </div>
 
             <div class="modal-qr-url-box">
-              <span class="qr-url-label">🔗 Link Pendaftaran Resmi (Online HTTPS):</span>
+              <span class="qr-url-label">🔗 Link Aktif QR Pendaftaran:</span>
               <a href="#" target="_blank" class="qr-url-link" id="qr-direct-link">Memuat link...</a>
             </div>
 
-            <div style="display:flex;gap:6px;margin:8px 0;">
-              <input type="text" id="quick-ip-input" class="claim-input" style="padding:6px 8px;font-size:11px;" value="${kioskHost}" placeholder="https://...">
-              <button class="btn-secondary" id="btn-quick-save-ip" style="white-space:nowrap;padding:6px 12px;font-size:11px;">Ganti Host</button>
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 10px;margin:8px 0;text-align:left;">
+              <label style="font-size:11px;font-weight:700;color:var(--cyan);display:block;margin-bottom:4px;">
+                ⚙️ URL Form Event dari Panitia/Teman (Google Form / Portal Event):
+              </label>
+              <div style="display:flex;gap:6px;">
+                <input type="text" id="input-universal-event-qr" class="claim-input" style="padding:6px 8px;font-size:11px;" value="${universalEventUrl}" placeholder="Contoh: https://forms.gle/... atau https://event.com/daftar">
+                <button class="btn-primary" id="btn-save-universal-qr" style="white-space:nowrap;padding:6px 12px;font-size:11px;">Simpan URL</button>
+              </div>
+              <span style="font-size:9.5px;color:rgba(255,255,255,0.6);margin-top:3px;display:block;">
+                *Jika diisi, QR langsung mengarah ke form pendaftaran bersama event teman Anda.
+              </span>
             </div>
 
             <div class="modal-qr-footer-actions" style="display:flex;gap:8px;margin-top:10px;">
@@ -311,10 +319,8 @@ export class LeaderboardScreen {
                 <select id="kiosk-select-track" class="claim-input" style="background:#120826;color:#fff;">
                   <option value="KOMANG">🌺 Komang - Raim Laode</option>
                   <option value="NADIMU">🎵 Selalu Ada di Nadimu - OST Jumbo</option>
-                  <option value="JINGLE_BELLS">🔔 Jingle Bells Piano</option>
-                  <option value="NEON_DAWN">⭐ Neon Dawn (Pop Ballad)</option>
-                  <option value="CYBER_GROOVE">⚡ Cyber Groove</option>
-                  <option value="ENDLESS">♾️ Endless Groove</option>
+                  <option value="JATUH_SUKA">✨ Jatuh Suka - 10 Jari Motion</option>
+                  <option value="TARAGAK_PULANG">🌾 Taragak Pulang - Minang Klasik</option>
                 </select>
               </div>
 
@@ -453,12 +459,32 @@ export class LeaderboardScreen {
       };
     }
 
-    // 7. Open Manual Input Modal
+    // 7. Save Universal Event QR URL
+    const saveUniversalQrBtn = document.getElementById('btn-save-universal-qr');
+    const inputUniversalQr = document.getElementById('input-universal-event-qr');
+    if (saveUniversalQrBtn && inputUniversalQr) {
+      saveUniversalQrBtn.onclick = () => {
+        const urlVal = inputUniversalQr.value.trim();
+        competitionLeaderboardService.setUniversalEventQrUrl(urlVal);
+        this.renderQrCode();
+        saveUniversalQrBtn.innerText = '✔ Tersimpan!';
+        setTimeout(() => { if (saveUniversalQrBtn) saveUniversalQrBtn.innerText = 'Simpan URL'; }, 1500);
+      };
+    }
+
+    // 8. Open Manual Input Modal with Pre-fill
     const openManBtn = document.getElementById('btn-open-manual-input');
     const manModal = document.getElementById('manual-input-modal');
     const closeManBtn = document.getElementById('btn-close-manual-modal');
     if (openManBtn && manModal) {
       openManBtn.onclick = () => {
+        const pending = competitionLeaderboardService.getPendingSession();
+        if (pending) {
+          const trackSelect = document.getElementById('kiosk-select-track');
+          const scoreInput = document.getElementById('kiosk-input-score');
+          if (trackSelect && pending.songId) trackSelect.value = pending.songId;
+          if (scoreInput && pending.score) scoreInput.value = pending.score;
+        }
         manModal.style.display = 'flex';
       };
     }
@@ -582,11 +608,14 @@ export class LeaderboardScreen {
     const linkEl = document.getElementById('qr-direct-link');
     if (!canvas) return;
 
+    const universalUrl = competitionLeaderboardService.getUniversalEventQrUrl();
     const pending = competitionLeaderboardService.getPendingSession();
     const kioskHost = competitionLeaderboardService.getKioskHost();
 
     let targetUrl = '';
-    if (pending && pending.claimUrl) {
+    if (universalUrl) {
+      targetUrl = universalUrl;
+    } else if (pending && pending.claimUrl) {
       targetUrl = pending.claimUrl;
     } else {
       targetUrl = `${kioskHost}/#claim?session=BOOTH-REG&song=KOMANG&score=90000`;

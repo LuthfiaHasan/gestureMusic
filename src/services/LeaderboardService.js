@@ -3,78 +3,7 @@
 const STORAGE_KEY_PLAYER = 'gm_active_player';
 const STORAGE_KEY_LEADERBOARD = 'gm_leaderboard_records';
 
-const DEFAULT_SEEDS = [
-  {
-    id: 'seed_1',
-    name: 'Rian Melodi',
-    phone: '081234567890',
-    songId: 'jatuhsuka',
-    songTitle: 'JATUH SUKA',
-    score: 18450,
-    lives: 5,
-    stars: 5,
-    starTitle: 'SEMPURNA!',
-    starIcons: '⭐⭐⭐⭐⭐',
-    date: 'Hari ini, 10:15',
-    timestamp: Date.now() - 3600000 * 3,
-  },
-  {
-    id: 'seed_2',
-    name: 'Siti Rahma',
-    phone: '081398765432',
-    songId: 'taragak',
-    songTitle: 'TARAGAK PULANG',
-    score: 16800,
-    lives: 5,
-    stars: 5,
-    starTitle: 'SEMPURNA!',
-    starIcons: '⭐⭐⭐⭐⭐',
-    date: 'Hari ini, 11:20',
-    timestamp: Date.now() - 3600000 * 2,
-  },
-  {
-    id: 'seed_3',
-    name: 'Kevin Cyber',
-    phone: '082155443322',
-    songId: 'jatuhsuka',
-    songTitle: 'JATUH SUKA',
-    score: 15200,
-    lives: 4,
-    stars: 4,
-    starTitle: 'HEBAT!',
-    starIcons: '⭐⭐⭐⭐',
-    date: 'Hari ini, 11:45',
-    timestamp: Date.now() - 3600000 * 1.5,
-  },
-  {
-    id: 'seed_4',
-    name: 'Nadia Putri',
-    phone: '085712349876',
-    songId: 'taragak',
-    songTitle: 'TARAGAK PULANG',
-    score: 14100,
-    lives: 4,
-    stars: 4,
-    starTitle: 'HEBAT!',
-    starIcons: '⭐⭐⭐⭐',
-    date: 'Hari ini, 12:10',
-    timestamp: Date.now() - 3600000 * 1,
-  },
-  {
-    id: 'seed_5',
-    name: 'Budi HandBeat',
-    phone: '087811223344',
-    songId: 'jatuhsuka',
-    songTitle: 'JATUH SUKA',
-    score: 12500,
-    lives: 3,
-    stars: 3,
-    starTitle: 'BAGUS!',
-    starIcons: '⭐⭐⭐',
-    date: 'Hari ini, 12:35',
-    timestamp: Date.now() - 1800000,
-  },
-];
+const DEFAULT_SEEDS = [];
 
 export class LeaderboardService {
   constructor() {
@@ -143,7 +72,7 @@ export class LeaderboardService {
     try {
       const existing = localStorage.getItem(STORAGE_KEY_LEADERBOARD);
       if (!existing) {
-        localStorage.setItem(STORAGE_KEY_LEADERBOARD, JSON.stringify(DEFAULT_SEEDS));
+        localStorage.setItem(STORAGE_KEY_LEADERBOARD, JSON.stringify([]));
       }
     } catch (e) {}
   }
@@ -153,10 +82,10 @@ export class LeaderboardService {
       const raw = localStorage.getItem(STORAGE_KEY_LEADERBOARD);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) return parsed.filter(item => !String(item?.id).startsWith('seed_'));
       }
     } catch (e) {}
-    return [...DEFAULT_SEEDS];
+    return [];
   }
 
   saveRecords(records) {

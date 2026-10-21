@@ -391,7 +391,7 @@ export class NadimuService {
     this.audioSrc = '/sounds/selalu_ada_di_nadimu.mp3';
     this.audioOffsetSec = 0.0;
     this.backingVolume = 0.85;
-    this.playerVolume = 0.50;
+    this.playerVolume = 0.0; // Default muted so pure song plays without artificial sound clash
 
     // 45-Second Random Session Mode
     this.sessionMode = '30S_RANDOM';
@@ -425,7 +425,7 @@ export class NadimuService {
     this.maxLives = 5;
     this.lives = 5;
     this.isNoFail = false;
-    this.introShieldDurationSec = 4.0;
+    this.introShieldDurationSec = 2.0; // Toleransi 2 detik awal saja
     this.isGameOver = false;
     this.isFinished = false;
     this.gameResult = null;
@@ -475,6 +475,23 @@ export class NadimuService {
     if (this.onStateChanged) this.onStateChanged();
   }
 
+  setMode(mode) {
+    this.mode = mode;
+    if (this.onStateChanged) this.onStateChanged();
+  }
+
+  setAudioOffset(offsetSec) {
+    this.audioOffsetSec = Math.max(-2.0, Math.min(2.0, offsetSec));
+  }
+
+  setVolumes(backingVol, playerVol) {
+    this.backingVolume = Math.max(0, Math.min(1, backingVol));
+    this.playerVolume = Math.max(0, Math.min(1, playerVol));
+    if (this.audioEl) {
+      this.audioEl.volume = this.backingVolume;
+    }
+  }
+
   getCurrentSongTime() {
     if (this.mode === 'PLAY_ALONG' && this.audioEl) {
       return Math.max(0, this.audioEl.currentTime - this.audioOffsetSec);
@@ -511,16 +528,8 @@ export class NadimuService {
   }
 
   recoverLife(amount = 1) {
-    if (this.lives < this.maxLives) {
-      this.lives = Math.min(this.maxLives, this.lives + amount);
-      if (this.onLifeRecovered) {
-        this.onLifeRecovered({
-          lives: this.lives,
-          maxLives: this.maxLives,
-          amount,
-        });
-      }
-    }
+    // Disabled: lives cannot be recovered during gameplay
+    return;
   }
 
   loseLife(reason = 'CHORD_MISSED') {
@@ -581,29 +590,33 @@ export class NadimuService {
 
     const standardScore = this.getStandardizedScore();
     const accuracy = standardScore.accuracyPct;
+    const isFullCombo = (this.missHits === 0 && (this.perfectHits + this.greatHits + this.goodHits) > 0);
+
+    // Stars Rating (1 - 3 Stars):
+    // ⭐⭐⭐: Full combo, OR Accuracy >= 80%, OR 4+ lives left, OR 3+ lives with >= 70% accuracy
+    let stars = 1;
+    if (isFullCombo || accuracy >= 80 || (this.lives >= 4 && this.missHits <= 2) || (this.lives >= 3 && accuracy >= 70)) {
+      stars = 3;
+    } else if (accuracy >= 60 || this.lives >= 2 || this.missHits <= 4) {
+      stars = 2;
+    } else {
+      stars = 1;
+    }
 
     // Grade Determination (S+, S, A, B, C)
     let grade = 'B';
-    if (accuracy >= 98 && this.missHits === 0) grade = 'S+';
-    else if (accuracy >= 90) grade = 'S';
-    else if (accuracy >= 80) grade = 'A';
-    else if (accuracy >= 65) grade = 'B';
+    if (isFullCombo && accuracy >= 94) grade = 'S+';
+    else if (accuracy >= 88 || (accuracy >= 80 && this.lives >= 4 && this.missHits <= 1)) grade = 'S';
+    else if (accuracy >= 74 || (this.lives >= 3 && this.missHits <= 2)) grade = 'A';
+    else if (accuracy >= 58 || this.lives >= 2) grade = 'B';
     else grade = 'C';
-
-    // Stars Rating (1 - 4 Stars)
-    let stars = 1;
-    if (accuracy >= 90 && this.missHits === 0) stars = 4;
-    else if (accuracy >= 85) stars = 4;
-    else if (accuracy >= 70) stars = 3;
-    else if (accuracy >= 50) stars = 2;
-    else stars = 1;
 
     this.gameResult = {
       isVictory: true,
       reason: 'SONG_COMPLETED',
       score: this.score,
       standardScore: standardScore.standardScore,
-      accuracyPct: standardScore.accuracyPct,
+      accuracyPct: accuracy,
       grade,
       stars,
       maxCombo: this.maxCombo,
@@ -611,9 +624,24 @@ export class NadimuService {
       greatHits: this.greatHits,
       goodHits: this.goodHits,
       missHits: this.missHits,
+      lives: this.lives,
+      maxLives: this.maxLives,
       songId: 'NADIMU',
       songTitle: '🎵 Selalu Ada di Nadimu - OST Jumbo',
     };
+
+    audioManager.playLevelComplete();
+    setTimeout(() => {
+      if (isFullCombo) {
+        audioManager.speakMascot('Yaaay! Kereen banget! Selalu Ada di Nadimu selesai sempurna!');
+      } else if (stars === 3) {
+        audioManager.speakMascot('Waaah hebat banget! Tiga bintang diraih dengan lincah! Flix bangga deh!');
+      } else if (stars === 2) {
+        audioManager.speakMascot('Yeay seru banget! Jarimu lincah deh, ayo main lagi bareng Flix!');
+      } else {
+        audioManager.speakMascot('Horeee! Lagunya selesai dengan indah! Kamu keren!');
+      }
+    }, 450);
 
     if (this.onSongFinished) {
       this.onSongFinished(this.gameResult);
@@ -622,6 +650,9 @@ export class NadimuService {
 
   getStandardizedScore() {
     const totalHits = this.perfectHits + this.greatHits + this.goodHits + this.missHits;
+    const scorePct = totalHits > 0 
+      ? Math.min(100, Math.round(((this.perfectHits * 1.0 + this.greatHits * 0.88 + this.goodHits * 0.75) / totalHits) * 100))
+      : 85;
     const baseCalc = competitionLeaderboardService.calculateStandardScore({
       totalNotes: Math.max(12, totalHits),
       perfectCount: this.perfectHits,
@@ -630,7 +661,8 @@ export class NadimuService {
       badCount: 0,
       missCount: this.missHits,
       maxCombo: this.maxCombo,
-      scorePct: totalHits > 0 ? Math.round(((this.perfectHits + this.greatHits * 0.8 + this.goodHits * 0.6) / totalHits) * 100) : 85,
+      chordAccuracyPct: scorePct,
+      scorePct: scorePct,
     });
     return baseCalc;
   }
@@ -825,12 +857,14 @@ export class NadimuService {
       'Am': ['C4', 'E4', 'A4', 'C5'],
     };
     const voicing = sweetVoicings[measure.chord] || (measure.melodyNotes && measure.melodyNotes.slice(0, 3)) || ['C4', 'E4', 'G4'];
-    audioManager.playKomangMelodyNote(voicing, {
-      duration: 2.2,
-      gainScale: this.playerVolume || 0.48,
-      isPerfect: true,
-      preset: 'Acoustic Piano',
-    });
+    if (this.playerVolume > 0.01) {
+      audioManager.playKomangMelodyNote(voicing, {
+        duration: 1.6,
+        gainScale: this.playerVolume * 0.25,
+        isPerfect: false,
+        preset: 'Acoustic Piano',
+      });
+    }
 
     let rating = 'PERFECT';
     let points = 1000;
@@ -999,13 +1033,15 @@ export class NadimuService {
       if (!preset || preset.toLowerCase().includes('guitar')) {
         preset = 'Acoustic Piano';
       }
-      audioManager.playKomangMelodyNote(keys, {
-        duration: 1.6,
-        gainScale: this.playerVolume || 0.48,
-        isPerfect: isPerfect,
-        lane: lane,
-        preset: 'Acoustic Piano',
-      });
+      if (this.playerVolume > 0.01) {
+        audioManager.playKomangMelodyNote(keys, {
+          duration: 1.2,
+          gainScale: this.playerVolume * 0.25,
+          isPerfect: false,
+          lane: lane,
+          preset: 'Acoustic Piano',
+        });
+      }
     } catch (e) {}
   }
 

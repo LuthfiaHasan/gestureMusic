@@ -396,45 +396,10 @@ class AudioManager {
   }
 
   /**
-   * Crystalline bell chime for PERFECT rhythm hits
+   * Crystalline bell chime for PERFECT rhythm hits (Disabled: prevents electronic beep sound clashing with songs)
    */
   _playPerfectSparkle(startTime, pan = 0) {
-    if (!this.ctx) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const filter = this.ctx.createBiquadFilter();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2093, startTime); // C7 bell chime
-      osc.frequency.exponentialRampToValueAtTime(3136, startTime + 0.14); // G7 sparkle
-
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(2600, startTime);
-      filter.Q.setValueAtTime(4.0, startTime);
-
-      gain.gain.setValueAtTime(0.0001, startTime);
-      gain.gain.linearRampToValueAtTime(0.032, startTime + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.26);
-
-      let panner = null;
-      if (this.ctx.createStereoPanner) {
-        panner = this.ctx.createStereoPanner();
-        panner.pan.setValueAtTime(pan, startTime);
-      }
-
-      osc.connect(filter);
-      filter.connect(gain);
-      if (panner) {
-        gain.connect(panner);
-        panner.connect(this.sfxGain);
-      } else {
-        gain.connect(this.sfxGain);
-      }
-
-      osc.start(startTime);
-      osc.stop(startTime + 0.28);
-    } catch (e) {}
+    return;
   }
 
   /**
@@ -1404,47 +1369,100 @@ class AudioManager {
    * Game Announcer Voice Feedback (Web Speech Synthesis + Energetic arcade tone)
    */
   speakAnnouncer(text) {
-    // 1. Synthesize arcade announcer vocal tone
-    this._playAnnouncerChime(text);
+    this.speakMascot(text);
+  }
 
-    // 2. Announce using Web Speech Synthesis if available
+  /**
+   * Cute Mascot Voice (Flix) with cheerful cartoon tone & pitch
+   */
+  speakMascot(text) {
+    // 1. Play cute playful cartoon chime
+    this._playCuteMascotChime();
+
+    // 2. Announce using high-pitched, cute cartoon mascot voice
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel(); // Cancel any prior speech
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.02;
-        utterance.pitch = 1.12;
-        utterance.volume = 1.0;
+        
+        // Cute cartoon mascot: higher pitch (1.60), sprightly cheerful rate (1.18)
+        utterance.pitch = 1.60;
+        utterance.rate = 1.18;
+        utterance.volume = 0.95;
 
         const voices = window.speechSynthesis.getVoices();
         if (voices && voices.length > 0) {
-          const enVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('David')));
-          if (enVoice) utterance.voice = enVoice;
+          // Priority 1: Indonesian voice for natural, fluent Indonesian pronunciation
+          const idVoice = voices.find(v => 
+            v.lang.toLowerCase().startsWith('id') || 
+            v.lang.toLowerCase().includes('id-') || 
+            v.name.toLowerCase().includes('indonesia') ||
+            v.name.toLowerCase().includes('gadis') ||
+            v.name.toLowerCase().includes('damayanti')
+          );
+
+          if (idVoice) {
+            utterance.voice = idVoice;
+          } else {
+            // Priority 2: Bright female/natural voice with high pitch
+            const cuteVoice = voices.find(v => 
+              v.name.includes('Natural') || 
+              v.name.includes('Google') || 
+              v.name.includes('Samantha') || 
+              v.name.includes('Zira') ||
+              v.name.includes('Victoria')
+            );
+            if (cuteVoice) utterance.voice = cuteVoice;
+          }
         }
 
-        window.speechSynthesis.speak(utterance);
+        // Delay speech slightly to let the cute chime ring first
+        setTimeout(() => {
+          try {
+            window.speechSynthesis.speak(utterance);
+          } catch (e) {}
+        }, 120);
       } catch (e) {
         console.warn('Speech synthesis note:', e);
       }
     }
   }
 
-  _playAnnouncerChime(text) {
+  /**
+   * Cute Bubbly Cartoon Mascot Jingle (Playful Arpeggio)
+   */
+  _playCuteMascotChime() {
     if (!this.initialized || !this.ctx) return;
     const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    const isExc = text.toLowerCase().includes('excellent') || text.toLowerCase().includes('great');
-    osc.frequency.setValueAtTime(isExc ? 880 : 587.33, now);
-    osc.frequency.exponentialRampToValueAtTime(isExc ? 1318.51 : 880, now + 0.18);
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-    osc.connect(gain);
-    gain.connect(this.sfxGain);
-    osc.start(now);
-    osc.stop(now + 0.3);
+    
+    // Playful cute cartoon bounce jingle (cute C-major bounce: E5 -> G5 -> C6 -> E6)
+    const notes = [
+      { f: 659.25, t: 0.00, dur: 0.12, type: 'triangle' }, // E5
+      { f: 783.99, t: 0.08, dur: 0.12, type: 'triangle' }, // G5
+      { f: 1046.50, t: 0.16, dur: 0.14, type: 'sine' },     // C6
+      { f: 1318.51, t: 0.24, dur: 0.28, type: 'sine' },     // E6 (sparkle high note)
+    ];
+
+    notes.forEach(n => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = n.type;
+      
+      const startTime = now + n.t;
+      // Gentle cute pitch swoop up for bubbly cartoon character
+      osc.frequency.setValueAtTime(n.f * 0.92, startTime);
+      osc.frequency.exponentialRampToValueAtTime(n.f, startTime + 0.04);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.linearRampToValueAtTime(0.18, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + n.dur);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(startTime);
+      osc.stop(startTime + n.dur + 0.05);
+    });
   }
 
   // Setting controls
@@ -1494,6 +1512,72 @@ class AudioManager {
         this.loadNylonGuitarSamples().catch(() => {});
       }
     }
+  }
+
+  // ==========================================
+  // MENU BACKGROUND MUSIC (BGM): Menang Bersama Flix
+  // ==========================================
+  initMenuBgm(src = '/sounds/menang_bersama_flix.mp3') {
+    if (!this.bgmAudio) {
+      this.bgmAudio = new Audio(src);
+      this.bgmAudio.loop = true;
+      this.bgmAudio.volume = 0.28; // Pleasant ambient volume
+      const savedPref = localStorage.getItem('gesture_menu_bgm_enabled');
+      this.isBgmEnabled = savedPref !== null ? savedPref === 'true' : true;
+    }
+    return this.bgmAudio;
+  }
+
+  playMenuBgm() {
+    this.initMenuBgm();
+    if (!this.isBgmEnabled || !this.bgmAudio) return;
+
+    if (this.bgmAudio.paused) {
+      this.bgmAudio.play().catch(() => {
+        // Autoplay policy: start on first user tap/click
+        const startOnUserTap = () => {
+          if (this.isBgmEnabled && this.bgmAudio && this.bgmAudio.paused) {
+            this.bgmAudio.play().catch(() => {});
+          }
+          window.removeEventListener('click', startOnUserTap);
+          window.removeEventListener('touchstart', startOnUserTap);
+          window.removeEventListener('keydown', startOnUserTap);
+        };
+        window.addEventListener('click', startOnUserTap, { once: true });
+        window.addEventListener('touchstart', startOnUserTap, { once: true });
+        window.addEventListener('keydown', startOnUserTap, { once: true });
+      });
+    }
+  }
+
+  pauseMenuBgm() {
+    if (this.bgmAudio && !this.bgmAudio.paused) {
+      this.bgmAudio.pause();
+    }
+  }
+
+  stopMenuBgm() {
+    if (this.bgmAudio) {
+      try {
+        this.bgmAudio.pause();
+        this.bgmAudio.currentTime = 0;
+      } catch (e) {}
+    }
+  }
+
+  toggleMenuBgm() {
+    this.initMenuBgm();
+    this.isBgmEnabled = !this.isBgmEnabled;
+    try {
+      localStorage.setItem('gesture_menu_bgm_enabled', this.isBgmEnabled ? 'true' : 'false');
+    } catch (e) {}
+
+    if (this.isBgmEnabled) {
+      this.playMenuBgm();
+    } else {
+      this.pauseMenuBgm();
+    }
+    return this.isBgmEnabled;
   }
 }
 
