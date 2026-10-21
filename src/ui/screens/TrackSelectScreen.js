@@ -9,10 +9,8 @@ import { audioManager } from '../../audio/AudioManager.js';
 const TRACK_ICONS = {
   KOMANG: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path><path d="M2 14h20"></path></svg>`,
   NADIMU: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="3.5" fill="currentColor"></circle><circle cx="18.5" cy="15.5" r="3.5" fill="currentColor"></circle><path d="M9 17.5V5l13-2v12.5"></path></svg>`,
-  JINGLE_BELLS: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
-  NEON_DAWN: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
-  CYBER_GROOVE: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>`,
-  ENDLESS: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.356-8-5.096 0-5.096 8 0 8 5.223 0 7.26-8 12.356-8z"></path></svg>`,
+  JATUH_SUKA: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`,
+  TARAGAK_PULANG: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`,
 };
 
 export class TrackSelectScreen {
@@ -26,6 +24,12 @@ export class TrackSelectScreen {
           <div>
             <h2 class="subpage-title">PILIH LAGU KOMPETISI</h2>
             <span style="font-size:11px; color:var(--text-muted);">Pilih lagu favoritmu • Papan peringkat tetap 1 & setara untuk semua lagu!</span>
+          </div>
+          <div style="margin-left:auto;">
+            <button class="btn-menu-bgm-pill ${audioManager.isBgmEnabled ? 'active' : ''}" id="btn-track-bgm-toggle" title="Putar / Jeda Backsound Flix">
+              <span class="bgm-dot ${audioManager.isBgmEnabled ? 'active' : ''}"></span>
+              <span>🎵 Backsound: <strong>${audioManager.isBgmEnabled ? 'ON' : 'OFF'}</strong></span>
+            </button>
           </div>
         </div>
 
@@ -58,7 +62,6 @@ export class TrackSelectScreen {
                   <div class="track-main-info">
                     <div class="track-title-row">
                       <h3 class="track-title">${t.title}</h3>
-                      <span class="track-diff-badge ${t.difficulty.toLowerCase()}">${t.difficulty}</span>
                     </div>
                     <span class="track-artist">${t.artist} • ${t.genre}</span>
                   </div>
@@ -144,6 +147,7 @@ export class TrackSelectScreen {
   }
 
   static startTrack(trackId, app) {
+    audioManager.pauseMenuBgm();
     if (trackId === 'KOMANG' || trackId === 'NADIMU') {
       settingsManager.update('soundPreset', 'Acoustic Piano');
       audioManager.setPreset('Acoustic Piano');
@@ -156,26 +160,14 @@ export class TrackSelectScreen {
       case 'NADIMU':
         gameEngine.setState(GAME_STATES.NADIMU);
         break;
-      case 'JINGLE_BELLS':
-        gameEngine.setState(GAME_STATES.JINGLE_BELLS);
-        break;
       case 'JATUH_SUKA':
         gameEngine.setState(GAME_STATES.JATUH_SUKA);
         break;
       case 'TARAGAK_PULANG':
         gameEngine.setState(GAME_STATES.TARAGAK_PULANG);
         break;
-      case 'NEON_DAWN':
-        gameEngine.startRound('CLASSIC', 1);
-        break;
-      case 'CYBER_GROOVE':
-        gameEngine.startRound('CLASSIC', 4);
-        break;
-      case 'ENDLESS':
-        gameEngine.startRound('ENDLESS', 1);
-        break;
       default:
-        gameEngine.startRound('CLASSIC', 1);
+        gameEngine.setState(GAME_STATES.KOMANG);
         break;
     }
   }

@@ -530,13 +530,12 @@ export class TaragakPulangService {
   }
 
   _finishSong() {
-    this.stop();
-    const total = this.targets.length;
-    const accuracy = Math.round(((this.hits.perfect + this.hits.great * 0.8 + this.hits.good * 0.5) / total) * 100);
+    const total = Math.max(1, this.targets.length);
+    const accuracy = Math.min(100, Math.round(((this.hits.perfect * 1.0 + this.hits.great * 0.88 + this.hits.good * 0.75) / total) * 100));
 
     let stars = 1;
-    if (accuracy >= 85) stars = 3;
-    else if (accuracy >= 65) stars = 2;
+    if (accuracy >= 80 || (this.hits.miss <= 2 && accuracy >= 70)) stars = 3;
+    else if (accuracy >= 60 || this.hits.miss <= 4) stars = 2;
 
     if (this.onSongComplete) {
       this.onSongComplete({

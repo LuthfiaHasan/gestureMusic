@@ -29,54 +29,6 @@ export const COMPETITION_TRACKS = {
     emoji: '🎶',
     desc: 'Piano Tiles Pop • Key C Major • 78 BPM • Sentuhan Hangat & Haru Keluarga',
   },
-  JINGLE_BELLS: {
-    id: 'JINGLE_BELLS',
-    title: 'Jingle Bells Piano',
-    artist: 'James Lord Pierpont',
-    genre: 'Classic Holiday Pop',
-    bpm: 110,
-    difficulty: 'EASY',
-    badge: 'JINGLE BELLS',
-    color: '#00f7ff',
-    emoji: '🔔',
-    desc: 'Melodi Ceria C Major • 48 Not • Cocok untuk Pemula & Adu Kecepatan',
-  },
-  NEON_DAWN: {
-    id: 'NEON_DAWN',
-    title: 'Neon Dawn (Pop Ballad)',
-    artist: 'Indonesian Pop Synth',
-    genre: 'Pop Ballad',
-    bpm: 80,
-    difficulty: 'BEGINNER',
-    badge: 'NEON DAWN',
-    color: '#00e5a3',
-    emoji: '🌅',
-    desc: 'Akor Pop Harmonis • 80 BPM • 1 Measure Per Akor • Santai & Presisi',
-  },
-  CYBER_GROOVE: {
-    id: 'CYBER_GROOVE',
-    title: 'Cyber Groove',
-    artist: 'Modern Pop Beat',
-    genre: 'Upbeat Funk',
-    bpm: 115,
-    difficulty: 'HARD',
-    badge: 'CYBER GROOVE',
-    color: '#ffd700',
-    emoji: '⚡',
-    desc: 'Upbeat Dynamic Pop • 115 BPM • Transisi Cepat & Combo Multiplier',
-  },
-  ENDLESS: {
-    id: 'ENDLESS',
-    title: 'Endless Groove Jam',
-    artist: 'Non-Stop Rhythm',
-    genre: 'Endurance Pop',
-    bpm: 120,
-    difficulty: 'SURVIVAL',
-    badge: 'ENDLESS',
-    color: '#a855f7',
-    emoji: '♾️',
-    desc: 'Uji Ketahanan Non-Stop • 3 Nyawa • BPM Bertahap Meningkat',
-  },
   JATUH_SUKA: {
     id: 'JATUH_SUKA',
     title: '✨ Jatuh Suka - 10 Jari Motion',
@@ -108,14 +60,93 @@ export class CompetitionLeaderboardService {
     this.storageKey = 'gs_competition_leaderboard_v2';
     this.pendingSessionKey = 'gs_competition_pending_session';
     this.kioskHostKey = 'gs_kiosk_host_url';
+    this.universalEventQrKey = 'gs_universal_event_qr_url';
     this.broadcastChannel = null;
 
     // Listeners for UI updates
     this.onNewScoreSubmitted = null;
 
+    // Auto-purge any dummy seeds from previous tests so only 100% real player records exist
+    this.purgeDummySeeds();
+
     this.initBroadcastChannel();
     this.initCrossTabListener();
     this.startKioskSync();
+  }
+
+  /**
+   * Purges all fake/demo data (Dimas Wicaksono, Sarah Nabila, Reza Pratama, etc.)
+   * Guarantees leaderboard contains ONLY genuine player entries from the event.
+   */
+  purgeDummySeeds() {
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const dummyNames = [
+            'dimas wicaksono',
+            'sarah nabila',
+            'reza pratama',
+            'alya putri',
+            'bagus setiawan',
+            'rian melodi',
+            'siti rahma',
+            'kevin cyber',
+            'nadia putri',
+            'budi handbeat',
+            'f1',
+            'test',
+            'testing',
+            'ahmad real'
+          ];
+          const realEntries = parsed.filter(item => {
+            if (!item || !item.id) return false;
+            const idStr = String(item.id);
+            if (idStr.startsWith('GS-DEMO-') || idStr.startsWith('seed_')) return false;
+            const nameLower = (item.playerName || item.name || '').trim().toLowerCase();
+            const phoneStr = String(item.phone || '').replace(/[^0-9]/g, '');
+            if (dummyNames.includes(nameLower) || nameLower.length < 3 || nameLower.includes('f1') || phoneStr.includes('4324342')) return false;
+            return true;
+          });
+          localStorage.setItem(this.storageKey, JSON.stringify(realEntries));
+        }
+      }
+
+      // Also clean legacy store if it only contains seeds
+      const legacyRaw = localStorage.getItem('gm_leaderboard_records');
+      if (legacyRaw) {
+        const legacyParsed = JSON.parse(legacyRaw);
+        if (Array.isArray(legacyParsed)) {
+          const cleanedLegacy = legacyParsed.filter(item => item && !String(item.id).startsWith('seed_'));
+          localStorage.setItem('gm_leaderboard_records', JSON.stringify(cleanedLegacy));
+        }
+      }
+    } catch (e) {
+      console.warn('Purge dummy seeds error:', e);
+    }
+  }
+
+  /**
+   * Universal Event QR URL configured by Panitia/friend (e.g. Google Form or Event Portal)
+   */
+  getUniversalEventQrUrl() {
+    try {
+      const saved = localStorage.getItem(this.universalEventQrKey);
+      return (saved && typeof saved === 'string') ? saved.trim() : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  setUniversalEventQrUrl(url) {
+    try {
+      if (url && typeof url === 'string') {
+        localStorage.setItem(this.universalEventQrKey, url.trim());
+      } else {
+        localStorage.removeItem(this.universalEventQrKey);
+      }
+    } catch (e) {}
   }
 
   initBroadcastChannel() {
@@ -181,7 +212,7 @@ export class CompetitionLeaderboardService {
 
   /**
    * Calculates a strictly normalized, standardized 100,000 points competition score.
-   * Ensures mathematical fairness between songs with different note counts and lengths!
+   * Ensures mathematical fairness between all songs (Piano Tiles & Motion Sync)!
    */
   calculateStandardScore({
     totalNotes = 20,
@@ -193,12 +224,25 @@ export class CompetitionLeaderboardService {
     maxCombo = 0,
     chordAccuracyPct = 100,
     scorePct = 0,
+    customScore = null,
   }) {
+    if (typeof customScore === 'number' && !isNaN(customScore) && customScore > 0) {
+      const finalScore = Math.min(100000, Math.max(0, Math.round(customScore)));
+      return {
+        standardScore: finalScore,
+        timingScore: Math.round(finalScore * 0.70),
+        gestureScore: Math.round(finalScore * 0.20),
+        comboScore: Math.round(finalScore * 0.10),
+        accuracyPct: Math.min(100, Math.max(0, Math.round(chordAccuracyPct || scorePct || (finalScore / 1000)))),
+        isFullCombo: missCount === 0 && (perfectCount + greatCount + goodCount) > 0,
+      };
+    }
+
     const notes = Math.max(1, totalNotes);
 
     // 1. Hit Timing Accuracy Component: 70,000 Points max
-    // Perfect = 1.0, Great = 0.8, Good = 0.6, Bad = 0.3, Miss = 0.0
-    const timingRatio = Math.min(1.0, (perfectCount * 1.0 + greatCount * 0.80 + goodCount * 0.60 + badCount * 0.30) / notes);
+    // Perfect = 1.0, Great = 0.88, Good = 0.72, Bad = 0.35, Miss = 0.0
+    const timingRatio = Math.min(1.0, (perfectCount * 1.0 + greatCount * 0.88 + goodCount * 0.72 + badCount * 0.35) / notes);
     const timingScore = Math.round(timingRatio * 70000);
 
     // 2. Gesture / Shape Matching Component: 20,000 Points max
@@ -206,7 +250,7 @@ export class CompetitionLeaderboardService {
     const gestureScore = Math.round(gestureRatio * 20000);
 
     // 3. Full Combo & Streak Flow Component: 10,000 Points max
-    // Full Combo gets the full 10,000 pts!
+    // Full Combo receives the full 10,000 pts!
     const comboRatio = Math.min(1.0, maxCombo / notes);
     const comboScore = Math.round(comboRatio * 10000);
 
@@ -218,12 +262,83 @@ export class CompetitionLeaderboardService {
       gestureScore,
       comboScore,
       accuracyPct: Math.round(timingRatio * 100),
-      isFullCombo: missCount === 0 && (perfectCount + greatCount) > 0,
+      isFullCombo: missCount === 0 && (perfectCount + greatCount + goodCount) > 0,
     };
   }
 
   /**
-   * Retrieves all entries in the 1 Unified Leaderboard, sorted descending by score
+   * Standardizes 10-Finger Motion Sync game score (Jatuh Suka & Taragak Pulang) to 100,000 pts scale
+   */
+  calculateMotionSyncScore({
+    songId = 'JATUH_SUKA',
+    rawScore = 0,
+    lives = 5,
+    maxLives = 5,
+    duration = 60,
+    targetDuration = 60,
+    starRating = null,
+  }) {
+    const isTaragak = songId === 'TARAGAK_PULANG' || songId === 'taragak';
+    const benchmarkScore = isTaragak ? 1150 : 1200;
+
+    // 1. Survival & Timing component (up to 70,000 pts)
+    const durationRatio = Math.min(1.0, duration / targetDuration);
+    const scoreRatio = Math.min(1.0, rawScore / benchmarkScore);
+    const timingRatio = durationRatio * 0.40 + scoreRatio * 0.60;
+    const timingScore = Math.round(timingRatio * 70000);
+
+    // 2. Hand Gesture Accuracy component (up to 20,000 pts)
+    // Preserved lives (0 to 5) directly reflect gesture precision
+    const livesRatio = Math.max(0, Math.min(1.0, lives / maxLives));
+    const starRatio = Math.min(1.0, ((starRating?.stars || 3) / 5));
+    const gestureRatio = (livesRatio * 0.70) + (starRatio * 0.30);
+    const gestureScore = Math.round(gestureRatio * 20000);
+
+    // 3. Perfect Streak / Combo flow (up to 10,000 pts)
+    // 5 Stars with 5 Lives gets full 10,000 pts!
+    let comboScore = 0;
+    if (lives === 5 && (starRating?.stars >= 5 || rawScore >= benchmarkScore * 0.9)) {
+      comboScore = 10000;
+    } else if (lives >= 4) {
+      comboScore = Math.round(8000 * scoreRatio);
+    } else if (lives >= 3) {
+      comboScore = Math.round(6000 * scoreRatio);
+    } else if (lives >= 2) {
+      comboScore = Math.round(4000 * scoreRatio);
+    } else {
+      comboScore = Math.round(2000 * scoreRatio);
+    }
+
+    const standardScore = Math.min(100000, Math.max(0, timingScore + gestureScore + comboScore));
+    const accuracyPct = Math.min(100, Math.round(((timingRatio * 0.7 + gestureRatio * 0.3) * 100)));
+
+    let grade = 'B';
+    if (standardScore >= 96000 && lives === 5) grade = 'S+';
+    else if (standardScore >= 90000) grade = 'S';
+    else if (standardScore >= 80000) grade = 'A';
+    else if (standardScore >= 65000) grade = 'B';
+    else grade = 'C';
+
+    return {
+      standardScore,
+      timingScore,
+      gestureScore,
+      comboScore,
+      accuracyPct,
+      grade,
+      stars: starRating?.stars || (standardScore >= 90000 ? 5 : standardScore >= 80000 ? 4 : 3),
+      totalNotes: Math.round(targetDuration * 1.9),
+      perfectCount: Math.round(scoreRatio * 50),
+      greatCount: Math.round(scoreRatio * 30),
+      goodCount: Math.round(scoreRatio * 15),
+      missCount: Math.max(0, maxLives - lives),
+      maxCombo: Math.round(scoreRatio * 45),
+    };
+  }
+
+  /**
+   * Retrieves all entries in the 1 Unified Leaderboard, sorted descending by score.
+   * Contains ONLY real user scores. Starts empty if no games have been registered yet.
    */
   getLeaderboard(filterSong = 'ALL') {
     let list = [];
@@ -236,13 +351,46 @@ export class CompetitionLeaderboardService {
       list = [];
     }
 
-    if (!Array.isArray(list) || list.length === 0) {
-      list = this._getSeedLeaderboard();
-      this.saveLeaderboard(list);
+    if (!Array.isArray(list)) {
+      list = [];
     }
 
+    // Always exclude any dummy seeds or legacy test entries on the fly
+    const dummyNames = [
+      'dimas wicaksono',
+      'sarah nabila',
+      'reza pratama',
+      'alya putri',
+      'bagus setiawan',
+      'rian melodi',
+      'siti rahma',
+      'kevin cyber',
+      'nadia putri',
+      'budi handbeat',
+      'f1',
+      'test',
+      'testing',
+      'ahmad real'
+    ];
+    list = list.filter(item => {
+      if (!item || !item.id) return false;
+      const idStr = String(item.id);
+      if (idStr.startsWith('GS-DEMO-') || idStr.startsWith('seed_')) return false;
+      const nameLower = (item.playerName || item.name || '').trim().toLowerCase();
+      const phoneStr = String(item.phone || '').replace(/[^0-9]/g, '');
+      if (dummyNames.includes(nameLower) || nameLower.length < 3 || nameLower.includes('f1') || phoneStr.includes('4324342')) return false;
+      return true;
+    });
+
+    // Filter by song if requested
     if (filterSong && filterSong !== 'ALL') {
-      list = list.filter(item => item.songId === filterSong || item.trackId === filterSong);
+      const normFilter = filterSong.toUpperCase();
+      list = list.filter(item => {
+        const itemSong = (item.songId || item.trackId || '').toUpperCase();
+        if (normFilter === 'JATUH_SUKA' && (itemSong === 'JATUHSUKA' || itemSong === 'JATUH_SUKA')) return true;
+        if (normFilter === 'TARAGAK_PULANG' && (itemSong === 'TARAGAK' || itemSong === 'TARAGAK_PULANG')) return true;
+        return itemSong === normFilter;
+      });
     }
 
     // Sort descending by score, tiebreaker: combo, then timestamp
@@ -396,17 +544,31 @@ export class CompetitionLeaderboardService {
       localStorage.setItem(this.pendingSessionKey, JSON.stringify(session));
     } catch (e) {}
 
-    const kioskBase = this.getKioskHost();
-    // Build QR Code Claim URL
-    const params = new URLSearchParams({
-      session: session.id,
-      song: session.songId,
-      score: session.score.toString(),
-      acc: session.accuracy.toString(),
-      combo: session.combo.toString(),
-      t: session.timestamp.toString(),
-    });
-    session.claimUrl = `${kioskBase}/#claim?${params.toString()}`;
+    const universalUrl = this.getUniversalEventQrUrl();
+    if (universalUrl) {
+      try {
+        const u = new URL(universalUrl);
+        u.searchParams.set('game', 'gesture_synth');
+        u.searchParams.set('song', session.songId);
+        u.searchParams.set('score', session.score.toString());
+        u.searchParams.set('session', session.id);
+        session.claimUrl = u.toString();
+      } catch (e) {
+        session.claimUrl = universalUrl;
+      }
+    } else {
+      const kioskBase = this.getKioskHost();
+      // Build QR Code Claim URL
+      const params = new URLSearchParams({
+        session: session.id,
+        song: session.songId,
+        score: session.score.toString(),
+        acc: session.accuracy.toString(),
+        combo: session.combo.toString(),
+        t: session.timestamp.toString(),
+      });
+      session.claimUrl = `${kioskBase}/#claim?${params.toString()}`;
+    }
 
     return session;
   }
@@ -610,105 +772,6 @@ export class CompetitionLeaderboardService {
     localStorage.removeItem(this.storageKey);
     localStorage.removeItem(this.pendingSessionKey);
     localStorage.removeItem('gs_last_submitted_entry');
-  }
-
-  /**
-   * Realistic initial seed data for lively booth demonstration
-   */
-  _getSeedLeaderboard() {
-    return [
-      {
-        id: 'GS-DEMO-01',
-        playerName: 'Dimas Wicaksono',
-        phone: '081298765432',
-        notes: '@dimas_piano',
-        songId: 'KOMANG',
-        songTitle: '🌺 Komang - Raim Laode',
-        songBadge: '🌺 KOMANG',
-        songEmoji: '🌺',
-        score: 98450,
-        accuracy: 99,
-        combo: 48,
-        stars: 5,
-        grade: 'S+',
-        timestamp: Date.now() - 3600000 * 2,
-        dateFormatted: 'Hari ini, 13:45',
-        prizeClaimed: false,
-      },
-      {
-        id: 'GS-DEMO-02',
-        playerName: 'Sarah Nabila',
-        phone: '085712345678',
-        notes: '',
-        songId: 'JINGLE_BELLS',
-        songTitle: '🔔 Jingle Bells Piano',
-        songBadge: '🔔 JINGLE BELLS',
-        songEmoji: '🔔',
-        score: 96800,
-        accuracy: 97,
-        combo: 48,
-        stars: 5,
-        grade: 'S',
-        timestamp: Date.now() - 3600000 * 3,
-        dateFormatted: 'Hari ini, 12:30',
-        prizeClaimed: false,
-      },
-      {
-        id: 'GS-DEMO-03',
-        playerName: 'Reza Pratama',
-        phone: '081345678901',
-        notes: '',
-        songId: 'NEON_DAWN',
-        songTitle: '⭐ Neon Dawn (Pop Ballad)',
-        songBadge: '⭐ NEON DAWN',
-        songEmoji: '⭐',
-        score: 94200,
-        accuracy: 95,
-        combo: 32,
-        stars: 4,
-        grade: 'S',
-        timestamp: Date.now() - 3600000 * 4,
-        dateFormatted: 'Hari ini, 11:15',
-        prizeClaimed: true,
-        prizeClaimedAt: Date.now() - 3600000 * 2,
-      },
-      {
-        id: 'GS-DEMO-04',
-        playerName: 'Alya Putri',
-        phone: '087890123456',
-        notes: '',
-        songId: 'KOMANG',
-        songTitle: '🌺 Komang - Raim Laode',
-        songBadge: '🌺 KOMANG',
-        songEmoji: '🌺',
-        score: 91500,
-        accuracy: 92,
-        combo: 38,
-        stars: 4,
-        grade: 'A',
-        timestamp: Date.now() - 3600000 * 5,
-        dateFormatted: 'Hari ini, 10:20',
-        prizeClaimed: false,
-      },
-      {
-        id: 'GS-DEMO-05',
-        playerName: 'Bagus Setiawan',
-        phone: '082123456789',
-        notes: '',
-        songId: 'CYBER_GROOVE',
-        songTitle: '⚡ Cyber Groove',
-        songBadge: '⚡ CYBER GROOVE',
-        songEmoji: '⚡',
-        score: 87600,
-        accuracy: 89,
-        combo: 26,
-        stars: 3,
-        grade: 'A',
-        timestamp: Date.now() - 3600000 * 6,
-        dateFormatted: 'Hari ini, 09:40',
-        prizeClaimed: false,
-      },
-    ];
   }
 }
 

@@ -81,33 +81,46 @@
 
 /* --- REST REMINDER BANNER --- */
 .rest-reminder-toast {
-  position: absolute;
-  bottom: 20px;
+  position: fixed;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(28, 16, 58, 0.95);
+  background: rgba(22, 14, 46, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1.5px solid var(--gold);
-  box-shadow: 0 0 25px rgba(255, 215, 0, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 215, 0, 0.35);
   border-radius: var(--radius-md);
   padding: 12px 18px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  z-index: 999;
+  gap: 14px;
+  z-index: 100000;
   max-width: 90%;
+  pointer-events: auto;
   animation: slideUp 0.3s ease-out;
 }
 
 .rest-reminder-toast .toast-title {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--gold);
   font-family: var(--font-display);
+  white-space: nowrap;
 }
 
+.rest-reminder-toast .toast-body,
 .rest-reminder-toast .toast-desc {
   font-size: 11px;
   color: var(--text-main);
+  line-height: 1.4;
+}
+
+.rest-reminder-toast .toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .rest-reminder-toast .toast-btn {
@@ -115,10 +128,29 @@
   border: 1px solid var(--gold);
   color: #fff;
   border-radius: var(--radius-pill);
-  padding: 4px 10px;
-  font-size: 10px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.rest-reminder-toast .toast-btn:hover {
+  background: rgba(255, 215, 0, 0.38);
+  transform: translateY(-1px);
+}
+
+.rest-reminder-toast .toast-btn-dismiss {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #cbd5e1;
+}
+
+.rest-reminder-toast .toast-btn-dismiss:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 /* --- MIDI IMPORT SCREEN STYLES --- */
@@ -312,6 +344,7 @@
 /* --- LEADERBOARD SCREEN STYLES --- */
 .leaderboard-screen {
   overflow-y: auto;
+  padding-top: 10px;
 }
 
 .leaderboard-container {
@@ -1469,8 +1502,14 @@
 
 .tracks-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .tracks-cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .track-card {
@@ -1513,6 +1552,24 @@
   box-shadow: 0 0 22px rgba(0, 247, 255, 0.4);
 }
 
+.track-card.jatuh_suka {
+  border-color: rgba(0, 247, 255, 0.35);
+}
+
+.track-card.jatuh_suka:hover {
+  border-color: #00f7ff;
+  box-shadow: 0 0 22px rgba(0, 247, 255, 0.45);
+}
+
+.track-card.taragak_pulang {
+  border-color: rgba(251, 176, 64, 0.35);
+}
+
+.track-card.taragak_pulang:hover {
+  border-color: #fbb040;
+  box-shadow: 0 0 22px rgba(251, 176, 64, 0.45);
+}
+
 .track-card-top {
   display: flex;
   align-items: center;
@@ -1548,32 +1605,18 @@
   box-shadow: 0 4px 18px rgba(20, 179, 212, 0.35);
 }
 
-.track-icon-badge.jingle_bells {
-  background: linear-gradient(135deg, rgba(251, 176, 64, 0.32) 0%, rgba(245, 158, 11, 0.22) 100%);
+.track-icon-badge.jatuh_suka {
+  background: linear-gradient(135deg, rgba(0, 247, 255, 0.32) 0%, rgba(99, 102, 241, 0.25) 100%);
+  color: #00f7ff;
+  border-color: rgba(0, 247, 255, 0.5);
+  box-shadow: 0 4px 18px rgba(0, 247, 255, 0.35);
+}
+
+.track-icon-badge.taragak_pulang {
+  background: linear-gradient(135deg, rgba(251, 176, 64, 0.32) 0%, rgba(234, 88, 12, 0.25) 100%);
   color: #fbb040;
   border-color: rgba(251, 176, 64, 0.5);
   box-shadow: 0 4px 18px rgba(251, 176, 64, 0.35);
-}
-
-.track-icon-badge.neon_dawn {
-  background: linear-gradient(135deg, rgba(0, 229, 163, 0.32) 0%, rgba(14, 165, 233, 0.22) 100%);
-  color: #00e5a3;
-  border-color: rgba(0, 229, 163, 0.5);
-  box-shadow: 0 4px 18px rgba(0, 229, 163, 0.35);
-}
-
-.track-icon-badge.cyber_groove {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.32) 0%, rgba(139, 92, 246, 0.22) 100%);
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.5);
-  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35);
-}
-
-.track-icon-badge.endless {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.32) 0%, rgba(236, 72, 153, 0.22) 100%);
-  color: #c084fc;
-  border-color: rgba(168, 85, 247, 0.5);
-  box-shadow: 0 4px 18px rgba(168, 85, 247, 0.35);
 }
 
 .track-card:hover .track-icon-badge {
@@ -2007,6 +2050,68 @@
     opacity: 1;
     transform: translate(-50%, 0) scale(1);
   }
+}
+
+/* --- MENU BACKGROUND MUSIC (BGM) PILL & CONTROLS --- */
+.home-top-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.btn-menu-bgm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(14, 25, 48, 0.75);
+  border: 1px solid rgba(0, 247, 255, 0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: #e0f7ff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn-menu-bgm-pill:hover {
+  background: rgba(0, 247, 255, 0.18);
+  border-color: #00f7ff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 16px rgba(0, 247, 255, 0.4);
+}
+
+.btn-menu-bgm-pill.active {
+  border-color: rgba(0, 255, 170, 0.6);
+}
+
+.bgm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5e7e;
+  box-shadow: 0 0 8px rgba(255, 94, 126, 0.8);
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.bgm-dot.active {
+  background: #00ffaa;
+  box-shadow: 0 0 10px #00ffaa;
+  animation: bgmPulse 1.8s infinite;
+}
+
+@keyframes bgmPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.7; }
 }
 
 

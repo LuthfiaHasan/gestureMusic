@@ -14,6 +14,7 @@ export const NADIMU_LANES = [
     color: '#14b3d4',
     glowColor: 'rgba(20, 179, 212, 0.45)',
     name: 'C (Do)',
+    role: '(Do)',
     keyHint: '1 / D',
   },
   {
@@ -23,7 +24,8 @@ export const NADIMU_LANES = [
     emoji: '✌️',
     color: '#3b82f6',
     glowColor: 'rgba(59, 130, 246, 0.45)',
-    name: 'F / Dm',
+    name: 'F (Subdominan)',
+    role: '(Subdominan)',
     keyHint: '2 / F',
   },
   {
@@ -33,7 +35,8 @@ export const NADIMU_LANES = [
     emoji: '🤟',
     color: '#fbb040',
     glowColor: 'rgba(251, 176, 64, 0.45)',
-    name: 'Em / Am',
+    name: 'Em (Lembut)',
+    role: '(Lembut)',
     keyHint: '3 / J',
   },
   {
@@ -43,7 +46,8 @@ export const NADIMU_LANES = [
     emoji: '🖐️',
     color: '#10b981',
     glowColor: 'rgba(16, 185, 129, 0.45)',
-    name: 'G Dominan',
+    name: 'G (Dominan)',
+    role: '(Dominan)',
     keyHint: '4 / K',
   },
 ];
@@ -68,7 +72,7 @@ export class NadimuTilesEngine {
     ];
     this.currentKeyHeightModeIdx = 0;
     this.hitLineY = 455;
-    this.hitWindowSec = 0.52; // Generous, comfortable hit window matching Komang
+    this.hitWindowSec = 0.55; // Nyaman & toleran untuk gestur kamera TV
 
     // Visual Speed
     this.baseTravelTimeSec = 4.2;
@@ -167,34 +171,6 @@ export class NadimuTilesEngine {
       'G': ['G4', 'B4', 'D5'],
     };
 
-    const sweetVoicingsHigh = {
-      'C': ['C5', 'E5', 'G5'],
-      'F': ['C5', 'F5', 'A5'],
-      'Em': ['B4', 'E5', 'G5'],
-      'Am': ['C5', 'E5', 'A5'],
-      'Dm': ['D5', 'F5', 'A5'],
-      'G': ['B4', 'D5', 'G5'],
-    };
-
-    const splitLyrics = {
-      0: ["Kala nanti...", "badai 'kan datang ⛈️"],
-      1: ["Angin akan...", "buat kau goyah 🍃"],
-      2: ["Maafkan...", "hidup memang 🕊️"],
-      3: ["Ingin kau...", "lebih kuat... ✨"],
-      4: ["Andaikan...", "saat itu datang..."],
-      5: ["Kami tak ada...", "menemani... 🕊️"],
-      6: ["Aku ingin...", "kamu mendengar..."],
-      7: ["Nyanyianku...", "di sini... 🕊️"],
-      8: ["Sedikit demi...", "sedikit... ✨"],
-      9: ["Lelah tak akan...", "tersia... 💖"],
-      10: ["Selalu ada...", "di nadimu... ✨"],
-      11: ["Mengalir dalam...", "jiwamu... 🌸"],
-      12: ["Tersenyumlah...", "hari ini... ☀️"],
-      13: ["Esok kita...", "'kan melangkah... 🚀"],
-      14: ["Selalu ada...", "di nadimu... ✨"],
-      15: ["Keluarga abadi...", "selamanya... ❤️"],
-    };
-
     const totalCycles = 10;
     let globalId = 0;
 
@@ -212,10 +188,8 @@ export class NadimuTilesEngine {
 
         const mainMelody = (m.melodyNotes && m.melodyNotes[0]) ? m.melodyNotes[0] : 'C4';
         const chordVoicing = sweetVoicings[m.chord] || ['C4', 'E4', 'G4', 'C5'];
-        const chordVoicingHigh = sweetVoicingsHigh[m.chord] || chordVoicing;
-        const lyrics = splitLyrics[m.index] || [m.lyric, ''];
 
-        // 1. Beat 1 Primary Downbeat Tile (Matching Komang's elongated grand piano tile)
+        // Single Elongated Grand Piano Tile per measure (matching Komang's visual elegance & clean single-hit rhythm)
         this.tiles.push({
           id: `tile_${globalId++}`,
           cycle,
@@ -226,45 +200,36 @@ export class NadimuTilesEngine {
           fingerCount: m.fingerCount,
           emoji: m.emoji,
           lane: laneIndex,
-          lyric: lyrics[0],
+          lyric: '',
           displayNote: mainMelody,
           melodyNotes: chordVoicing,
           timeSec: targetTimeSec,
-          durationSec: this.halfMeasureSec * 0.85,
+          durationSec: this.measureDurationSec * 0.85,
           status: 'PENDING',
           hitRating: null,
           isMelodySubtile: false,
         });
-
-        // 2. Beat 3 Secondary Flow Tile (Fills highway so tiles flow continuously like Komang, no single lonely tiles!)
-        this.tiles.push({
-          id: `tile_${globalId++}`,
-          cycle,
-          measureIndex: m.index,
-          measureNum: m.measure,
-          chord: m.chord,
-          chordDesc: `${m.chord} (Alunan Melodi)`,
-          fingerCount: m.fingerCount,
-          emoji: m.emoji,
-          lane: laneIndex,
-          lyric: lyrics[1] || lyrics[0],
-          displayNote: (m.melodyNotes && m.melodyNotes[2]) ? m.melodyNotes[2] : 'G4',
-          melodyNotes: chordVoicingHigh,
-          timeSec: targetTimeSec + this.halfMeasureSec,
-          durationSec: this.halfMeasureSec * 0.85,
-          status: 'PENDING',
-          hitRating: null,
-          isMelodySubtile: true,
-        });
       });
     }
+
+    // Ensure tiles are strictly ordered by time
+    this.tiles.sort((a, b) => a.timeSec - b.timeSec);
   }
 
   _bindEvents() {
     if (!this.canvas) return;
 
+    // Click / Touch hit on lanes (Starts playback if paused, matching Komang)
     const handlePointerDown = (e) => {
       e.preventDefault();
+      if (this.nadimuService && !this.nadimuService.isPlaying) {
+        if (this.nadimuService.sessionMode === '30S_RANDOM') {
+          this.nadimuService.play();
+        } else {
+          this.nadimuService.play();
+        }
+        if (window.app) window.app.render();
+      }
       const rect = this.canvas.getBoundingClientRect();
       const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : rect.left);
       const x = clientX - rect.left;
@@ -343,28 +308,6 @@ export class NadimuTilesEngine {
 
     if (!hasHand) return null;
 
-    if (fingers === 5) {
-      const songTime = this.getCurrentSongTime();
-      let bestTile = null;
-      let minDelta = Infinity;
-
-      for (let i = 0; i < this.tiles.length; i++) {
-        const t = this.tiles[i];
-        if (t.status === 'PENDING') {
-          const delta = Math.abs(t.timeSec - songTime);
-          if (delta <= this.hitWindowSec && delta < minDelta) {
-            minDelta = delta;
-            bestTile = t;
-          }
-        }
-      }
-
-      if (bestTile) {
-        return this.triggerLaneAction(bestTile.lane, false, true);
-      }
-      return null;
-    }
-
     let targetLane = -1;
     if (fingers === 1) targetLane = 0;
     else if (fingers === 2) targetLane = 1;
@@ -420,14 +363,17 @@ export class NadimuTilesEngine {
 
       const lanePreviewNotes = ['C4', 'F4', 'E4', 'G4'];
       const previewNote = lanePreviewNotes[laneIndex] || 'C4';
-      audioManager.init();
-      audioManager.resume();
-      audioManager.playKomangMelodyNote(previewNote, {
-        duration: 1.1,
-        lane: laneIndex,
-        isPerfect: false,
-        preset: 'Acoustic Piano',
-      });
+      if (this.nadimuService && this.nadimuService.playerVolume > 0.01) {
+        audioManager.init();
+        audioManager.resume();
+        audioManager.playKomangMelodyNote(previewNote, {
+          duration: 0.8,
+          lane: laneIndex,
+          isPerfect: false,
+          preset: 'Acoustic Piano',
+          gainScale: this.nadimuService.playerVolume * 0.25,
+        });
+      }
     }
 
     return null;
@@ -438,27 +384,31 @@ export class NadimuTilesEngine {
 
     let rating = 'PERFECT';
     let baseScore = 1000;
-    if (timeDiffSec <= 0.18) {
+    if (timeDiffSec <= 0.26) {
       rating = 'PERFECT';
       baseScore = 1000;
-    } else if (timeDiffSec <= 0.35) {
+    } else if (timeDiffSec <= 0.44) {
       rating = 'GREAT';
-      baseScore = 600;
+      baseScore = 850;
     } else {
       rating = 'GOOD';
-      baseScore = 300;
+      baseScore = 700;
     }
     tile.hitRating = rating;
 
-    // 1. Play crystal-pure, sweet singing Steinway Grand Piano melody chord with stereo pan & sparkle overtone!
-    audioManager.init();
-    audioManager.resume();
-    audioManager.playKomangMelodyNote(tile.melodyNotes || tile.displayNote || 'C5', {
-      duration: 1.6,
-      isPerfect: rating === 'PERFECT',
-      lane: tile.lane,
-      preset: 'Acoustic Piano',
-    });
+    // 1. Play melody note only if user enabled piano player volume (default 0 / muted so song plays pure)
+    const playerVol = this.nadimuService ? this.nadimuService.playerVolume : 0;
+    if (playerVol > 0.01) {
+      audioManager.init();
+      audioManager.resume();
+      audioManager.playKomangMelodyNote(tile.melodyNotes || tile.displayNote || 'C5', {
+        duration: 1.2,
+        isPerfect: false,
+        lane: tile.lane,
+        preset: 'Acoustic Piano',
+        gainScale: playerVol * 0.25,
+      });
+    }
 
     // 2. Spawn Particle Burst & Animated Floating Toast
     const laneWidth = this.width / 4;
@@ -489,11 +439,6 @@ export class NadimuTilesEngine {
 
       const earnedPoints = Math.round(baseScore * multiplier);
       this.nadimuService.score += earnedPoints;
-
-      if (this.nadimuService.combo > 0 && this.nadimuService.combo % 6 === 0) {
-        this.nadimuService.recoverLife(1);
-        this._spawnToast(hitX, hitY - 45, '+1 NYAWA! ❤️', 0, '#00ffaa');
-      }
 
       this.nadimuService.evaluatedMeasures.add(tile.measureIndex);
 
@@ -642,7 +587,7 @@ export class NadimuTilesEngine {
         }
       }
 
-      if ((songTime - tile.timeSec) > this.hitWindowSec) {
+      if ((songTime - tile.timeSec) > 0.35) {
         tile.status = 'MISSED';
         if (this.nadimuService) {
           if (!tile.isMelodySubtile) {
@@ -738,6 +683,11 @@ export class NadimuTilesEngine {
     });
   }
 
+  draw(songTime = this.getCurrentSongTime()) {
+    if (!this.ctx) return;
+    this._renderHighway(songTime);
+  }
+
   _renderHighway(songTime) {
     const ctx = this.ctx;
     const w = this.width;
@@ -759,11 +709,11 @@ export class NadimuTilesEngine {
       this.screenShakeTime--;
     }
 
-    // Deep neon highway gradient matching Komang
+    // Deep Flash Tech corporate navy highway gradient matching Komang
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, 'rgba(8, 4, 18, 0.95)');
-    bgGrad.addColorStop(0.7, 'rgba(16, 8, 32, 0.96)');
-    bgGrad.addColorStop(1, 'rgba(28, 12, 48, 0.98)');
+    bgGrad.addColorStop(0, 'rgba(4, 14, 34, 0.98)');
+    bgGrad.addColorStop(0.7, 'rgba(7, 24, 56, 0.98)');
+    bgGrad.addColorStop(1, 'rgba(10, 38, 85, 0.98)');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
@@ -802,11 +752,10 @@ export class NadimuTilesEngine {
     const S_now = this._getIntegratedSongTime(songTime);
     this.speedMultiplier = this.getSpeedMultiplier(songTime);
 
-    // Visual distance between bars in the same lane (using halfMeasureSec so 2-3 tiles are continuously visible!)
-    const subMeasureSec = this.halfMeasureSec || (this.measureDurationSec / 2);
-    const measureDistance = (subMeasureSec / this.baseTravelTimeSec) * hitY;
+    // Visual distance between bars in the same lane (matching Komang's elegant dimensions)
+    const measureDistance = (this.measureDurationSec / this.baseTravelTimeSec) * hitY;
     // Grand elongated piano tile height with clean spacing, matching Komang!
-    const tileHeight = Math.max(105, Math.min(185, Math.round(measureDistance - 20)));
+    const tileHeight = Math.max(110, Math.min(190, Math.round(measureDistance - 24)));
 
     for (let i = 0; i < this.tiles.length; i++) {
       const tile = this.tiles[i];
@@ -839,6 +788,54 @@ export class NadimuTilesEngine {
     // Render Floating Judgment Toasts (+1000 PERFECT! ✨)
     this._renderFloatingToasts(ctx);
 
+    // Idle Prompt Overlay (Matching Komang)
+    if (!this.isRunning && songTime <= 0.1) {
+      ctx.save();
+      const badgeW = Math.min(340, w * 0.85);
+      const badgeH = 50;
+      const bx = (w - badgeW) / 2;
+      const by = hitY * 0.42;
+
+      ctx.fillStyle = 'rgba(6, 21, 45, 0.92)';
+      this._roundRect(ctx, bx, by, badgeW, badgeH, 12, true, false);
+
+      ctx.strokeStyle = 'rgba(20, 179, 212, 0.5)';
+      ctx.lineWidth = 1.5;
+      this._roundRect(ctx, bx, by, badgeW, badgeH, 12, false, true);
+
+      ctx.fillStyle = '#14b3d4';
+      ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('▶️ KLIK "MAIN 30s" ATAU SENTUH TUTS', w / 2, by + 18);
+
+      ctx.fillStyle = '#bfd9ee';
+      ctx.font = '500 11px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Tunjukkan gestur tangan di depan kamera 📷', w / 2, by + 34);
+
+      ctx.restore();
+    }
+
+    // Dynamic Speed HUD Badge on Highway
+    if (this.speedMultiplier && this.speedMultiplier > 1.02) {
+      ctx.save();
+      const badgeText = `⚡ SPEED ${this.speedMultiplier.toFixed(1)}x`;
+      ctx.font = '900 11px Orbitron, sans-serif';
+      const textW = ctx.measureText(badgeText).width;
+      const bx = w - textW - 20;
+      const by = 16;
+      ctx.fillStyle = 'rgba(10, 5, 25, 0.75)';
+      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, true, false);
+      ctx.strokeStyle = this.speedMultiplier >= 1.8 ? '#ff2d75' : (this.speedMultiplier >= 1.4 ? '#ffd700' : '#00f7ff');
+      ctx.lineWidth = 1;
+      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, false, true);
+      ctx.fillStyle = this.speedMultiplier >= 1.8 ? '#ff2d75' : (this.speedMultiplier >= 1.4 ? '#ffd700' : '#00f7ff');
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeText, bx, by);
+      ctx.restore();
+    }
+
     // Red Vignette on damage / miss
     if (this.redVignetteAlpha > 0.01) {
       ctx.save();
@@ -853,8 +850,6 @@ export class NadimuTilesEngine {
 
     ctx.restore();
   }
-
-
 
   _renderSingleTile(ctx, tile, topY, tileHeight, laneW) {
     const laneConfig = NADIMU_LANES[tile.lane];
@@ -882,8 +877,7 @@ export class NadimuTilesEngine {
     // Draw Piano Tile body (Glossy dark glass with glowing neon borders matching Komang)
     const tileGrad = ctx.createLinearGradient(lx, topY, lx, topY + tileHeight);
     if (tile.isMelodySubtile) {
-      tileGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-      tileGrad.addColorStop(0.35, 'rgba(28, 16, 48, 0.95)');
+      tileGrad.addColorStop(0, 'rgba(255, 255, 255, 0.88)');
       tileGrad.addColorStop(1, laneConfig.color);
     } else {
       tileGrad.addColorStop(0, laneConfig.glowColor || 'rgba(0, 247, 255, 0.35)');
@@ -907,16 +901,28 @@ export class NadimuTilesEngine {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     this._roundRect(ctx, lx + 5, topY + 3, lWidth - 10, 4, 2, true, false);
 
-    // Inner Chord & Gesture Text
-    ctx.fillStyle = '#060a14';
-    ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${tile.emoji} ${tile.chord}`, x + w / 2, y + height / 2 - 4);
+    // Tile Text & Info (Matching Komang Visual Excellence)
+    if (tileHeight >= 36) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
 
-    ctx.font = '600 9.5px "Plus Jakarta Sans", sans-serif';
-    ctx.fillStyle = '#111827';
-    ctx.fillText(tile.lyric ? tile.lyric.slice(0, 18) : `${tile.fingerCount} JARI`, x + w / 2, y + height / 2 + 10);
+      // Big Chord Name near top
+      ctx.fillText(tile.chord, lx + lWidth / 2, topY + 34);
+
+      // Finger Icon & Gesture hint below chord
+      ctx.font = 'bold 12.5px Outfit, sans-serif';
+      ctx.fillStyle = laneConfig.color;
+      ctx.fillText(`${tile.emoji} ${tile.fingerCount} JARI`, lx + lWidth / 2, topY + 58);
+
+      // Chord description in middle of long tile
+      if (tile.chordDesc && tileHeight >= 140) {
+        ctx.font = '600 11px Outfit, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillText(tile.chordDesc, lx + lWidth / 2, topY + 84);
+      }
+    }
 
     ctx.restore();
   }
@@ -926,35 +932,35 @@ export class NadimuTilesEngine {
 
     ctx.save();
 
-    // A. Piano Fallboard / Header Bar above the keys (Wooden Cyber Trim)
+    // A. Piano Fallboard / Header Bar above the keys (Flash Tech Corporate Navy Trim)
     const headerH = 10;
     const fallboardGrad = ctx.createLinearGradient(0, hitY - headerH, 0, hitY);
-    fallboardGrad.addColorStop(0, 'rgba(6, 10, 20, 0.98)');
-    fallboardGrad.addColorStop(0.5, 'rgba(16, 26, 50, 0.95)');
-    fallboardGrad.addColorStop(1, 'rgba(8, 14, 30, 1)');
+    fallboardGrad.addColorStop(0, 'rgba(6, 21, 45, 0.98)');
+    fallboardGrad.addColorStop(0.5, 'rgba(11, 40, 85, 0.95)');
+    fallboardGrad.addColorStop(1, 'rgba(6, 21, 45, 1)');
     ctx.fillStyle = fallboardGrad;
     ctx.fillRect(0, hitY - headerH, w, headerH);
 
-    // B. Acoustic Grand Piano Red Velvet Felt Damper Strip
-    ctx.fillStyle = '#b91c1c'; // Crimson red felt damper
+    // B. Acoustic Grand Piano Damper Strip (Corporate Blue with Cyan Stitch)
+    ctx.fillStyle = '#0b5fa5';
     ctx.fillRect(0, hitY - 3, w, 4);
-    // Gold felt stitch accent line
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.7)';
+    // Cyan felt stitch accent line
+    ctx.strokeStyle = 'rgba(20, 179, 212, 0.7)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, hitY - 1);
     ctx.lineTo(w, hitY - 1);
     ctx.stroke();
 
-    // C. Glowing Receptor Neon Line
-    ctx.strokeStyle = 'rgba(0, 247, 255, 0.35)';
+    // C. Glowing Receptor Neon Line (Flash Tech Cyan)
+    ctx.strokeStyle = 'rgba(20, 179, 212, 0.35)';
     ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(0, hitY);
     ctx.lineTo(w, hitY);
     ctx.stroke();
 
-    ctx.strokeStyle = '#00f7ff';
+    ctx.strokeStyle = '#14b3d4';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(0, hitY);
@@ -984,94 +990,102 @@ export class NadimuTilesEngine {
         this._roundRect(ctx, lx, keyTop + keyH - 4, lWidth, 6, 4, true, false);
       }
 
-      // Grand Piano Key Body Gradient
+      // Grand Piano Key Body Gradient (Deep Flash Tech Navy Glossy Key)
       const keyGrad = ctx.createLinearGradient(lx, keyTop, lx, keyTop + keyH);
       if (isActive) {
         keyGrad.addColorStop(0, '#ffffff');
         keyGrad.addColorStop(0.18, lane.color);
-        keyGrad.addColorStop(0.72, lane.color);
-        keyGrad.addColorStop(1, 'rgba(255, 255, 255, 0.4)');
+        keyGrad.addColorStop(0.75, 'rgba(11, 95, 165, 0.95)');
+        keyGrad.addColorStop(1, 'rgba(6, 21, 45, 0.98)');
       } else {
-        keyGrad.addColorStop(0, 'rgba(240, 244, 255, 0.95)'); // Polished ivory key head
-        keyGrad.addColorStop(0.10, 'rgba(215, 225, 248, 0.88)');
-        keyGrad.addColorStop(0.40, 'rgba(20, 30, 60, 0.92)'); // Deep reflective key body
-        keyGrad.addColorStop(0.80, 'rgba(12, 18, 36, 0.98)');
-        keyGrad.addColorStop(1, 'rgba(6, 10, 22, 1)'); // Dark weighted key base
+        keyGrad.addColorStop(0, 'rgba(16, 44, 96, 0.96)');
+        keyGrad.addColorStop(0.20, 'rgba(10, 28, 64, 0.96)');
+        keyGrad.addColorStop(0.65, 'rgba(7, 20, 48, 0.98)');
+        keyGrad.addColorStop(1, 'rgba(4, 12, 30, 1)');
       }
 
       ctx.fillStyle = keyGrad;
       this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, true, false);
 
-      // Ivory Vertical Reflection Strip
-      if (!isActive) {
-        const shineGrad = ctx.createLinearGradient(lx + 4, 0, lx + 18, 0);
-        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
-        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = shineGrad;
-        this._roundRect(ctx, lx + 4, keyTop + 6, 12, keyH - 16, 2, true, false);
-      }
-
-      // 3D Bevel: Left Edge Highlight & Right Edge Shadow
+      // Clean 3D Bevel Highlights
       ctx.lineWidth = 1;
-      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.35)';
+      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.18)';
       ctx.beginPath();
       ctx.moveTo(lx + 2, keyTop + 4);
       ctx.lineTo(lx + 2, keyTop + keyH - 4);
       ctx.stroke();
 
-      // Key Labels
-      ctx.fillStyle = isPressed ? '#ffffff' : lane.color;
-      ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.beginPath();
+      ctx.moveTo(lx + lWidth - 2, keyTop + 4);
+      ctx.lineTo(lx + lWidth - 2, keyTop + keyH - 4);
+      ctx.stroke();
+
+      // Outer Key Border with Lane Color Accent
+      if (isActive) {
+        ctx.strokeStyle = lane.glowColor || 'rgba(20, 179, 212, 0.5)';
+        ctx.lineWidth = 4;
+        this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
+      } else {
+        ctx.strokeStyle = lane.color;
+        ctx.lineWidth = 1.5;
+        this._roundRect(ctx, lx, keyTop, lWidth, keyH, keyRadius, false, true);
+      }
+
+      // Bottom Keycap Lip
+      ctx.fillStyle = isActive ? lane.color : 'rgba(0, 0, 0, 0.45)';
+      this._roundRect(ctx, lx + 2, keyTop + keyH - 5, lWidth - 4, 3, 2, true, false);
+
+      // --- KEY LABELS & NOTATION ---
+      const centerX = lx + lWidth / 2;
+
+      // 1. Top Target Accent Pill
+      const pillW = 32;
+      const pillH = 4;
+      ctx.fillStyle = isActive ? '#ffffff' : lane.color;
+      this._roundRect(ctx, centerX - pillW / 2, keyTop + 10, pillW, pillH, 2, true, false);
+
+      // 2. Large Bold Chord Name
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(lane.chord, centerX, keyTop + keyH * 0.25);
+      ctx.fillText(lane.chord, centerX, keyTop + keyH * 0.26);
 
-      // 3. Gesture Badge with Finger Count & Emoji
+      // 3. Gesture Pill Badge with Finger Count & Emoji
       const badgeY = keyTop + keyH * 0.50;
-      const badgeW = lWidth - 18;
+      const badgeW = lWidth - 16;
       const badgeH = 26;
 
-      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.25)' : 'rgba(0, 0, 0, 0.55)';
+      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.4)' : 'rgba(4, 14, 34, 0.65)';
       this._roundRect(ctx, centerX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6, true, false);
 
-      ctx.strokeStyle = isActive ? 'rgba(255, 255, 255, 0.6)' : lane.color;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = isActive ? '#ffffff' : lane.color;
+      ctx.lineWidth = 1.2;
       this._roundRect(ctx, centerX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 6, false, true);
 
-      ctx.fillStyle = isActive ? '#000000' : lane.color;
+      ctx.fillStyle = isActive ? '#ffffff' : lane.color;
       ctx.font = 'bold 12.5px Outfit, sans-serif';
       ctx.fillText(`${lane.emoji} ${lane.fingerCount} JARI`, centerX, badgeY);
 
-      // 4. Subtitle / Harmonic Role
-      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.75)' : 'rgba(255, 255, 255, 0.75)';
-      ctx.font = '600 11px Outfit, sans-serif';
-      ctx.fillText(lane.name, centerX, keyTop + keyH * 0.72);
+      // 4. Harmonic Role Subtitle
+      ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(220, 232, 255, 0.85)';
+      ctx.font = '600 11.5px Outfit, sans-serif';
+      const roleText = lane.role || lane.name.split(' ')[1] || lane.name;
+      ctx.fillText(roleText, centerX, keyTop + keyH * 0.72);
 
-      // 5. Keyboard Key Hint
-      ctx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.5)';
-      ctx.font = '600 10.5px monospace';
-      ctx.fillText(`Key: ${lane.keyHint}`, centerX, keyTop + keyH * 0.88);
+      // 5. Key Shortcut Hint at Bottom
+      const keyHintY = keyTop + keyH * 0.88;
+      ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.08)';
+      this._roundRect(ctx, centerX - 24, keyHintY - 9, 48, 18, 4, true, false);
 
-      ctx.restore();
-    }
+      ctx.fillStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.75)';
+      ctx.font = 'bold 10px Outfit, sans-serif';
+      ctx.fillText(`[${lane.keyHint}]`, centerX, keyHintY);
 
-    // Dynamic Speed HUD Badge on Highway
-    if (this.speedMultiplier && this.speedMultiplier > 1.02) {
-      ctx.save();
-      const badgeText = `⚡ SPEED ${this.speedMultiplier.toFixed(1)}x`;
-      ctx.font = '900 11px Orbitron, sans-serif';
-      const textW = ctx.measureText(badgeText).width;
-      const bx = w - textW - 20;
-      const by = 16;
-      ctx.fillStyle = 'rgba(10, 5, 25, 0.75)';
-      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, true, false);
-      ctx.strokeStyle = this.speedMultiplier >= 1.8 ? '#ff2d75' : (this.speedMultiplier >= 1.4 ? '#ffd700' : '#00f7ff');
-      ctx.lineWidth = 1;
-      this._roundRect(ctx, bx - 8, by - 12, textW + 16, 20, 10, false, true);
-      ctx.fillStyle = this.speedMultiplier >= 1.8 ? '#ff2d75' : (this.speedMultiplier >= 1.4 ? '#ffd700' : '#00f7ff');
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(badgeText, bx, by);
       ctx.restore();
     }
 

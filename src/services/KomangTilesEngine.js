@@ -2,7 +2,7 @@
 // 4-Lane Falling Tiles Engine synchronized with Komang's 16-measure chord progression,
 // backing track audio, live camera hand gesture recognition, and interactive input.
 
-import { KOMANG_MEASURES } from './KomangService.js';
+import { KOMANG_MEASURES, KOMANG_TIMELINE_LYRICS, getKomangLyricAtTime, getKomangTimelineItemAtTime } from './KomangService.js';
 import { audioManager } from '../audio/AudioManager.js';
 
 export const KOMANG_LANES = [
@@ -158,10 +158,9 @@ export class KomangTilesEngine {
 
   _generateTileSchedule() {
     this.tiles = [];
-    const bpm = this.komangService?.bpm || 130;
-    const beatSec = 60 / bpm;
-    this.measureDurationSec = beatSec * 4;
-    this.cycleDurationSec = this.measureDurationSec * KOMANG_MEASURES.length;
+    const measureSec = this.komangService?.measureDurationSec || 2.85;
+    this.measureDurationSec = measureSec;
+    this.cycleDurationSec = measureSec * 16; // ~45.6s per 16-measure cycle
 
     // Sweet upper-register harmonies for primary chord downbeats (Octaves 4-5 only, NO boomy bass)
     const sweetVoicings = {
@@ -171,47 +170,76 @@ export class KomangTilesEngine {
       'Cm': ['G4', 'C5', 'Eb5'],
     };
 
-    // Generate tiles for 14 full cycles (~7 minutes of song, comfortably covering 4:30 MP3)
-    const totalCycles = 14;
     let globalId = 0;
 
-    for (let cycle = 0; cycle < totalCycles; cycle++) {
-      const cycleOffsetSec = cycle * this.cycleDurationSec;
+    // 1. Generate Intro Tiles (0.0s to 16.5s)
+    const introChords = [
+      { chord: 'G', fingers: 1, lane: 0, timeSec: 0.0 },
+      { chord: 'D/F#', fingers: 2, lane: 1, timeSec: 2.85 },
+      { chord: 'Am', fingers: 3, lane: 2, timeSec: 5.70 },
+      { chord: 'Cm', fingers: 4, lane: 3, timeSec: 8.55 },
+      { chord: 'G', fingers: 1, lane: 0, timeSec: 11.40 },
+      { chord: 'D/F#', fingers: 2, lane: 1, timeSec: 14.25 },
+    ];
 
-      KOMANG_MEASURES.forEach((m) => {
-        const targetTimeSec = cycleOffsetSec + m.index * this.measureDurationSec;
-        let laneIndex = 0;
-        if (m.fingerCount === 1) laneIndex = 0;
-        else if (m.fingerCount === 2) laneIndex = 1;
-        else if (m.fingerCount === 3) laneIndex = 2;
-        else if (m.fingerCount === 4) laneIndex = 3;
-        else laneIndex = 0;
+    introChords.forEach((ic, i) => {
+      this.tiles.push({
+        id: `tile_intro_${globalId++}`,
+        cycle: 0,
+        measureIndex: i,
+        measureNum: i + 1,
+        chord: ic.chord,
+        chordDesc: `${ic.chord} (Intro Piano)`,
+        fingerCount: ic.fingers,
+        emoji: ic.fingers === 1 ? '☝️' : (ic.fingers === 2 ? '✌️' : (ic.fingers === 3 ? '🤟' : '🖐️')),
+        lane: ic.lane,
+        lyric: '',
+        displayNote: sweetVoicings[ic.chord][0],
+        melodyNotes: sweetVoicings[ic.chord],
+        timeSec: ic.timeSec,
+        durationSec: this.measureDurationSec * 0.85,
+        status: 'PENDING',
+        hitRating: null,
+        isMelodySubtile: false,
+      });
+    });
 
-        const mainMelody = (m.melodyNotes && m.melodyNotes[0]) ? m.melodyNotes[0] : 'G4';
-        const chordVoicing = sweetVoicings[m.chord] || ['G4', 'B4', 'D5'];
+    // 2. Generate Song Verse, Chorus, Bridge, and Outro Tiles from KOMANG_TIMELINE_LYRICS
+    KOMANG_TIMELINE_LYRICS.forEach((entry, idx) => {
+      if (entry.startSec === 0) return; // Intro already generated
+      const laneIndex = (entry.fingerCount >= 1 && entry.fingerCount <= 4) ? entry.fingerCount - 1 : 0;
+      const duration = entry.endSec - entry.startSec;
+      const numMeasures = Math.max(1, Math.round(duration / this.measureDurationSec));
 
-        // 1. Primary Chord Downbeat Tile (Beat 1) - 1 Akor per Bar (1.85 detik jeda santai)
+      for (let m = 0; m < numMeasures; m++) {
+        const targetTimeSec = Number((entry.startSec + m * this.measureDurationSec).toFixed(2));
+        const chordVoicing = entry.melodyNotes || sweetVoicings[entry.chord] || ['G4', 'B4', 'D5'];
+        const mainMelody = chordVoicing[0];
+
         this.tiles.push({
           id: `tile_${globalId++}`,
-          cycle,
-          measureIndex: m.index,
-          measureNum: m.measure,
-          chord: m.chord,
-          chordDesc: m.chordDesc,
-          fingerCount: m.fingerCount,
-          emoji: m.emoji,
+          cycle: Math.floor(targetTimeSec / this.cycleDurationSec) + 1,
+          measureIndex: idx * 2 + m,
+          measureNum: Math.floor(targetTimeSec / this.measureDurationSec) + 1,
+          chord: entry.chord,
+          chordDesc: entry.chordDesc,
+          fingerCount: entry.fingerCount,
+          emoji: entry.emoji,
           lane: laneIndex,
-          lyric: m.lyric,
+          lyric: '',
           displayNote: mainMelody,
-          melodyNotes: chordVoicing, // Sweet sparkling triad in octave 4-5
+          melodyNotes: chordVoicing,
           timeSec: targetTimeSec,
           durationSec: this.measureDurationSec * 0.85,
           status: 'PENDING',
           hitRating: null,
           isMelodySubtile: false,
         });
-      });
-    }
+      }
+    });
+
+    // Ensure tiles are strictly ordered by time
+    this.tiles.sort((a, b) => a.timeSec - b.timeSec);
   }
 
   _bindEvents() {
@@ -289,28 +317,6 @@ export class KomangTilesEngine {
   evaluateGesture(totalFingers, hasHand = true) {
     if (!hasHand || !this.komangService) return null;
 
-    if (totalFingers === 5) {
-      // 🖐️ 5 Jari (Telapak Terbuka): SUPER WILDCARD!
-      // Otomatis menargetkan ubin PENDING terdekat di jalur mana saja yang mendekati garis hit
-      const curTime = this._getCurrentSongTime();
-      let bestTile = null;
-      let minDiff = 999;
-      for (let i = 0; i < this.tiles.length; i++) {
-        const t = this.tiles[i];
-        if (t.timeSec > curTime + 0.6) break;
-        if (t.status !== 'PENDING') continue;
-        const diff = Math.abs(curTime - t.timeSec);
-        if (diff <= 0.46 && diff < minDiff) {
-          minDiff = diff;
-          bestTile = t;
-        }
-      }
-      if (bestTile) {
-        return this.triggerLaneAction(bestTile.lane, false, true);
-      }
-      return null;
-    }
-
     let targetLane = -1;
     if (totalFingers === 1) targetLane = 0;
     else if (totalFingers === 2) targetLane = 1;
@@ -330,7 +336,7 @@ export class KomangTilesEngine {
     if (!this.komangService) return null;
 
     const currentTimeSec = this._getCurrentSongTime();
-    const hitToleranceSec = 0.52; // Nyaman & toleran untuk gestur kamera TV
+    const hitToleranceSec = 0.55; // Nyaman & toleran untuk gestur kamera TV
 
     // Find the closest pending tile in this lane near hit line
     let candidate = null;
@@ -367,8 +373,9 @@ export class KomangTilesEngine {
       }, 120);
 
       const lanePreviewNotes = ['G4', 'F#4', 'A4', 'C5'];
-      const previewNote = lanePreviewNotes[laneIndex] || 'G4';
-      audioManager.playKomangMelodyNote(previewNote, { duration: 1.1, lane: laneIndex, isPerfect: false, preset: 'Acoustic Piano' });
+      if (this.komangService && this.komangService.playerVolume > 0.01) {
+        audioManager.playKomangMelodyNote(previewNote, { duration: 0.8, lane: laneIndex, isPerfect: false, preset: 'Acoustic Piano', gainScale: this.komangService.playerVolume * 0.25 });
+      }
     }
 
     // Camera gesture input without an active tile nearby returns cleanly without strobing or noise
@@ -378,30 +385,34 @@ export class KomangTilesEngine {
   _executeHit(tile, timeDiffSec, isDirectTap, isWildcard = false) {
     tile.status = 'HIT';
 
-    // Judgment Rating
+    // Judgment Rating (Toleran & Fair untuk AI Hand Tracking kamera TV)
     let rating = 'PERFECT';
     let points = 100;
-    if (timeDiffSec <= 0.20) {
+    if (timeDiffSec <= 0.26) {
       rating = 'PERFECT';
       points = 100;
-    } else if (timeDiffSec <= 0.38) {
+    } else if (timeDiffSec <= 0.44) {
       rating = 'GREAT';
-      points = 80;
+      points = 85;
     } else {
       rating = 'GOOD';
-      points = 50;
+      points = 70;
     }
     tile.hitRating = rating;
 
-    // 1. Play crystal-clear, sweet singing Steinway Grand Piano melody note!
-    audioManager.init();
-    audioManager.resume();
-    audioManager.playKomangMelodyNote(tile.melodyNotes || tile.displayNote || 'G4', {
-      duration: 1.6,
-      isPerfect: rating === 'PERFECT',
-      lane: tile.lane,
-      preset: 'Acoustic Piano',
-    });
+    // 1. Play melody note only if user enabled piano player volume (default 0 / muted so song plays pure)
+    const playerVol = this.komangService ? this.komangService.playerVolume : 0;
+    if (playerVol > 0.01) {
+      audioManager.init();
+      audioManager.resume();
+      audioManager.playKomangMelodyNote(tile.melodyNotes || tile.displayNote || 'G4', {
+        duration: 1.2,
+        gainScale: playerVol * 0.25,
+        isPerfect: false,
+        lane: tile.lane,
+        preset: 'Acoustic Piano',
+      });
+    }
 
     // 2. Spawn Particle Burst & Toast
     const laneWidth = this.width / 4;
@@ -433,17 +444,12 @@ export class KomangTilesEngine {
 
       const earnedPoints = Math.round(points * multiplier);
       this.komangService.score += earnedPoints;
-      // Combo Health Recovery: Setiap streak 6 kombo, pulihkan +1 nyawa!
-      if (this.komangService.combo > 0 && this.komangService.combo % 6 === 0) {
-        this.komangService.recoverLife(1);
-        this._spawnToast(hitX, hitY - 45, '+1 NYAWA! ❤️', 0, '#00ffaa');
-      }
 
       this.komangService.evaluatedMeasures.add(tile.measureIndex);
 
       if (this.komangService.onChordHit) {
         this.komangService.onChordHit({
-          measure: KOMANG_MEASURES[tile.measureIndex],
+          measure: KOMANG_MEASURES[tile.measureIndex % KOMANG_MEASURES.length] || tile,
           measureIndex: tile.measureIndex,
           rating,
           points: earnedPoints,
@@ -565,7 +571,7 @@ export class KomangTilesEngine {
     const curTime = this._getCurrentSongTime();
     const laneWidth = this.width / 4;
     const hitY = this.height * this.hitLineRatio;
-    const missThresholdSec = 0.50; // Lebih tenang dan tidak gampang terlewat
+    const missThresholdSec = 0.35; // Cepat & responsif mendeteksi ubin terlewat
 
     this.speed = this.getSpeedMultiplier(curTime);
 
@@ -831,14 +837,6 @@ export class KomangTilesEngine {
           ctx.font = '600 11px Outfit, sans-serif';
           ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
           ctx.fillText(tile.chordDesc, lx + lWidth / 2, topY + 84);
-        }
-
-        // Lyric preview near bottom of the long tile
-        if (tile.lyric && !tile.isMelodySubtile) {
-          ctx.font = '600 12px Outfit, sans-serif';
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-          const shortLyric = tile.lyric.length > 20 ? tile.lyric.substring(0, 19) + '…' : tile.lyric;
-          ctx.fillText(`"${shortLyric}"`, lx + lWidth / 2, topY + tileHeight - 16);
         }
       }
 

@@ -260,23 +260,22 @@ body:has(.home-screen) #bg-canvas {
   height: auto;
   min-height: min-content;
   box-sizing: border-box;
-  padding: 8px 0 36px;
+  padding: 24px 0 40px;
 }
 
 /* Track Selection Screen (PILIH LAGU KOMPETISI) in Desktop Fullscreen */
 .phone-shell.fullscreen-mode .subpage-screen.track-select-screen,
-.phone-shell.fullscreen-mode .track-select-screen,
-.phone-shell.fullscreen-mode .subpage-screen {
+.phone-shell.fullscreen-mode .track-select-screen {
   max-width: 1040px;
   width: 100%;
-  margin: auto;
+  margin: 0 auto;
   height: auto;
   min-height: min-content;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 14px;
-  padding: 12px 0;
+  padding: 24px 0 40px;
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -291,8 +290,8 @@ body:has(.home-screen) #bg-canvas {
 
 .phone-shell.fullscreen-mode .track-select-screen .tracks-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
 }
 
 .phone-shell.fullscreen-mode .track-select-screen .track-card {
@@ -331,7 +330,7 @@ body:has(.home-screen) #bg-canvas {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  padding: 10px 0 40px;
+  padding: 24px 0 50px;
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
@@ -2419,7 +2418,10 @@ body:has(.home-screen) #bg-canvas {
 .subpage-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  padding-top: 6px;
+  padding-right: 140px;
+  flex-shrink: 0;
 }
 
 .btn-icon-back {

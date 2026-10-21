@@ -9,6 +9,9 @@ import { jatuhSukaSyncService, JATUH_SUKA_SEQUENCE } from './JatuhSukaAudioMotio
 import { taragakPulangSyncService, TARAGAK_PULANG_SEQUENCE } from './TaragakPulangSyncService.js';
 import { leaderboardService } from './LeaderboardService.js';
 import { leaderboardUI } from '../ui/LeaderboardModal.js';
+import { competitionLeaderboardService, COMPETITION_TRACKS } from './CompetitionLeaderboardService.js';
+import { qrCodeService } from './QrCodeService.js';
+import { gameEngine, GAME_STATES } from '../game/GameEngine.js';
 
 // ─────────────────────────────────────────────
 // 1. SONG SELECTION MENU
@@ -584,11 +587,11 @@ class GestureMusicGameEngine {
               <span class="stat-lbl" id="stat-gameover-rank">SURVIVE</span>
             </div>
             <div style="display:flex;gap:18px;margin:8px 0;width:100%;justify-content:center;">
-              <div><span style="font-size:18px;font-weight:900;color:#fff;" id="stat-final-score">0</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">SKOR AKHIR</span></div>
-              <div><span style="font-size:18px;font-weight:900;color:var(--cyan);" id="stat-final-time">00:00</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">WAKTU</span></div>
+              <div><span style="font-size:18px;font-weight:900;color:#fff;" id="stat-final-score">0</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">SKOR KETUKAN</span></div>
+              <div><span style="font-size:18px;font-weight:900;color:var(--cyan);" id="stat-final-time">00:00</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">WAKTU BERTAHAN</span></div>
             </div>
             <div class="modal-player-rank-chip" id="stat-gameover-leaderboard-chip" style="display: none;"></div>
-            <button class="btn-modal-leaderboard" id="btn-leaderboard-gameover">🏆 Lihat Papan Peringkat (Leaderboard)</button>
+            <button class="btn-modal-leaderboard" id="btn-leaderboard-gameover">🏆 Buka Papan Peringkat Terpadu</button>
             <button class="btn-modal-restart" id="btn-retry-gameover">🔄 Coba Lagi (Ulangi Lagu)</button>
             <button class="btn-modal-menu" id="btn-menu-gameover">📋 Kembali ke Menu</button>
           </div>
@@ -596,21 +599,41 @@ class GestureMusicGameEngine {
 
         <!-- Modal Kemenangan (Lagu Selesai) -->
         <div class="game-over-modal-backdrop" id="victory-modal" style="display: none;">
-          <div class="game-over-modal-card victory-card">
+          <div class="game-over-modal-card victory-card" style="max-width:440px;">
             <div class="modal-skull-icon victory-icon">🏆</div>
             <h2 class="modal-title victory-title">LAGU SELESAI!</h2>
-            <p class="modal-subtitle">Selamat! Anda berhasil menyelesaikan tantangan 1 Menit lagu ${this.config.title}!</p>
+            <p class="modal-subtitle">Selamat! Anda menyelesaikan tantangan 1 Menit lagu ${this.config.title}!</p>
             <div class="modal-star-section">
               <span class="modal-star-banner animated-stars" id="stat-victory-stars">⭐⭐⭐⭐⭐</span>
               <span class="stat-lbl" id="stat-victory-rank">PERFECT!</span>
             </div>
-            <div style="display:flex;gap:18px;margin:8px 0;width:100%;justify-content:center;">
-              <div><span style="font-size:18px;font-weight:900;color:#ffd700;" id="stat-victory-score">1,250</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">SKOR TOTAL</span></div>
-              <div><span style="font-size:18px;font-weight:900;color:#00ff88;" id="stat-victory-lives">5/5 ❤️</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">SISA NYAWA</span></div>
+
+            <!-- Standardized 100k Points Competition Score Banner -->
+            <div style="background:rgba(0,247,255,0.1);border:1.5px solid #00f7ff;border-radius:12px;padding:10px 14px;margin:10px 0;text-align:center;box-shadow:0 0 20px rgba(0,247,255,0.25);">
+              <span style="font-size:10.5px;font-weight:800;color:#00f7ff;letter-spacing:1px;display:block;">SKOR RESMI KOMPETISI (STANDAR 100K POIN):</span>
+              <span style="font-size:26px;font-weight:900;color:#ffd700;" id="stat-victory-standard-score">96,500 PTS</span>
+              <div style="font-size:10.5px;color:rgba(255,255,255,0.8);margin-top:2px;" id="stat-victory-breakdown-desc">Tepat Irama: 66,500 • Gestur 10 Jari: 20,000 • Combo: 10,000</div>
             </div>
-            <p style="font-size:12px;color:rgba(255,255,255,0.8);line-height:1.4;" id="stat-victory-desc">Luar Biasa! Irama dan gerakan jari Anda sangat presisi!</p>
-            <div class="modal-player-rank-chip" id="stat-victory-leaderboard-chip" style="display: none;"></div>
-            <button class="btn-modal-leaderboard" id="btn-leaderboard-victory">🏆 Lihat Papan Peringkat (Leaderboard)</button>
+
+            <div style="display:flex;gap:18px;margin:6px 0;width:100%;justify-content:center;">
+              <div><span style="font-size:16px;font-weight:900;color:#ffd700;" id="stat-victory-score">1,250</span><br><span style="font-size:9.5px;color:rgba(255,255,255,0.6);">SKOR KETUKAN</span></div>
+              <div><span style="font-size:16px;font-weight:900;color:#00ff88;" id="stat-victory-lives">5/5 ❤️</span><br><span style="font-size:9.5px;color:rgba(255,255,255,0.6);">SISA NYAWA</span></div>
+            </div>
+
+            <!-- Official QR Registration Card -->
+            <div style="display:flex;align-items:center;gap:12px;background:rgba(12,6,26,0.92);border:1.2px solid rgba(0,247,255,0.4);border-radius:12px;padding:10px 12px;margin:8px 0;text-align:left;">
+              <div style="background:#fff;border-radius:8px;padding:4px;flex-shrink:0;">
+                <canvas id="motionsync-victory-qr-canvas" width="105" height="105"></canvas>
+              </div>
+              <div style="flex:1;">
+                <span style="background:#00f7ff;color:#060a14;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:10px;display:inline-block;margin-bottom:3px;">🎁 KLAIM HADIAH RESMI</span>
+                <div style="font-size:11.5px;font-weight:800;color:#fff;line-height:1.2;">SCAN QR UNTUK DAFTAR NAMA & HP</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.7);margin:3px 0 6px 0;">Atau daftarkan langsung dari layar ini:</div>
+                <button class="btn-claim-inline" id="btn-motionsync-manual-claim" style="background:linear-gradient(135deg,#ff2d75,#ff6584);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;">✏️ Input di Layar Ini</button>
+              </div>
+            </div>
+
+            <button class="btn-modal-leaderboard" id="btn-leaderboard-victory">🏆 Buka Papan Peringkat Terpadu</button>
             <button class="btn-modal-restart btn-victory-restart" id="btn-retry-victory">🔄 Mainkan Lagi</button>
             <button class="btn-modal-menu" id="btn-menu-victory">📋 Pilih Lagu Lain</button>
           </div>
@@ -703,7 +726,8 @@ class GestureMusicGameEngine {
     });
 
     document.getElementById('btn-top-leaderboard')?.addEventListener('click', () => {
-      leaderboardUI.openLeaderboard(null, this.config.songId);
+      this.stop();
+      gameEngine.setState(GAME_STATES.LEADERBOARD);
     });
 
     document.getElementById('btn-top-player-chip')?.addEventListener('click', () => {
@@ -718,11 +742,30 @@ class GestureMusicGameEngine {
     });
 
     document.getElementById('btn-leaderboard-gameover')?.addEventListener('click', () => {
-      leaderboardUI.openLeaderboard(this.lastSavedRecordId, this.config.songId);
+      this.stop();
+      gameEngine.setState(GAME_STATES.LEADERBOARD);
     });
 
     document.getElementById('btn-leaderboard-victory')?.addEventListener('click', () => {
-      leaderboardUI.openLeaderboard(this.lastSavedRecordId, this.config.songId);
+      this.stop();
+      gameEngine.setState(GAME_STATES.LEADERBOARD);
+    });
+
+    document.getElementById('btn-motionsync-manual-claim')?.addEventListener('click', () => {
+      this.stop();
+      gameEngine.setState(GAME_STATES.LEADERBOARD);
+      setTimeout(() => {
+        const manModal = document.getElementById('manual-input-modal');
+        if (manModal) {
+          const trackSelect = document.getElementById('kiosk-select-track');
+          const scoreInput = document.getElementById('kiosk-input-score');
+          const songId = this.config.songId === 'taragak' ? 'TARAGAK_PULANG' : 'JATUH_SUKA';
+          if (trackSelect) trackSelect.value = songId;
+          const pending = competitionLeaderboardService.getPendingSession();
+          if (scoreInput && pending?.score) scoreInput.value = pending.score;
+          manModal.style.display = 'flex';
+        }
+      }, 150);
     });
 
     document.getElementById('btn-retry-gameover')?.addEventListener('click', () => {
@@ -1227,35 +1270,6 @@ class GestureMusicGameEngine {
       if (rankEl) rankEl.innerText = `${stats.starRating.title} (${stats.starRating.stars}/5 Bintang)`;
     }
 
-    // Catat perolehan ke Leaderboard secara otomatis
-    const player = leaderboardService.getCurrentPlayer() || { name: 'Pemain', phone: '-' };
-    const recordResult = leaderboardService.addScore({
-      name: player.name,
-      phone: player.phone,
-      songId: this.config.songId,
-      songTitle: this.config.title,
-      score: stats.score || 0,
-      lives: 0,
-      starRating: stats.starRating,
-      duration: stats.duration,
-    });
-    this.lastSavedRecordId = recordResult.entry.id;
-
-    const rankChip = document.getElementById('stat-gameover-leaderboard-chip');
-    if (rankChip) {
-      rankChip.style.display = 'flex';
-      rankChip.innerHTML = `
-        <div class="mpr-left">
-          <span class="mpr-player-lbl">PEMAIN TERCATAT:</span>
-          <span class="mpr-player-val">👤 ${this.escapeHtml(player.name)}</span>
-        </div>
-        <div class="mpr-right">
-          <span class="mpr-rank-val">Peringkat #${recordResult.overallRank}</span>
-          <span class="mpr-rank-sub">dari ${recordResult.totalEntries} Pemain</span>
-        </div>
-      `;
-    }
-
     modal.style.display = 'flex';
   }
 
@@ -1275,37 +1289,60 @@ class GestureMusicGameEngine {
       if (descEl) descEl.innerText = stats.starRating.description;
     }
 
-    // Catat perolehan ke Leaderboard secara otomatis
-    const player = leaderboardService.getCurrentPlayer() || { name: 'Pemain', phone: '-' };
-    const recordResult = leaderboardService.addScore({
-      name: player.name,
-      phone: player.phone,
-      songId: this.config.songId,
-      songTitle: this.config.title,
-      score: stats.score || 0,
-      lives: stats.lives || 5,
-      starRating: stats.starRating,
-      duration: stats.duration,
-    });
-    this.lastSavedRecordId = recordResult.entry.id;
+    // Standardized competition score for 1 Unified Leaderboard
+    const songId = this.config.songId === 'taragak' ? 'TARAGAK_PULANG' : 'JATUH_SUKA';
+    const trackInfo = COMPETITION_TRACKS[songId] || { title: this.config.title, badge: this.config.title, emoji: '✨' };
 
-    const rankChip = document.getElementById('stat-victory-leaderboard-chip');
-    if (rankChip) {
-      rankChip.style.display = 'flex';
-      const rankTitle = recordResult.isChampion
-        ? '👑 REKOR #1 JUARA BARU!'
-        : (recordResult.isTop3 ? `🔥 TOP 3 BESAR (#${recordResult.overallRank})` : `Peringkat #${recordResult.overallRank}`);
-      rankChip.innerHTML = `
-        <div class="mpr-left">
-          <span class="mpr-player-lbl">PEMAIN TERCATAT:</span>
-          <span class="mpr-player-val">👤 ${this.escapeHtml(player.name)}</span>
-        </div>
-        <div class="mpr-right">
-          <span class="mpr-rank-val">${rankTitle}</span>
-          <span class="mpr-rank-sub">dari ${recordResult.totalEntries} Pemain</span>
-        </div>
-      `;
+    const stdScoreCalc = competitionLeaderboardService.calculateMotionSyncScore({
+      songId,
+      rawScore: stats.score || 0,
+      lives: stats.lives || 5,
+      maxLives: 5,
+      duration: stats.duration || 60,
+      targetDuration: 60,
+      starRating: stats.starRating,
+    });
+
+    const compSession = competitionLeaderboardService.createPendingSession({
+      songId,
+      songTitle: trackInfo.title,
+      songBadge: trackInfo.badge,
+      songEmoji: trackInfo.emoji,
+      totalNotes: stdScoreCalc.totalNotes,
+      perfectCount: stdScoreCalc.perfectCount,
+      greatCount: stdScoreCalc.greatCount,
+      goodCount: stdScoreCalc.goodCount,
+      badCount: 0,
+      missCount: stdScoreCalc.missCount,
+      maxCombo: stdScoreCalc.maxCombo,
+      chordAccuracyPct: stdScoreCalc.accuracyPct,
+      scorePct: stdScoreCalc.accuracyPct,
+      grade: stdScoreCalc.grade,
+      stars: stdScoreCalc.stars,
+      customScore: stdScoreCalc.standardScore,
+    });
+
+    const stdScoreEl = document.getElementById('stat-victory-standard-score');
+    if (stdScoreEl) {
+      stdScoreEl.innerText = `${stdScoreCalc.standardScore.toLocaleString()} PTS / 100k`;
     }
+    const breakdownEl = document.getElementById('stat-victory-breakdown-desc');
+    if (breakdownEl) {
+      breakdownEl.innerText = `Akurasi Irama: ${stdScoreCalc.timingScore.toLocaleString()} • Gestur Jari: ${stdScoreCalc.gestureScore.toLocaleString()} • Combo Streak: ${stdScoreCalc.comboScore.toLocaleString()}`;
+    }
+
+    setTimeout(() => {
+      const qrCanvas = document.getElementById('motionsync-victory-qr-canvas');
+      if (qrCanvas && compSession?.claimUrl) {
+        qrCodeService.renderToCanvas(qrCanvas, compSession.claimUrl, {
+          size: 105,
+          padding: 6,
+          darkColor: '#0a0518',
+          lightColor: '#ffffff',
+          showEmblem: false,
+        });
+      }
+    }, 60);
 
     modal.style.display = 'flex';
   }

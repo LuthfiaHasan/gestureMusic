@@ -141,7 +141,7 @@ class App {
     } catch (e) {}
 
     setTimeout(() => {
-      audioManager.speakAnnouncer(`Selamat kepada ${entry.playerName}! Skor berhasil masuk ke papan peringkat!`);
+      audioManager.speakMascot(`Horeee! Selamat ya ${entry.playerName}! Skormu berhasil masuk papan peringkat!`);
     }, 350);
 
     let toast = document.getElementById('lead-submission-toast');
@@ -332,24 +332,43 @@ class App {
     `;
     toast.classList.add('visible');
 
+    const closeToast = () => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translate(-50%, 20px)';
+      toast.style.transition = 'all 0.25s ease';
+      setTimeout(() => {
+        if (toast && toast.parentNode) {
+          toast.remove();
+        }
+      }, 250);
+    };
+
     const pauseBtn = toast.querySelector('#btn-toast-pause');
     if (pauseBtn) {
-      pauseBtn.onclick = () => {
+      pauseBtn.onclick = (e) => {
+        e.stopPropagation();
         if (gameEngine.currentState === GAME_STATES.GAMEPLAY_PHASE) {
           gameEngine.pause();
+        } else if (gameEngine.currentState === GAME_STATES.KOMANG && typeof komangService !== 'undefined' && komangService.isPlaying) {
+          komangService.pause();
+          if (window.app) window.app.render();
+        } else if (gameEngine.currentState === GAME_STATES.NADIMU && typeof nadimuService !== 'undefined' && nadimuService.isPlaying) {
+          nadimuService.pause();
+          if (window.app) window.app.render();
         }
-        toast.classList.remove('visible');
+        closeToast();
       };
     }
     const dismissBtn = toast.querySelector('#btn-toast-dismiss');
     if (dismissBtn) {
-      dismissBtn.onclick = () => {
-        toast.classList.remove('visible');
+      dismissBtn.onclick = (e) => {
+        e.stopPropagation();
+        closeToast();
       };
     }
     setTimeout(() => {
-      if (toast && toast.classList.contains('visible')) {
-        toast.classList.remove('visible');
+      if (toast && toast.parentNode) {
+        closeToast();
       }
     }, 12000);
   }
@@ -406,7 +425,7 @@ class App {
           </button>
         `}
 
-        <div class="phone-shell ${isFullscreenActive ? 'fullscreen-mode tv-mode home-fullscreen-shell' : ''}">
+        <div class="phone-shell ${isFullscreenActive ? 'fullscreen-mode tv-mode' : ''} ${(isHome && isFullscreenActive) ? 'home-fullscreen-shell' : ''}">
           ${isFullscreenActive ? '' : `
             <div class="phone-status-bar">
               <span>${timeStr}</span>
@@ -510,6 +529,24 @@ class App {
       sessionTimerService.resume();
     } else {
       sessionTimerService.pause();
+    }
+
+    // Manage Menu Backsound (Menang Bersama Flix)
+    const isGameplaySession = [
+      GAME_STATES.GAMEPLAY_PHASE,
+      GAME_STATES.KOMANG,
+      GAME_STATES.NADIMU,
+      GAME_STATES.JATUH_SUKA,
+      GAME_STATES.TARAGAK_PULANG,
+      GAME_STATES.JINGLE_BELLS,
+      GAME_STATES.FREE_SYNTH,
+      GAME_STATES.CALIBRATION,
+    ].includes(state);
+
+    if (isGameplaySession) {
+      audioManager.pauseMenuBgm();
+    } else if (state === GAME_STATES.HOME || state === GAME_STATES.TRACK_SELECT || state === GAME_STATES.LEADERBOARD) {
+      audioManager.playMenuBgm();
     }
 
     if (state !== GAME_STATES.JATUH_SUKA && state !== GAME_STATES.TARAGAK_PULANG) {
@@ -652,9 +689,15 @@ class App {
                 <img src="/images/FLASH%20TECH.png" alt="Flash Tech Indonesia" class="brand-headline-logo" />
               </div>
               
-              <div class="game-badge-clean">
-                <span class="badge-dot"></span>
-                <span>GAME RITME MUSIK SENSOR TANGAN</span>
+              <div class="home-top-badge-row">
+                <div class="game-badge-clean">
+                  <span class="badge-dot"></span>
+                  <span>GAME RITME MUSIK SENSOR TANGAN</span>
+                </div>
+                <button class="btn-menu-bgm-pill ${audioManager.isBgmEnabled ? 'active' : ''}" id="btn-home-bgm-toggle" title="Putar / Jeda Backsound Flix">
+                  <span class="bgm-dot ${audioManager.isBgmEnabled ? 'active' : ''}"></span>
+                  <span>🎵 Backsound: <strong>${audioManager.isBgmEnabled ? 'ON' : 'OFF'}</strong></span>
+                </button>
               </div>
 
               <h1 class="game-title-clean">GESTURE SYNTH</h1>
@@ -2324,10 +2367,10 @@ class App {
 
     // 4 Systems (16 Measures) - Piano Arrangement Aga Pratama Alamsyah
     const systems = [
-      { id: 1, measures: [1, 2, 3, 4], label: 'Line 1: G ➔ D/F# (Intro Melodi)' },
-      { id: 2, measures: [5, 6, 7, 8], label: 'Line 2: Am ➔ Cm (Syahdu Menuju Vokal)' },
-      { id: 3, measures: [9, 10, 11, 12], label: 'Line 3: G ➔ D/F# ("Sebab kau terlalu indah...")' },
-      { id: 4, measures: [13, 14, 15, 16], label: 'Line 4: Am ➔ Cm ➔ G ("Kau Komang-ku...")' },
+      { id: 1, measures: [1, 2, 3, 4], label: 'Bait 1: G ➔ D/F# ("Dari kejauhan tergambar cerita tentang kita...")' },
+      { id: 2, measures: [5, 6, 7, 8], label: 'Bait 1 (Lanjutan): Am ➔ Cm ("Ingin kuungkapkan rindu...")' },
+      { id: 3, measures: [9, 10, 11, 12], label: 'Pre-Chorus: G ➔ D/F# ("Sebab kau terlalu indah dari sekedar kata...")' },
+      { id: 4, measures: [13, 14, 15, 16], label: 'Reff: Am ➔ Cm ➔ G ("Dan apabila tak bersamamu...")' },
     ];
 
     const systemsHtml = systems.map(sys => {
@@ -2343,7 +2386,6 @@ class App {
               <span class="komang-m-chord">${m.chord}</span>
               <span class="komang-m-finger">${m.emoji} ${m.fingerCount}F</span>
             </div>
-            <span class="komang-m-lyric" title="${m.lyric}">"${m.lyric}"</span>
             <span class="komang-m-notes">${m.notes}</span>
           </div>
         `;
@@ -2482,16 +2524,13 @@ class App {
               </div>
             </div>
 
-            <!-- Giant Karaoke Lyrics Display (High Legibility from TV Couch) -->
+            <!-- TV HUD Chord & Measure Card -->
             <div class="komang-karaoke-card">
               <div class="karaoke-badge-row">
                 <span class="tv-tag" id="komang-session-tag">
-                  ${komangService.sessionMode === '30S_RANDOM' ? `🎲 45s: ${komangService.currentSegment?.title || 'Intro'}` : '🎤 LIRIK SEKARANG'}
+                  ${komangService.sessionMode === '30S_RANDOM' ? `🎲 45s: ${komangService.currentSegment?.title || 'Intro'}` : '🎹 AKOR SEKARANG'}
                 </span>
                 <span class="komang-chord-badge" id="komang-cur-chord">${curMeasure.chord}</span>
-              </div>
-              <div class="komang-big-lyric" id="komang-cur-lyric">
-                "${curMeasure.lyric}"
               </div>
               <div class="komang-next-lyric-cue" id="komang-next-preview">
                 👉 Bar ${curMeasure.measure} / 16 (G Major)
@@ -2667,9 +2706,6 @@ class App {
               <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-fingers="4" data-chord="Cm">
                 <span>🖐️ 4: Cm</span>
               </button>
-              <button class="komang-fbtn wildcard-fbtn ${curMeasure.fingerCount === 5 ? 'active' : ''}" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas (Pukul Jalur Aktif)">
-                <span>✨ 5: SAKTI</span>
-              </button>
             </div>
           </div>
 
@@ -2793,9 +2829,6 @@ class App {
 
     const chordEl = document.getElementById('komang-cur-chord');
     if (chordEl) chordEl.innerText = curMeasure.chord;
-
-    const lyricEl = document.getElementById('komang-cur-lyric');
-    if (lyricEl) lyricEl.innerText = `"${curMeasure.lyric}"`;
 
     const descEl = document.getElementById('komang-cur-desc');
     if (descEl) descEl.innerText = curMeasure.chordDesc;
@@ -3073,6 +3106,35 @@ class App {
     };
     const gradeColor = gradeColorMap[stats.grade] || '#00f7ff';
 
+    const gradeDetails = {
+      'S+': {
+        title: 'LEGEND MASTER',
+        speechTitle: 'Flix Terpukau:',
+        speechQuote: '"PERFECT FULL COMBO! 👑 Gerakan jarimu luar biasa sempurna tanpa celah! Kamu legenda musik sejati!"'
+      },
+      'S': {
+        title: 'MASTER PIANIS',
+        speechTitle: 'Flix Bangga Banget:',
+        speechQuote: '"LUAR BIASA! 🌟 Permainan musik dan ketukan jarimu sangat lincah! Kamu musisi berbakat!"'
+      },
+      'A': {
+        title: 'PIANIS MAHIR',
+        speechTitle: 'Flix Senang Banget:',
+        speechQuote: '"HEBAT BANGET! 🎵 Refleks jarimu keren dan lagunya mengalun sangat indah!"'
+      },
+      'B': {
+        title: 'PIANIS BERBAKAT',
+        speechTitle: 'Flix Bertepuk Tangan:',
+        speechQuote: '"BAGUS! 👏 Ketukanmu sudah cukup pas, ayo coba sekali lagi untuk raih Bintang 3!"'
+      },
+      'C': {
+        title: 'PIANIS PEMULA',
+        speechTitle: 'Flix Menyemangati:',
+        speechQuote: '"SEMANGAT! 💪 Coba ikuti alunan lagu dan ritme ubin dengan lebih santai ya!"'
+      }
+    };
+    const currentGrade = gradeDetails[stats.grade] || gradeDetails['A'];
+
     const modal = document.createElement('div');
     modal.className = 'komang-modal-backdrop';
     modal.id = 'komang-victory-backdrop';
@@ -3081,7 +3143,7 @@ class App {
         <div class="modal-confetti-badge">🎉 ${stats.is30sSession ? 'SESI 45 DETIK SELESAI!' : 'LAGU KOMANG SELESAI!'} 🎉</div>
         <h2 class="modal-title-victory">VICTORY CLEAR!</h2>
         <p class="modal-subtitle-victory">
-          ${stats.is30sSession ? `Bagian: <strong>${stats.segment?.title || 'Komang'}</strong> (${stats.segment?.lyricHint || ''})` : 'Piano Karaoke • Raim Laode • Key G Major'}
+          ${stats.is30sSession ? `Bagian: <strong>${stats.segment?.title || 'Komang'}</strong>` : 'Piano • Raim Laode • Key G Major'}
         </p>
 
         <!-- Grade & Star Celebration Banner -->
@@ -3096,7 +3158,7 @@ class App {
             ${stats.isFullCombo ? `
               <span class="full-combo-pill">👑 PERFECT FULL COMBO!</span>
             ` : `
-              <span class="clear-pill">✨ TINGKAT: ${stats.grade === 'S' || stats.grade === 'S+' ? 'MASTER PIANIS' : 'PIANIS MAHIR'}</span>
+              <span class="clear-pill">✨ TINGKAT: ${currentGrade.title}</span>
             `}
           </div>
         </div>
@@ -3105,8 +3167,8 @@ class App {
         <div class="modal-mascot-row victory">
           <img src="/images/maskot_transparent.png" alt="Flix" class="modal-mascot-avatar mascot-victory-bounce" />
           <div class="modal-mascot-speech victory">
-            <span class="mascot-speech-name">Flix Bangga Banget:</span>
-            <p class="mascot-speech-quote">"LUAR BIASA! 🌟 Permainan musik dan gerakan jarimu lincah banget! Kamu musisi berbakat!"</p>
+            <span class="mascot-speech-name">${currentGrade.speechTitle}</span>
+            <p class="mascot-speech-quote">${currentGrade.speechQuote}</p>
           </div>
         </div>
 
@@ -3195,10 +3257,10 @@ class App {
     const isTilesView = nadimuService.viewMode === 'TILES';
 
     const systems = [
-      { id: 1, measures: [1, 2, 3, 4], label: 'Bait 1: C ➔ F ➔ Em ➔ Am ("Kala nanti badai...")' },
-      { id: 2, measures: [5, 6, 7, 8], label: 'Bait 2: Dm ➔ G ➔ C ➔ G ("Andaikan saat itu...")' },
-      { id: 3, measures: [9, 10, 11, 12], label: 'Reff: F ➔ G ➔ Em ➔ Am ("Sedikit demi sedikit...")' },
-      { id: 4, measures: [13, 14, 15, 16], label: 'Klimaks: Dm ➔ G ➔ F ➔ C ("Selalu ada di nadimu...")' },
+      { id: 1, measures: [1, 2, 3, 4], label: 'Bait 1: C ➔ F ➔ Em ➔ Am' },
+      { id: 2, measures: [5, 6, 7, 8], label: 'Bait 2: Dm ➔ G ➔ C ➔ G' },
+      { id: 3, measures: [9, 10, 11, 12], label: 'Reff: F ➔ G ➔ Em ➔ Am' },
+      { id: 4, measures: [13, 14, 15, 16], label: 'Klimaks: Dm ➔ G ➔ F ➔ C' },
     ];
 
     const systemsHtml = systems.map(sys => {
@@ -3214,7 +3276,6 @@ class App {
               <span class="komang-m-chord">${m.chord}</span>
               <span class="komang-m-finger">${m.emoji} ${m.fingerCount}F</span>
             </div>
-            <span class="komang-m-lyric" title="${m.lyric}">"${m.lyric}"</span>
             <span class="komang-m-notes">${m.notes}</span>
           </div>
         `;
@@ -3257,23 +3318,24 @@ class App {
               <span class="komang-subtitle">
                 ${nadimuService.sessionMode === '30S_RANDOM' 
                   ? `⏱️ SESI 45 DETIK (BAGIAN RANDOM: ${nadimuService.currentSegment?.title || 'Bait 1'}) • 78 BPM` 
-                  : '🎵 FULL SONG • OST JUMBO • KEY C MAJOR • 78 BPM'}
+                  : '🎹 MODE LAGU PENUH (4:43) • OST Jumbo • Key C Major'}
               </span>
             </div>
           </div>
 
+          <!-- Mode controls & View Switcher -->
           <div class="komang-header-actions">
-            <!-- 45S vs Full Song switcher -->
+            <!-- 45S RANDOM vs FULL SONG Switcher -->
             <div class="komang-view-switcher">
-              <button class="komang-view-btn ${nadimuService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-nadimu-mode-30s" title="Main cepat 30 detik bagian acak lagu Nadimu">
-                🎲 30s
+              <button class="komang-view-btn ${nadimuService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-nadimu-mode-30s" title="Main cepat 45 detik dari bagian acak lagu Nadimu (Makin lama makin cepat!)">
+                🎲 45s RANDOM
               </button>
               <button class="komang-view-btn ${nadimuService.sessionMode === 'FULL_SONG' ? 'active' : ''}" id="btn-nadimu-mode-full" title="Main lagu penuh dari awal sampai akhir">
                 🎵 Penuh
               </button>
             </div>
 
-            <!-- View Switcher (Tiles vs Sheet) -->
+            <!-- PIANO TILES vs PARTITUR View Toggle -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${isTilesView ? 'active' : ''}" id="btn-nadimu-view-tiles">
                 🎹 Tiles
@@ -3283,88 +3345,100 @@ class App {
               </button>
             </div>
 
-            <!-- Mode Santai vs Nyawa -->
-            <div class="hud-pill-group">
-              <button class="mode-pill ${nadimuService.isNoFail ? 'active' : ''}" id="btn-nadimu-nofail-toggle" title="Klik untuk beralih antara Mode Santai atau Tantangan">
-                ${nadimuService.isNoFail ? '🛡️ Santai' : '🎮 5 Nyawa'}
-              </button>
+            <!-- Audio Modes -->
+            <div class="jingle-mode-pills">
+              <button class="mode-pill ${nadimuService.mode === 'PLAY_ALONG' ? 'active' : ''}" id="btn-nadimu-mode-playalong">🎵 MP3</button>
+              <button class="mode-pill ${nadimuService.mode === 'GUIDE' ? 'active' : ''}" id="btn-nadimu-mode-guide">🎓 Belajar</button>
+              <button class="mode-pill ${nadimuService.mode === 'TEMPO' ? 'active' : ''}" id="btn-nadimu-mode-tempo">⏱️ 78 BPM</button>
             </div>
+
+            <!-- No-Fail / Challenge Mode Toggle Button -->
+            <button class="mode-pill ${nadimuService.isNoFail ? 'active' : ''}" id="btn-nadimu-nofail-toggle" title="Klik untuk beralih antara Mode Santai atau Tantangan">
+              ${nadimuService.isNoFail ? '🛡️ Santai' : '🎮 5 Nyawa'}
+            </button>
+
+            <!-- TV Fullscreen Button -->
+            <button class="btn-tv-fullscreen" id="btn-nadimu-fullscreen-tv" title="Tampilkan Fullscreen">
+              🖥️ TV
+            </button>
           </div>
         </div>
 
-        <!-- MAIN 3-COLUMN TV STAGE -->
-        <div class="komang-tv-stage">
-          
-          <!-- 1. LEFT COLUMN: SCORE, SPEED, LYRIC KARAOKE CARD & CONTROLS -->
+        <!-- MAIN STAGE: 3-Column TV Landscape Layout -->
+        <div class="komang-tv-stage ${isTilesView ? 'tiles-mode' : 'sheet-mode'}">
+
+          <!-- 1. LEFT COLUMN: TV HUD, BIG LYRICS, SCORE & TRANSPORT -->
           <div class="komang-left-col">
-            <!-- Score & Combo Big Card -->
+            <!-- Score, Combo & Lives Card (Matching Komang) -->
             <div class="komang-tv-score-card">
               <div class="tv-score-row">
-                <div class="tv-stat-block">
-                  <span class="tv-score-label">SKOR ANDA</span>
+                <div class="tv-score-item">
+                  <span class="tv-stat-kicker">TOTAL SKOR</span>
                   <span class="tv-score-num" id="nadimu-cur-score">${nadimuService.score} PTS</span>
                 </div>
-                <div class="tv-stat-block">
-                  <span class="tv-score-label">COMBO</span>
+                <div class="tv-score-item combo-item">
+                  <span class="tv-stat-kicker">STREAK COMBO</span>
                   <span class="tv-combo-num" id="nadimu-cur-combo">x${nadimuService.combo} COMBO</span>
                 </div>
+                <div class="tv-score-item lives-item">
+                  <span class="tv-stat-kicker">SISA NYAWA</span>
+                  <div class="komang-hearts-row" id="nadimu-hearts-row">
+                    ${nadimuService.isNoFail ? '<span style="font-size:12px; color:#00ffaa; font-weight:900; font-family:var(--font-display);">🛡️ BEBAS</span>' : `${'❤️'.repeat(Math.max(0, nadimuService.lives))}${'🖤'.repeat(Math.max(0, nadimuService.maxLives - nadimuService.lives))}`}
+                  </div>
+                </div>
               </div>
-              <div class="tv-lives-row">
-                <span class="tv-lives-label">STATUS NYAWA:</span>
-                <span class="tv-hearts-display" id="nadimu-hearts-row">
-                  ${nadimuService.isNoFail ? '<span style="font-size:12px; color:#00ffaa; font-weight:900; font-family:var(--font-display);">🛡️ BEBAS</span>' : `${'❤️'.repeat(Math.max(0, nadimuService.lives))}${'🖤'.repeat(Math.max(0, nadimuService.maxLives - nadimuService.lives))}`}
-                </span>
+              <div class="tv-multiplier-row">
                 <span class="multiplier-pill" id="nadimu-multiplier-pill">⚡ MULTIPLIER 1.0x</span>
+                <div class="komang-speed-selector">
+                  <span style="font-size:10px; color:var(--text-muted); font-weight:800; letter-spacing:0.5px;">KECEPATAN UBIN:</span>
+                  <button class="speed-chip ${nadimuService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" data-song="nadimu" title="Sangat Santai & Pelan (Cocok untuk Pemula)">🐢 Santai (0.75x)</button>
+                  <button class="speed-chip ${nadimuService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" data-song="nadimu" title="Tenang & Pas (Rekomendasi Standar)">🌿 Normal (1.0x)</button>
+                  <button class="speed-chip ${nadimuService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" data-song="nadimu" title="Lebih Cepat (Tantangan)">⚡ Cepat (1.3x)</button>
+                </div>
               </div>
             </div>
 
-            <!-- Speed Selector -->
-            <div class="komang-speed-selector">
-              <div class="speed-header">
-                <span class="speed-title">KECEPATAN UBIN (SPEED)</span>
-                <span class="speed-value" id="nadimu-speed-val">${nadimuService.speedMultiplier.toFixed(2)}x</span>
-              </div>
-              <div class="speed-chips-row">
-                <button class="speed-chip ${nadimuService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" data-song="nadimu" title="Sangat Santai & Pelan">🐢 Santai (0.75x)</button>
-                <button class="speed-chip ${nadimuService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" data-song="nadimu" title="Tenang & Pas (Rekomendasi)">🌿 Normal (1.0x)</button>
-                <button class="speed-chip ${nadimuService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" data-song="nadimu" title="Lebih Cepat">⚡ Cepat (1.3x)</button>
-              </div>
-            </div>
-
-            <!-- Big Karaoke & Chord Visualizer Card -->
+            <!-- TV HUD Chord & Measure Card -->
             <div class="komang-karaoke-card">
-              <div class="karaoke-card-header">
-                <span class="karaoke-badge">
-                  ${nadimuService.sessionMode === '30S_RANDOM' ? `🎲 45s: ${nadimuService.currentSegment?.title || 'Bait 1'}` : '🎤 LIRIK SEKARANG'}
+              <div class="karaoke-badge-row">
+                <span class="tv-tag" id="nadimu-session-tag">
+                  ${nadimuService.sessionMode === '30S_RANDOM' ? `🎲 45s: ${nadimuService.currentSegment?.title || 'Bait 1'}` : '🎹 AKOR SEKARANG'}
                 </span>
-                <span class="measure-indicator" id="nadimu-measure-indicator">Bar ${curMeasure.measure} / 16</span>
+                <span class="komang-chord-badge" id="nadimu-cur-chord" style="color:#00f7ff; border-color:#00f7ff; text-shadow:0 0 15px rgba(0,247,255,0.6);">${curMeasure.chord}</span>
               </div>
-
-              <div class="karaoke-body">
-                <div class="komang-chord-badge" id="nadimu-cur-chord" style="color:#00f7ff; border-color:#00f7ff; text-shadow:0 0 15px rgba(0,247,255,0.6);">
-                  ${curMeasure.chord}
-                </div>
-                <div class="komang-big-lyric" id="nadimu-cur-lyric">
-                  "${curMeasure.lyric}"
-                </div>
-                <div class="komang-next-lyric-cue" id="nadimu-next-preview">
-                  👉 Selanjutnya: ${nadimuService.getNextMeasure().chord} ("${nadimuService.getNextMeasure().lyric}")
-                </div>
+              <div class="komang-next-lyric-cue" id="nadimu-next-preview">
+                👉 Bar ${curMeasure.measure} / 16 (C Major)
               </div>
-
               <div class="komang-chord-desc-bar" id="nadimu-cur-desc">
                 ${curMeasure.chordDesc}
               </div>
             </div>
 
-            <!-- Player & Progress Card -->
+            <!-- Audio Backing Player Card -->
             <div class="komang-player-card">
               <div class="komang-transport-row">
                 <span style="font-size:10.5px; font-weight:800; color:var(--ice-blue); letter-spacing:0.5px; font-family:var(--font-display);">🎚️ PENGATURAN SUARA & SYNC</span>
                 <span class="komang-time-badge" style="font-size:10px;">C Major • 78 BPM</span>
               </div>
+
               <div class="komang-progress-bar" id="nadimu-progress-bar">
                 <div class="komang-progress-fill" id="nadimu-progress-fill" style="background:linear-gradient(90deg, #14b3d4, #fbb040);"></div>
+              </div>
+
+              <div class="komang-sync-row">
+                <div class="komang-offset-controls">
+                  <span>⏱️ Sync:</span>
+                  <button class="komang-offset-btn" id="nadimu-offset-minus">-0.1s</button>
+                  <span id="nadimu-offset-val">${nadimuService.audioOffsetSec.toFixed(1)}s</span>
+                  <button class="komang-offset-btn" id="nadimu-offset-plus">+0.1s</button>
+                  <button class="komang-offset-btn" id="nadimu-offset-zero">0.0s</button>
+                </div>
+                <div class="komang-vol-row">
+                  <span>🔊 MP3:</span>
+                  <input type="range" class="komang-vol-slider" id="nadimu-vol-backing" min="0" max="1" step="0.05" value="${nadimuService.backingVolume}">
+                  <span>🎹 Piano:</span>
+                  <input type="range" class="komang-vol-slider" id="nadimu-vol-player" min="0" max="1" step="0.05" value="${nadimuService.playerVolume}">
+                </div>
               </div>
             </div>
 
@@ -3475,13 +3549,13 @@ class App {
 
               <div class="hero-cta-quick-actions">
                 <button class="btn-hero-util" id="btn-nadimu-random-segment" title="Pilih bagian lagu acak baru">
-                  🎲 Ganti Bagian
+                  🎲 Acak Bagian
                 </button>
                 <button class="btn-hero-util" id="btn-nadimu-reset" title="Ulang dari awal bagian ini">
                   ↺ Ulang
                 </button>
-                <span class="hero-time-badge" id="nadimu-time-display">
-                  ${nadimuService.sessionMode === '30S_RANDOM' ? '⏱️ SISA: 30s' : '0:00 / 4:10'}
+                <span class="btn-hero-util util-timer" id="nadimu-session-timer-pill" style="display:${nadimuService.sessionMode === '30S_RANDOM' ? 'inline-flex' : 'none'};">
+                  ⏱️ SISA: <span id="nadimu-timer-countdown">30s</span>
                 </span>
               </div>
             </div>
@@ -3499,9 +3573,6 @@ class App {
               </button>
               <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-song="nadimu" data-fingers="4" data-chord="G">
                 <span>🖐️ 4: G</span>
-              </button>
-              <button class="komang-fbtn wildcard-fbtn ${curMeasure.fingerCount === 5 ? 'active' : ''}" data-song="nadimu" data-fingers="5" data-chord="WILDCARD" title="5 Jari: Wildcard Bebas">
-                <span>✨ 5: SAKTI</span>
               </button>
             </div>
           </div>
@@ -3612,9 +3683,6 @@ class App {
     const chordEl = document.getElementById('nadimu-cur-chord');
     if (chordEl) chordEl.innerText = curMeasure.chord;
 
-    const lyricEl = document.getElementById('nadimu-cur-lyric');
-    if (lyricEl) lyricEl.innerText = `"${curMeasure.lyric}"`;
-
     const descEl = document.getElementById('nadimu-cur-desc');
     if (descEl) descEl.innerText = curMeasure.chordDesc;
 
@@ -3692,7 +3760,7 @@ class App {
       if (nextPreviewEl && nadimuService) {
         const nxt = nadimuService.getNextMeasure();
         if (nxt) {
-          nextPreviewEl.innerText = `👉 Selanjutnya: ${nxt.chord} (${nxt.emoji} ${nxt.fingerCount}F) • "${nxt.lyric}"`;
+          nextPreviewEl.innerText = `👉 Selanjutnya: ${nxt.chord} (${nxt.emoji} ${nxt.fingerCount} Jari)`;
         }
       }
     }
@@ -3853,6 +3921,35 @@ class App {
     };
     const gradeColor = gradeColorMap[stats.grade] || '#00f7ff';
 
+    const gradeDetails = {
+      'S+': {
+        title: 'LEGEND MASTER',
+        speechTitle: 'Flix Terpukau:',
+        speechQuote: '"PERFECT FULL COMBO! 👑 Gerakan jarimu luar biasa sempurna tanpa celah! Kamu legenda musik sejati!"'
+      },
+      'S': {
+        title: 'MASTER PIANIS',
+        speechTitle: 'Flix Bangga Banget:',
+        speechQuote: '"LUAR BIASA! 🌟 Permainan musik dan ketukan jarimu sangat lincah! Kamu musisi berbakat!"'
+      },
+      'A': {
+        title: 'PIANIS MAHIR',
+        speechTitle: 'Flix Senang Banget:',
+        speechQuote: '"HEBAT BANGET! 🎵 Refleks jarimu keren dan lagunya mengalun sangat indah!"'
+      },
+      'B': {
+        title: 'PIANIS BERBAKAT',
+        speechTitle: 'Flix Bertepuk Tangan:',
+        speechQuote: '"BAGUS! 👏 Ketukanmu sudah cukup pas, ayo coba sekali lagi untuk raih Bintang 3!"'
+      },
+      'C': {
+        title: 'PIANIS PEMULA',
+        speechTitle: 'Flix Menyemangati:',
+        speechQuote: '"SEMANGAT! 💪 Coba ikuti alunan lagu dan ritme ubin dengan lebih santai ya!"'
+      }
+    };
+    const currentGrade = gradeDetails[stats.grade] || gradeDetails['A'];
+
     // Create official competition session for leaderboard
     const compSession = competitionLeaderboardService.createPendingSession({
       songId: 'NADIMU',
@@ -3880,7 +3977,7 @@ class App {
         <h2 class="modal-title-victory" style="color:#00f7ff;">VICTORY CLEAR!</h2>
         <p class="modal-subtitle-victory">
           ${nadimuService.sessionMode === '30S_RANDOM' 
-            ? `Bagian: <strong>${nadimuService.currentSegment?.title || 'Bait 1'}</strong> ("${nadimuService.currentSegment?.lyricHint || ''}")` 
+            ? `Bagian: <strong>${nadimuService.currentSegment?.title || 'Bait 1'}</strong>` 
             : 'Selalu Ada di Nadimu • OST Jumbo • Key C Major'}
         </p>
 
@@ -3891,9 +3988,22 @@ class App {
           </div>
           <div class="victory-stars-box">
             <div class="victory-stars-row">
-              ${'⭐'.repeat(stats.stars || 4)}
+              ${'⭐'.repeat(stats.stars || 3)}
             </div>
-            <span class="clear-pill">✨ TINGKAT: ${stats.grade === 'S' || stats.grade === 'S+' ? 'MASTER PIANIS' : 'PIANIS MAHIR'}</span>
+            ${stats.isFullCombo ? `
+              <span class="full-combo-pill">👑 PERFECT FULL COMBO!</span>
+            ` : `
+              <span class="clear-pill">✨ TINGKAT: ${currentGrade.title}</span>
+            `}
+          </div>
+        </div>
+
+        <!-- Mascot Celebration -->
+        <div class="modal-mascot-row victory">
+          <img src="/images/maskot_transparent.png" alt="Flix" class="modal-mascot-avatar mascot-victory-bounce" />
+          <div class="modal-mascot-speech victory">
+            <span class="mascot-speech-name">${currentGrade.speechTitle}</span>
+            <p class="mascot-speech-quote">${currentGrade.speechQuote}</p>
           </div>
         </div>
 
@@ -3999,7 +4109,17 @@ document.addEventListener('click', (e) => {
   }
 
   // 1. Home Buttons
-  else if (e.target.closest('#btn-home-tracks')) {
+  else if (e.target.closest('#btn-home-bgm-toggle') || e.target.closest('#btn-track-bgm-toggle')) {
+    const isEnabled = audioManager.toggleMenuBgm();
+    const btns = document.querySelectorAll('#btn-home-bgm-toggle, #btn-track-bgm-toggle');
+    btns.forEach(btn => {
+      btn.innerHTML = `
+        <span class="bgm-dot ${isEnabled ? 'active' : ''}"></span>
+        <span>🎵 Backsound: <strong>${isEnabled ? 'ON' : 'OFF'}</strong></span>
+      `;
+      btn.classList.toggle('active', isEnabled);
+    });
+  } else if (e.target.closest('#btn-home-tracks')) {
     audioManager.init();
     gameEngine.setState(GAME_STATES.TRACK_SELECT);
   } else if (e.target.closest('#btn-home-play')) {
@@ -4156,18 +4276,31 @@ document.addEventListener('click', (e) => {
   } else if (e.target.closest('#btn-result-leaderboard') || e.target.closest('#btn-result-open-lead')) {
     if (window.app) window.app._clearAutoAdvance();
     gameEngine.setState(GAME_STATES.LEADERBOARD);
-  } else if (e.target.closest('#btn-result-direct-claim') || e.target.closest('#btn-komang-manual-claim')) {
+  } else if (e.target.closest('#btn-result-direct-claim') || e.target.closest('#btn-komang-manual-claim') || e.target.closest('#btn-nadimu-manual-claim')) {
     if (window.app) window.app._clearAutoAdvance();
-    const existing = document.getElementById('komang-victory-backdrop');
-    if (existing) existing.remove();
+    const existingKomang = document.getElementById('komang-victory-backdrop');
+    if (existingKomang) existingKomang.remove();
+    const existingNadimu = document.getElementById('nadimu-victory-backdrop');
+    if (existingNadimu) existingNadimu.remove();
     gameEngine.setState(GAME_STATES.LEADERBOARD);
     setTimeout(() => {
       const manModal = document.getElementById('manual-input-modal');
-      if (manModal) manModal.style.display = 'flex';
+      if (manModal) {
+        const pending = competitionLeaderboardService.getPendingSession();
+        if (pending) {
+          const trackSelect = document.getElementById('kiosk-select-track');
+          const scoreInput = document.getElementById('kiosk-input-score');
+          if (trackSelect && pending.songId) trackSelect.value = pending.songId;
+          if (scoreInput && pending.score) scoreInput.value = pending.score;
+        }
+        manModal.style.display = 'flex';
+      }
     }, 150);
-  } else if (e.target.closest('#btn-komang-view-lead')) {
-    const existing = document.getElementById('komang-victory-backdrop');
-    if (existing) existing.remove();
+  } else if (e.target.closest('#btn-komang-view-lead') || e.target.closest('#btn-nadimu-view-lead')) {
+    const existingKomang = document.getElementById('komang-victory-backdrop');
+    if (existingKomang) existingKomang.remove();
+    const existingNadimu = document.getElementById('nadimu-victory-backdrop');
+    if (existingNadimu) existingNadimu.remove();
     gameEngine.setState(GAME_STATES.LEADERBOARD);
   } else if (e.target.closest('#btn-result-share')) {
     const summary = scoreManager.getSummary();
@@ -4475,6 +4608,35 @@ document.addEventListener('click', (e) => {
     if (!isNaN(fingers)) {
       nadimuTilesEngine.evaluateGesture(fingers, true);
     }
+  } else if (e.target.closest('#btn-nadimu-mode-playalong')) {
+    nadimuService.setMode('PLAY_ALONG');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-mode-guide')) {
+    nadimuService.setMode('GUIDE');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#btn-nadimu-mode-tempo')) {
+    nadimuService.setMode('TEMPO');
+    if (window.app) window.app.render();
+  } else if (e.target.closest('#nadimu-offset-minus')) {
+    nadimuService.setAudioOffset(nadimuService.audioOffsetSec - 0.1);
+    const offsetEl = document.getElementById('nadimu-offset-val');
+    if (offsetEl) offsetEl.innerText = `${nadimuService.audioOffsetSec.toFixed(1)}s`;
+  } else if (e.target.closest('#nadimu-offset-plus')) {
+    nadimuService.setAudioOffset(nadimuService.audioOffsetSec + 0.1);
+    const offsetEl = document.getElementById('nadimu-offset-val');
+    if (offsetEl) offsetEl.innerText = `${nadimuService.audioOffsetSec.toFixed(1)}s`;
+  } else if (e.target.closest('#nadimu-offset-zero')) {
+    nadimuService.setAudioOffset(0.0);
+    const offsetEl = document.getElementById('nadimu-offset-val');
+    if (offsetEl) offsetEl.innerText = `0.0s`;
+  } else if (e.target.closest('#nadimu-progress-bar')) {
+    const bar = e.target.closest('#nadimu-progress-bar');
+    const rect = bar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    if (nadimuService.audioEl && nadimuService.audioEl.duration) {
+      const targetSec = ratio * nadimuService.audioEl.duration;
+      nadimuService.jumpToMeasure(Math.floor(targetSec / nadimuService.measureDurationSec));
+    }
   } else if (e.target.closest('#btn-komang-mode-30s')) {
     komangService.setSessionMode('30S_RANDOM');
     komangService.reset();
@@ -4516,7 +4678,12 @@ document.addEventListener('click', (e) => {
   } else if (e.target.closest('.speed-chip')) {
     const chip = e.target.closest('.speed-chip');
     const speed = parseFloat(chip.dataset.speed) || 1.0;
-    komangService.setSpeed(speed);
+    const isNadimu = chip.dataset.song === 'nadimu' || gameEngine.currentState === GAME_STATES.NADIMU;
+    if (isNadimu) {
+      nadimuService.setSpeed(speed);
+    } else {
+      komangService.setSpeed(speed);
+    }
     document.querySelectorAll('.speed-chip').forEach(c => c.classList.toggle('active', c === chip));
   } else if (e.target.closest('#komang-progress-bar')) {
     const bar = e.target.closest('#komang-progress-bar');
@@ -4546,7 +4713,7 @@ document.addEventListener('click', (e) => {
   } else if (e.target.closest('#btn-komang-view-sheet')) {
     komangService.setViewMode('SHEET');
     if (window.app) window.app.render();
-  } else if (e.target.closest('#btn-komang-fullscreen-tv')) {
+  } else if (e.target.closest('#btn-komang-fullscreen-tv') || e.target.closest('#btn-nadimu-fullscreen-tv')) {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
       if (window.app) {
@@ -4612,6 +4779,10 @@ document.addEventListener('input', (e) => {
     komangService.setVolumes(parseFloat(target.value), komangService.playerVolume);
   } else if (target.id === 'komang-vol-player') {
     komangService.setVolumes(komangService.backingVolume, parseFloat(target.value));
+  } else if (target.id === 'nadimu-vol-backing') {
+    nadimuService.setVolumes(parseFloat(target.value), nadimuService.playerVolume);
+  } else if (target.id === 'nadimu-vol-player') {
+    nadimuService.setVolumes(nadimuService.backingVolume, parseFloat(target.value));
   } else if (target.id === 'set-player-name') {
     scoreManager.playerName = target.value.trim() || 'CYBER_PLAYER';
     scoreManager.save();
@@ -4661,9 +4832,6 @@ document.addEventListener('keydown', (e) => {
   } else if (key === '4' || key === 'k') {
     e.preventDefault();
     tilesEngine.triggerLaneAction(3, true);
-  } else if (key === '5' || key === 'l') {
-    e.preventDefault();
-    tilesEngine.evaluateGesture(5, true);
   } else if (key === ' ') {
     e.preventDefault();
     if (songService.isPlaying) songService.pause();
