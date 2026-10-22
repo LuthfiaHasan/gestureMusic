@@ -43,28 +43,37 @@ class SongMenuScreen {
     const playerStripHtml = hasPlayer ? `
       <div class="menu-player-strip">
         <div class="mps-info-group">
-          <div class="mps-avatar">👤</div>
+          <div class="mps-avatar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
           <div class="mps-text">
             <div class="mps-label-row">
               <span class="mps-status-tag active">PEMAIN AKTIF</span>
             </div>
             <div class="mps-name">${this.escapeHtml(player.name)}</div>
-            <div class="mps-phone">📱 ${leaderboardService.formatPhone(player.phone, true)}</div>
+            <div class="mps-phone">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:3px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+              ${leaderboardService.formatPhone(player.phone, true)}
+            </div>
           </div>
         </div>
         <div class="mps-actions">
           <button class="btn-mps-change" id="btn-mps-change" title="Ubah Nama atau Nomor Telepon">
-            ✏️ Ganti Pemain
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            Ganti Pemain
           </button>
           <button class="btn-mps-leaderboard" id="btn-mps-leaderboard" title="Lihat Papan Peringkat Skor">
-            🏆 Papan Peringkat
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+            Papan Peringkat
           </button>
         </div>
       </div>
     ` : `
       <div class="menu-player-strip">
         <div class="mps-info-group">
-          <div class="mps-avatar unregistered">⚠️</div>
+          <div class="mps-avatar unregistered">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
           <div class="mps-text">
             <div class="mps-label-row">
               <span class="mps-status-tag required">WAJIB ISI DATA</span>
@@ -75,10 +84,12 @@ class SongMenuScreen {
         </div>
         <div class="mps-actions">
           <button class="btn-mps-change" id="btn-mps-register" style="border-color: var(--cyan); color: var(--cyan); background: rgba(0,247,255,0.18);">
-            📝 Isi Data Pemain
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+            Isi Data Pemain
           </button>
           <button class="btn-mps-leaderboard" id="btn-mps-leaderboard" title="Lihat Papan Peringkat Skor">
-            🏆 Papan Peringkat
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+            Papan Peringkat
           </button>
         </div>
       </div>
@@ -332,16 +343,39 @@ class GestureMusicGameEngine {
     </svg>`;
   }
 
+  cleanGuidance(msg) {
+    if (!msg) return '';
+    return msg
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, '')
+      .replace(/[💀🎉🙌⚠️🟢✨👋✔❤️🖤⭐]/gu, '')
+      .replace(/\(\s*\)/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  renderHeartsHtml(lives = 5, maxLives = 5) {
+    let html = '';
+    const activeCount = Math.max(0, lives !== undefined ? lives : 0);
+    for (let i = 0; i < maxLives; i++) {
+      if (i < activeCount) {
+        html += `<svg width="14" height="14" viewBox="0 0 24 24" fill="#ff3366" class="hud-heart active"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+      } else {
+        html += `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" class="hud-heart empty"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+      }
+    }
+    return html;
+  }
+
   getHologramHandHtml(fingerCount = 1) {
     const validCount = [1, 2, 3, 4, 5, 10].includes(Number(fingerCount)) ? Number(fingerCount) : 1;
     const isTen = validCount === 10;
     const gestureNames = {
-      1: '☝️ 1 JARI TELUNJUK',
-      2: '✌️ 2 JARI PEACE',
-      3: '🤟 3 JARI (INDEX + MID + RING)',
-      4: '🖖 4 JARI (LIPAT JEMPOL)',
-      5: '🖐️ 5 JARI TELAPAK',
-      10: '🙌 10 JARI (DUA TANGAN)'
+      1: '1 JARI TELUNJUK',
+      2: '2 JARI PEACE',
+      3: '3 JARI (INDEX + MID + RING)',
+      4: '4 JARI (LIPAT JEMPOL)',
+      5: '5 JARI TELAPAK',
+      10: '10 JARI (DUA TANGAN)'
     };
     const chipText = gestureNames[validCount] || `${validCount} JARI`;
     const imgSrc = `/images/gesture_hand_${validCount}.png`;
@@ -387,24 +421,34 @@ class GestureMusicGameEngine {
       <div class="gm-app-container${themeCls}">
         <header class="gm-top-bar">
           <div class="gm-logo-group">
-            <button class="btn-back-menu" id="btn-back-menu">⬅ MENU</button>
-            <span class="neon-text-cyan">${this.config.title}</span>
-            <span class="neon-text-magenta">${this.config.genre || 'MUSIK'}</span>
+            <button class="btn-icon-back" id="btn-back-menu" title="Kembali ke Menu">‹</button>
+            <div class="gm-title-text-wrap">
+              <div class="gm-title-heading">
+                <span class="gm-title-pulse">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:var(--cyan);"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+                </span>
+                <span class="gm-main-title">${this.config.title}</span>
+                <span class="gm-genre-badge">${this.config.genre || 'MUSIK'}</span>
+              </div>
+              <span class="gm-subtitle">TANTANGAN 60 DETIK • 10-FINGER MOTION SYNC • REFLEKS KAMERA</span>
+            </div>
           </div>
           <div class="gm-header-actions">
-            <div class="top-player-chip" id="btn-top-player-chip" title="Klik untuk ubah profil pemain">
-              <span>👤</span>
+            <button class="mode-pill gm-head-btn" id="btn-top-player-chip" title="Profil Pemain">
+              <svg class="btn-svg-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
               <span id="top-player-name">${this.escapeHtml(leaderboardService.getCurrentPlayer()?.name || 'Pemain')}</span>
-            </div>
-            <button class="btn-top-leaderboard" id="btn-top-leaderboard" title="Buka Papan Peringkat">
-              <span>🏆</span> Leaderboard
             </button>
-            <button class="btn-camera-status ${this.isCameraActive ? 'online' : ''}" id="btn-camera-status-toggle">
+            <button class="mode-pill gm-head-btn" id="btn-top-leaderboard" title="Buka Klasemen">
+              <svg class="btn-svg-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+              <span>Leaderboard</span>
+            </button>
+            <button class="mode-pill gm-head-btn ${this.isCameraActive ? 'active' : ''}" id="btn-camera-status-toggle">
               <span class="status-pulse-dot"></span>
               <span id="cam-status-label">${this.isCameraActive ? 'Kamera Aktif' : 'Buka Kamera'}</span>
             </button>
-            <button class="btn-kembali" id="btn-kembali">
-              <span class="kembali-arrow">↩</span> Reset Lagu
+            <button class="mode-pill gm-head-btn" id="btn-kembali" title="Ulang lagu dari awal">
+              <svg class="btn-svg-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+              <span>Reset Lagu</span>
             </button>
           </div>
         </header>
@@ -420,21 +464,17 @@ class GestureMusicGameEngine {
             </div>
             <div class="active-beat-indicator" id="active-beat-indicator">
               <span class="abi-label">TARGET KETUKAN:</span>
-              <span class="abi-val" id="abi-val">${curTarget.emoji} ${curTarget.label || curTarget.name}</span>
+              <span class="abi-val" id="abi-val">${curTarget.label || curTarget.name}</span>
             </div>
             <div class="lives-display-badge">
-              <span class="lives-caption">NYAWA:</span>
+              <span class="lives-caption">SISA NYAWA:</span>
               <div class="hearts-row" id="hearts-row">
-                <span class="heart-icon active" id="heart-1">❤️</span>
-                <span class="heart-icon active" id="heart-2">❤️</span>
-                <span class="heart-icon active" id="heart-3">❤️</span>
-                <span class="heart-icon active" id="heart-4">❤️</span>
-                <span class="heart-icon active" id="heart-5">❤️</span>
+                ${this.renderHeartsHtml(tel.lives !== undefined ? tel.lives : 5)}
               </div>
             </div>
             <div class="stars-display-badge" id="stars-display-badge">
-              <span class="stars-caption">RATING:</span>
-              <span class="stars-val" id="stars-val">⭐⭐⭐⭐⭐ PERFECT!</span>
+              <span class="stars-caption">PERFORMA:</span>
+              <span class="stars-val" id="stars-val"><svg width="12" height="12" viewBox="0 0 24 24" fill="#ffd700" class="btn-svg-icon" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>PERFECT</span>
             </div>
             <div class="score-progress-group">
               <div class="score-line">
@@ -442,7 +482,7 @@ class GestureMusicGameEngine {
                 <span class="time-digit" id="time-display">00:00 / 01:00</span>
                 <span class="score-sep">•</span>
                 <span class="score-caption">SKOR:</span>
-                <span class="score-digit" id="score-digit">0</span>
+                <span class="score-digit" id="score-digit">0 PTS</span>
               </div>
               <div class="progress-track-strip">
                 <div class="progress-fill-gradient" id="progress-fill-gradient" style="width: 0%;"></div>
@@ -467,17 +507,17 @@ class GestureMusicGameEngine {
                 <span class="hud-tracking-dot"></span>
                 <span>HAND TRACKING ACTIVE</span>
               </div>
-              <button class="btn-stop-virtual" id="btn-stop-virtual" style="display: none;">🛑 Hentikan Mode Virtual</button>
+              <button class="btn-stop-virtual" id="btn-stop-virtual" style="display: none;">Hentikan Mode Virtual</button>
               <video id="camera-video" autoplay playsinline muted style="opacity: 1 !important; display: block !important;"></video>
               <canvas id="tracking-canvas"></canvas>
               <div class="camera-gate-card" id="camera-gate-card" style="${this.isCameraActive ? 'display:none;' : 'display:flex;'}">
                 <div class="gate-modal-content">
-                  <div class="gate-cam-icon">📷</div>
+                  <div class="gate-cam-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></div>
                   <h3 class="gate-head">KAMERA WEBCAM</h3>
                   <p class="gate-hint" id="gate-hint">Buka webcam laptop Anda untuk mengendalikan musik, atau gunakan Mode Virtual jika kamera sedang sibuk.</p>
                   <div class="gate-buttons-col">
-                    <button class="btn-gate-activate" id="btn-gate-activate">▶ BUKA KAMERA SEKARANG</button>
-                    <button class="btn-gate-sim" id="btn-gate-sim">🖱️ Uji Mode Virtual (Rotasi Jari Otomatis)</button>
+                    <button class="btn-gate-activate" id="btn-gate-activate">BUKA KAMERA SEKARANG</button>
+                    <button class="btn-gate-sim" id="btn-gate-sim">Uji Mode Virtual (Rotasi Jari Otomatis)</button>
                   </div>
                 </div>
               </div>
@@ -488,8 +528,8 @@ class GestureMusicGameEngine {
           <section class="gm-panel guide-stage-panel">
             <div class="panel-box-header">
               <h2 class="panel-title">PETUNJUK GERAKAN JARI</h2>
-              <button class="btn-guide-help" id="btn-open-gesture-guide" title="Lihat Panduan 6 Jari">📖 Panduan Jari</button>
-              <div class="next-target-countdown" id="next-target-countdown">Berikutnya: ✌️ 2 Jari (dalam 4s)</div>
+              <button class="btn-guide-help" id="btn-open-gesture-guide" title="Lihat Panduan 6 Jari"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>Panduan Jari</button>
+              <div class="next-target-countdown" id="next-target-countdown">Berikutnya: 2 Jari (dalam 4s)</div>
             </div>
             <div class="finger-arena-stage" id="finger-arena-stage">
               <!-- 1. Antrean Petunjuk 4 Kotak Horizontal -->
@@ -505,7 +545,7 @@ class GestureMusicGameEngine {
                 <div class="thb-text">
                   <h3 class="thb-title" id="thb-title">TARGET: ${curTarget.label || curTarget.name}</h3>
                   <p class="thb-desc" id="thb-desc">${curTarget.tip || 'Ayunkan jarimu naik-turun santai mengikuti ketukan!'}</p>
-                  ${curTarget.lyric ? `<p class="thb-lyric" id="thb-lyric" style="font-size:11px;color:#ffd700;margin-top:2px;font-style:italic;">🎵 "${curTarget.lyric}"</p>` : ''}
+                  ${curTarget.lyric ? `<p class="thb-lyric" id="thb-lyric" style="font-size:11px;color:rgba(220,235,255,0.85);margin-top:2px;font-style:italic;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:4px;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>"${curTarget.lyric}"</p>` : ''}
                 </div>
               </div>
 
@@ -527,7 +567,7 @@ class GestureMusicGameEngine {
                   <span class="beat-pill ${tel.beatCount4 === 4 ? 'active' : ''}" id="beat-pill-4">4</span>
                 </div>
                 <div class="beat-motion-indicator">
-                  <span class="bmi-wave">⚡ AYUN NAIK-TURUN</span>
+                  <span class="bmi-wave"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:4px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>AYUN NAIK-TURUN</span>
                 </div>
               </div>
 
@@ -538,7 +578,7 @@ class GestureMusicGameEngine {
                     <span class="comp-lbl">TERDETEKSI:</span>
                     <span class="comp-val" id="comp-detected-text">Belum ada tangan</span>
                   </div>
-                  <div class="comp-status-badge idle" id="comp-status-badge">👋 Angkat Jari ke Kamera</div>
+                  <div class="comp-status-badge idle" id="comp-status-badge">Angkat Jari ke Kamera</div>
                   <div class="comp-col">
                     <span class="comp-lbl">KECEPATAN:</span>
                     <div class="motion-mini-track">
@@ -550,7 +590,7 @@ class GestureMusicGameEngine {
 
               <!-- 6. Bottom Bold Banner -->
               <div class="guide-bottom-banner">
-                <div class="banner-heading" id="banner-heading">${tel.guidanceMessage || this.config.defaultGuidance}</div>
+                <div class="banner-heading" id="banner-heading">${this.cleanGuidance(tel.guidanceMessage) || this.cleanGuidance(this.config.defaultGuidance)}</div>
                 <div class="banner-sub">Tahan bentuk jari yang tepat & ayunkan naik-turun santai! Musik akan berputar mulus.</div>
               </div>
             </div>
@@ -558,53 +598,94 @@ class GestureMusicGameEngine {
         </main>
 
         <footer class="gm-bottom-strip">
-          <div class="audio-hud-controls" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:4px 6px;">
+          <div class="audio-hud-controls">
             <div class="waveform-box">
               <canvas id="waveform-canvas" width="220" height="34"></canvas>
             </div>
-            <div class="volume-slider-group" style="display:flex;align-items:center;gap:8px;">
-              <span class="vol-icon">🔊</span>
-              <input type="range" id="volume-slider" min="0" max="100" value="85" class="slider-cyber"/>
+            <div class="volume-slider-group">
+              <svg class="vol-svg-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+              <input type="range" id="volume-slider" min="0" max="100" value="85" class="slider-cyber" title="Volume Musik"/>
             </div>
-            <button class="btn-mode-toggle" id="btn-mirror-toggle">🪞 Cermin Kamera</button>
+            <button class="btn-mirror-cyber ${this.isMirrored ? 'active' : ''}" id="btn-mirror-toggle" title="Klik untuk balikkan tampilan cermin kamera">
+              <svg class="mirror-svg-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20"></path>
+                <path d="M4 18l8-12v12H4z"></path>
+                <path d="M20 18l-8-12v12h8z" stroke-dasharray="2 2"></path>
+              </svg>
+              <span>Cermin Kamera</span>
+            </button>
           </div>
         </footer>
 
         <!-- Toast -1 Nyawa -->
         <div class="toast-life-lost" id="toast-life-lost" style="display: none;">
-          <div class="toast-heart">💔</div>
+          <div class="toast-heart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#ff2d55" stroke="#ff2d55"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+          </div>
           <div class="toast-msg" id="toast-msg">-1 NYAWA (SISA: 4)</div>
         </div>
 
         <!-- Modal Game Over (Lagu Hangus) -->
         <div class="game-over-modal-backdrop" id="game-over-modal" style="display: none;">
           <div class="game-over-modal-card">
-            <div class="modal-skull-icon">💀</div>
+            <div class="modal-skull-icon">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="gameover-svg-icon">
+                <path d="M12 2a8 8 0 0 0-8 8c0 3.3 2 6 4 7.5V20a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.5c2-1.5 4-4.2 4-7.5a8 8 0 0 0-8-8z"></path>
+                <circle cx="9" cy="11" r="1.5" fill="#ff2d55"></circle>
+                <circle cx="15" cy="11" r="1.5" fill="#ff2d55"></circle>
+                <line x1="10" y1="19" x2="10" y2="22"></line>
+                <line x1="14" y1="19" x2="14" y2="22"></line>
+              </svg>
+            </div>
             <h2 class="modal-title">LAGU HANGUS!</h2>
             <p class="modal-subtitle">Nyawa Anda Habis! Anda salah melakukan gerakan sebanyak 5 kali.</p>
             <div class="modal-star-section">
-              <span class="modal-star-banner" id="stat-gameover-stars">⭐</span>
-              <span class="stat-lbl" id="stat-gameover-rank">SURVIVE</span>
+              <div class="modal-star-banner" id="stat-gameover-stars">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffd700" stroke="#ffd700" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </div>
+              <span class="stat-lbl" id="stat-gameover-rank">SURVIVE (1/5 Bintang)</span>
             </div>
             <div style="display:flex;gap:18px;margin:8px 0;width:100%;justify-content:center;">
               <div><span style="font-size:18px;font-weight:900;color:#fff;" id="stat-final-score">0</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">SKOR KETUKAN</span></div>
               <div><span style="font-size:18px;font-weight:900;color:var(--cyan);" id="stat-final-time">00:00</span><br><span style="font-size:10px;color:rgba(255,255,255,0.6);">WAKTU BERTAHAN</span></div>
             </div>
             <div class="modal-player-rank-chip" id="stat-gameover-leaderboard-chip" style="display: none;"></div>
-            <button class="btn-modal-leaderboard" id="btn-leaderboard-gameover">🏆 Buka Papan Peringkat Terpadu</button>
-            <button class="btn-modal-restart" id="btn-retry-gameover">🔄 Coba Lagi (Ulangi Lagu)</button>
-            <button class="btn-modal-menu" id="btn-menu-gameover">📋 Kembali ke Menu</button>
+            <button class="btn-modal-leaderboard" id="btn-leaderboard-gameover">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+              <span>Buka Papan Peringkat Terpadu</span>
+            </button>
+            <button class="btn-modal-restart" id="btn-retry-gameover">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+              <span>Coba Lagi (Ulangi Lagu)</span>
+            </button>
+            <button class="btn-modal-menu" id="btn-menu-gameover">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              <span>Kembali ke Menu</span>
+            </button>
           </div>
         </div>
 
         <!-- Modal Kemenangan (Lagu Selesai) -->
         <div class="game-over-modal-backdrop" id="victory-modal" style="display: none;">
           <div class="game-over-modal-card victory-card" style="max-width:440px;">
-            <div class="modal-skull-icon victory-icon">🏆</div>
+            <div class="modal-skull-icon victory-icon">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="victory-svg-icon" style="filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.8));">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                <path d="M4 22h16"></path>
+                <path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path>
+                <path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path>
+              </svg>
+            </div>
             <h2 class="modal-title victory-title">LAGU SELESAI!</h2>
             <p class="modal-subtitle">Selamat! Anda menyelesaikan tantangan 1 Menit lagu ${this.config.title}!</p>
             <div class="modal-star-section">
-              <span class="modal-star-banner animated-stars" id="stat-victory-stars">⭐⭐⭐⭐⭐</span>
+              <div class="modal-star-banner animated-stars" id="stat-victory-stars">
+                <!-- 5 stars generated dynamically -->
+              </div>
               <span class="stat-lbl" id="stat-victory-rank">PERFECT!</span>
             </div>
 
@@ -617,7 +698,7 @@ class GestureMusicGameEngine {
 
             <div style="display:flex;gap:18px;margin:6px 0;width:100%;justify-content:center;">
               <div><span style="font-size:16px;font-weight:900;color:#ffd700;" id="stat-victory-score">1,250</span><br><span style="font-size:9.5px;color:rgba(255,255,255,0.6);">SKOR KETUKAN</span></div>
-              <div><span style="font-size:16px;font-weight:900;color:#00ff88;" id="stat-victory-lives">5/5 ❤️</span><br><span style="font-size:9.5px;color:rgba(255,255,255,0.6);">SISA NYAWA</span></div>
+              <div><span style="font-size:16px;font-weight:900;color:#00ff88;" id="stat-victory-lives">5/5</span><br><span style="font-size:9.5px;color:rgba(255,255,255,0.6);">SISA NYAWA</span></div>
             </div>
 
             <!-- Official QR Registration Card -->
@@ -626,16 +707,25 @@ class GestureMusicGameEngine {
                 <canvas id="motionsync-victory-qr-canvas" width="105" height="105"></canvas>
               </div>
               <div style="flex:1;">
-                <span style="background:#00f7ff;color:#060a14;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:10px;display:inline-block;margin-bottom:3px;">🎁 KLAIM HADIAH RESMI</span>
+                <span style="background:#00f7ff;color:#060a14;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:10px;display:inline-block;margin-bottom:3px;">KLAIM HADIAH RESMI</span>
                 <div style="font-size:11.5px;font-weight:800;color:#fff;line-height:1.2;">SCAN QR UNTUK DAFTAR NAMA & HP</div>
                 <div style="font-size:10px;color:rgba(255,255,255,0.7);margin:3px 0 6px 0;">Atau daftarkan langsung dari layar ini:</div>
-                <button class="btn-claim-inline" id="btn-motionsync-manual-claim" style="background:linear-gradient(135deg,#ff2d75,#ff6584);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;">✏️ Input di Layar Ini</button>
+                <button class="btn-claim-inline" id="btn-motionsync-manual-claim" style="background:linear-gradient(135deg,#ff2d75,#ff6584);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:800;cursor:pointer;">Input di Layar Ini</button>
               </div>
             </div>
 
-            <button class="btn-modal-leaderboard" id="btn-leaderboard-victory">🏆 Buka Papan Peringkat Terpadu</button>
-            <button class="btn-modal-restart btn-victory-restart" id="btn-retry-victory">🔄 Mainkan Lagi</button>
-            <button class="btn-modal-menu" id="btn-menu-victory">📋 Pilih Lagu Lain</button>
+            <button class="btn-modal-leaderboard" id="btn-leaderboard-victory">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+              <span>Buka Papan Peringkat Terpadu</span>
+            </button>
+            <button class="btn-modal-restart btn-victory-restart" id="btn-retry-victory">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+              <span>Mainkan Lagi</span>
+            </button>
+            <button class="btn-modal-menu" id="btn-menu-victory">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path><path d="M2 14h20"></path></svg>
+              <span>Pilih Lagu Lain</span>
+            </button>
           </div>
         </div>
 
@@ -713,12 +803,14 @@ class GestureMusicGameEngine {
       this.syncService.restartGame();
     });
 
-    document.getElementById('btn-mirror-toggle')?.addEventListener('click', () => {
+    document.getElementById('btn-mirror-toggle')?.addEventListener('click', (e) => {
       this.isMirrored = !this.isMirrored;
       const vid = document.getElementById('camera-video');
       const can = document.getElementById('tracking-canvas');
       if (vid) vid.style.transform = this.isMirrored ? 'scaleX(-1)' : 'none';
       if (can) can.style.transform = this.isMirrored ? 'scaleX(-1)' : 'none';
+      const btn = e.currentTarget || document.getElementById('btn-mirror-toggle');
+      if (btn) btn.classList.toggle('active', this.isMirrored);
     });
 
     document.getElementById('volume-slider')?.addEventListener('input', (e) => {
@@ -1132,7 +1224,7 @@ class GestureMusicGameEngine {
     ctx.fillStyle = 'rgba(0, 247, 255, 0.7)';
     ctx.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`ANGKAT ${target.fingerCount} JARI (${target.emoji}) KE SINI`, cx, cy + 95);
+    ctx.fillText(`ANGKAT ${target.fingerCount} JARI KE SINI`, cx, cy + 95);
     ctx.restore();
   }
 
@@ -1150,35 +1242,30 @@ class GestureMusicGameEngine {
     }
 
     const scoreEl = document.getElementById('score-digit');
-    if (scoreEl) scoreEl.innerText = Number(tel.score).toLocaleString();
+    if (scoreEl) scoreEl.innerText = `${Number(tel.score).toLocaleString()} PTS`;
 
     const progBar = document.getElementById('progress-fill-gradient');
     if (progBar) progBar.style.width = `${tel.progressPct}%`;
 
-    for (let i = 1; i <= 5; i++) {
-      const heartEl = document.getElementById(`heart-${i}`);
-      if (heartEl) {
-        if (i <= tel.lives) { heartEl.innerText = '❤️'; heartEl.className = 'heart-icon active'; }
-        else { heartEl.innerText = '🖤'; heartEl.className = 'heart-icon lost'; }
-      }
+    const heartsRow = document.getElementById('hearts-row');
+    if (heartsRow && tel.lives !== undefined) {
+      heartsRow.innerHTML = this.renderHeartsHtml(tel.lives, 5);
     }
 
     const starVal = document.getElementById('stars-val');
     if (starVal && tel.starRating) {
-      starVal.innerText = `${tel.starRating.starIcons} ${tel.starRating.title}`;
+      starVal.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="#ffd700" class="btn-svg-icon" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><span>${tel.starRating.title || 'PERFECT'}</span>`;
       starVal.style.color = tel.starRating.color || '#ffd700';
     }
 
     const curTarget = tel.currentTarget || this.defaultSequence[0];
     const abiVal = document.getElementById('abi-val');
-    if (abiVal) abiVal.innerText = `${curTarget.emoji} ${curTarget.label || curTarget.name}`;
+    if (abiVal) abiVal.innerText = `${curTarget.label || curTarget.name}`;
 
-    const thbEmoji = document.getElementById('thb-emoji');
     const thbTitle = document.getElementById('thb-title');
     const thbDesc = document.getElementById('thb-desc');
     const thbLyric = document.getElementById('thb-lyric');
     const thbThumbImg = document.getElementById('thb-thumb-img');
-    if (thbEmoji) thbEmoji.innerText = curTarget.emoji || '☝️';
     if (thbTitle) thbTitle.innerText = `TARGET: ${curTarget.label || curTarget.name}`;
     if (thbDesc) thbDesc.innerText = curTarget.tip || 'Ayunkan jarimu naik-turun santai mengikuti ketukan!';
     if (thbThumbImg) {
@@ -1190,7 +1277,7 @@ class GestureMusicGameEngine {
     }
     if (thbLyric) {
       if (curTarget.lyric) {
-        thbLyric.innerText = `🎵 "${curTarget.lyric}"`;
+        thbLyric.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:4px;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>"${curTarget.lyric}"`;
         thbLyric.style.display = 'block';
       } else {
         thbLyric.style.display = 'none';
@@ -1211,7 +1298,7 @@ class GestureMusicGameEngine {
 
     const cdEl = document.getElementById('next-target-countdown');
     if (cdEl) {
-      if (tel.nextTargetInfo) cdEl.innerText = `Berikutnya: ${tel.nextTargetInfo.nextTarget.emoji} ${tel.nextTargetInfo.nextTarget.name} (Ketukan ${tel.beatCount4 || 1}/4)`;
+      if (tel.nextTargetInfo) cdEl.innerText = `Berikutnya: ${tel.nextTargetInfo.nextTarget.name} (Ketukan ${tel.beatCount4 || 1}/4)`;
       else cdEl.innerText = `Menuju Selesai (${Math.max(0, 60 - Math.floor(tel.currentTime || 0))}s)`;
     }
 
@@ -1223,12 +1310,12 @@ class GestureMusicGameEngine {
     const miniBar = document.getElementById('motion-mini-bar');
     if (compDet) compDet.innerText = tel.isTargetMatch ? `${curTarget.fingerCount} Jari (Cocok!)` : `${tel.totalFingers} Jari`;
     if (compBadge) {
-      if (!tel.hasHand) { compBadge.className = 'comp-status-badge idle'; compBadge.innerText = '👋 Angkat Jari ke Kamera'; }
-      else if (tel.isTargetMatch && tel.isMoving) { compBadge.className = 'comp-status-badge match'; compBadge.innerText = '🟢 TEPAT & BERGERAK!'; }
-      else if (tel.isTargetMatch && !tel.isMoving) { compBadge.className = 'comp-status-badge match'; compBadge.innerText = '✨ BENTUK TEPAT! (AYUN NAIK-TURUN)'; }
+      if (!tel.hasHand) { compBadge.className = 'comp-status-badge idle'; compBadge.innerText = 'Angkat Jari ke Kamera'; }
+      else if (tel.isTargetMatch && tel.isMoving) { compBadge.className = 'comp-status-badge match'; compBadge.innerText = 'TEPAT & BERGERAK!'; }
+      else if (tel.isTargetMatch && !tel.isMoving) { compBadge.className = 'comp-status-badge match'; compBadge.innerText = 'BENTUK TEPAT! (AYUN NAIK-TURUN)'; }
       else if (curTarget.fingerCount <= 5 && tel.totalFingers > 5) {
-        compBadge.className = 'comp-status-badge wrong'; compBadge.innerText = `⚠️ GUNAKAN 1 TANGAN SAJA!`;
-      } else { compBadge.className = 'comp-status-badge wrong'; compBadge.innerText = `⚠️ SALAH! GUNAKAN ${curTarget.fingerCount} JARI (${curTarget.emoji})`; }
+        compBadge.className = 'comp-status-badge wrong'; compBadge.innerText = `GUNAKAN 1 TANGAN SAJA!`;
+      } else { compBadge.className = 'comp-status-badge wrong'; compBadge.innerText = `BENTUK SALAH: GUNAKAN ${curTarget.fingerCount} JARI`; }
     }
 
     if (miniBar) {
@@ -1237,7 +1324,7 @@ class GestureMusicGameEngine {
     }
 
     const bannerHead = document.getElementById('banner-heading');
-    if (bannerHead) bannerHead.innerText = tel.guidanceMessage || this.config.defaultGuidance || 'AYUNKAN JARIMU NAIK-TURUN SESUAI KETUKAN LAGU!';
+    if (bannerHead) bannerHead.innerText = this.cleanGuidance(tel.guidanceMessage) || this.cleanGuidance(this.config.defaultGuidance) || 'AYUNKAN JARIMU NAIK-TURUN SESUAI KETUKAN LAGU!';
   }
 
   showLifeLostToast(remainingLives, reason) {
@@ -1253,6 +1340,14 @@ class GestureMusicGameEngine {
     }
   }
 
+  _renderStars(earnedCount, max = 5) {
+    const earned = Math.max(0, Math.min(max, earnedCount || 1));
+    return Array.from({ length: max }, (_, i) => {
+      const isEarned = i < earned;
+      return `<svg class="star-rating-svg ${isEarned ? 'earned' : 'unearned'}" width="20" height="20" viewBox="0 0 24 24" fill="${isEarned ? '#ffd700' : 'rgba(255,255,255,0.1)'}" stroke="${isEarned ? '#ffd700' : 'rgba(255,255,255,0.22)'}" stroke-width="1.2" style="display:inline-block;margin:0 2px;${isEarned ? 'filter:drop-shadow(0 0 6px rgba(255,215,0,0.7));' : ''}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    }).join('');
+  }
+
   showGameOverModal(stats) {
     const modal = document.getElementById('game-over-modal');
     if (!modal) return;
@@ -1266,7 +1361,7 @@ class GestureMusicGameEngine {
       timeVal.innerText = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     }
     if (stats.starRating) {
-      if (starEl) starEl.innerText = stats.starRating.starIcons;
+      if (starEl) starEl.innerHTML = this._renderStars(stats.starRating.stars || 1);
       if (rankEl) rankEl.innerText = `${stats.starRating.title} (${stats.starRating.stars}/5 Bintang)`;
     }
 
@@ -1282,10 +1377,10 @@ class GestureMusicGameEngine {
     const rankEl = document.getElementById('stat-victory-rank');
     const descEl = document.getElementById('stat-victory-desc');
     if (scoreVal) scoreVal.innerText = Number(stats.score || 0).toLocaleString();
-    if (livesVal) livesVal.innerText = `${stats.lives || 5}/5 ❤️`;
+    if (livesVal) livesVal.innerText = `${stats.lives || 5}/5 Sisa Nyawa`;
     if (stats.starRating) {
-      if (starEl) starEl.innerText = stats.starRating.starIcons;
-      if (rankEl) rankEl.innerText = `${stats.starRating.title} (${stats.starRating.stars}/5 BINTANG)`;
+      if (starEl) starEl.innerHTML = this._renderStars(stats.starRating.stars || 5);
+      if (rankEl) rankEl.innerText = `${stats.starRating.title} (${stats.starRating.stars}/5 Bintang)`;
       if (descEl) descEl.innerText = stats.starRating.description;
     }
 
@@ -1380,10 +1475,10 @@ class TaragakPulangGame extends GestureMusicGameEngine {
       genre: 'MINANG KLASIK',
       syncService: taragakPulangSyncService,
       defaultSequence: taragakPulangSyncService.sequence,
-      themeClass: 'taragak-theme',
-      primaryColor: '#ffd700',
+      themeClass: '',
+      primaryColor: '#00f7ff',
       accentColor: '#00ff88',
-      defaultGuidance: 'AYUNKAN JARIMU NAIK-TURUN MENGIKUTI IRAMA MINANG TARAGAK PULANG!',
+      defaultGuidance: 'AYUNKAN JARIMU NAIK-TURUN SESUAI KETUKAN LAGU TARAGAK PULANG!',
     });
   }
 }

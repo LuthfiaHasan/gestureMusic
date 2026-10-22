@@ -599,7 +599,7 @@ export class KomangTilesEngine {
             // HANYA ubin akor utama yang mengurangi nyawa
             this.komangService.loseLife('CHORD_MISSED');
             const hitX = (tile.lane + 0.5) * laneWidth;
-            this._spawnToast(hitX, hitY - 25, 'MISS! 💔 -1 NYAWA', 0, '#ff3b3b');
+            this._spawnToast(hitX, hitY - 25, 'MISS! -1 NYAWA', 0, '#ff3b3b');
             this.lightPillars[tile.lane] = 0.75;
             this.laneActiveStates[tile.lane] = true;
             setTimeout(() => {
@@ -830,7 +830,7 @@ export class KomangTilesEngine {
         // Finger Icon & Gesture hint below chord
         ctx.font = 'bold 12.5px Outfit, sans-serif';
         ctx.fillStyle = lane.color;
-        ctx.fillText(`${tile.emoji} ${tile.fingerCount} JARI`, lx + lWidth / 2, topY + 58);
+        ctx.fillText(`${tile.fingerCount} JARI`, lx + lWidth / 2, topY + 58);
 
         // Chord description in middle of long tile
         if (tile.chordDesc && tileHeight >= 140) {
@@ -987,7 +987,7 @@ export class KomangTilesEngine {
 
       ctx.fillStyle = isActive ? '#ffffff' : lane.color;
       ctx.font = 'bold 12.5px Outfit, sans-serif';
-      ctx.fillText(`${lane.emoji} ${lane.fingerCount} JARI`, centerX, badgeY);
+      ctx.fillText(`${lane.fingerCount} JARI`, centerX, badgeY);
 
       // 4. Harmonic Role Subtitle
       ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.95)' : 'rgba(220, 232, 255, 0.85)';
@@ -1069,11 +1069,11 @@ export class KomangTilesEngine {
       ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('▶️ KLIK "MAIN 30s" ATAU SENTUH TUTS', w / 2, by + 18);
+      ctx.fillText('KLIK "MAIN 30s" ATAU SENTUH TUTS', w / 2, by + 18);
 
       ctx.fillStyle = '#bfd9ee';
       ctx.font = '500 11px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText('Tunjukkan gestur tangan di depan kamera 📷', w / 2, by + 34);
+      ctx.fillText('Tunjukkan gestur tangan di depan kamera', w / 2, by + 34);
 
       ctx.restore();
     }
