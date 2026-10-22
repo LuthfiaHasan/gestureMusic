@@ -2109,6 +2109,29 @@
   animation: bgmPulse 1.8s infinite;
 }
 
+.btn-menu-bgm-pill .bgm-label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-menu-bgm-pill .bgm-icon-svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  stroke: #38bdf8;
+  transition: all 0.25s ease;
+}
+
+.btn-menu-bgm-pill.active .bgm-icon-svg {
+  stroke: #00ffaa;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 170, 0.6));
+}
+
+.btn-menu-bgm-pill:hover .bgm-icon-svg {
+  transform: scale(1.1);
+}
+
 @keyframes bgmPulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.35); opacity: 0.7; }

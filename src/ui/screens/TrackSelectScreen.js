@@ -28,7 +28,10 @@ export class TrackSelectScreen {
           <div style="margin-left:auto;">
             <button class="btn-menu-bgm-pill ${audioManager.isBgmEnabled ? 'active' : ''}" id="btn-track-bgm-toggle" title="Putar / Jeda Backsound Flix">
               <span class="bgm-dot ${audioManager.isBgmEnabled ? 'active' : ''}"></span>
-              <span>🎵 Backsound: <strong>${audioManager.isBgmEnabled ? 'ON' : 'OFF'}</strong></span>
+              <span class="bgm-label-wrap">
+                <svg class="bgm-icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>
+                <span>Backsound: <strong>${audioManager.isBgmEnabled ? 'ON' : 'OFF'}</strong></span>
+              </span>
             </button>
           </div>
         </div>

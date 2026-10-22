@@ -33,6 +33,22 @@ import { competitionLeaderboardService, COMPETITION_TRACKS } from './services/Co
 import { qrCodeService } from './services/QrCodeService.js';
 import { JatuhSukaGame, TaragakPulangGame } from './services/MotionSyncGameEngine.js';
 
+function renderHeartsSvg(lives, maxLives = 5, isNoFail = false) {
+  if (isNoFail) {
+    return `<span class="hud-nofail-badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00ffaa" stroke-width="2.2" class="btn-svg-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg> <span>BEBAS</span></span>`;
+  }
+  let html = '';
+  const activeCount = Math.max(0, lives !== undefined ? lives : 0);
+  for (let i = 0; i < maxLives; i++) {
+    if (i < activeCount) {
+      html += `<svg width="14" height="14" viewBox="0 0 24 24" fill="#ff3366" class="hud-heart active"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+    } else {
+      html += `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" class="hud-heart empty"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+    }
+  }
+  return html;
+}
+
 class App {
   constructor() {
     this.appEl = document.getElementById('app');
@@ -41,7 +57,7 @@ class App {
     this.waveformVisualizer = null;
 
     // Viewport Mode
-    this.isFullscreen = settingsManager.settings.viewportMode === 'fullscreen';
+    this.isFullscreen = true;
 
     // Tracking state
     this.isTrackingRunning = false;
@@ -400,13 +416,16 @@ class App {
     try {
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      const isTvSong = gameEngine.currentState === GAME_STATES.KOMANG || gameEngine.currentState === GAME_STATES.NADIMU;
+      const isTvSong = gameEngine.currentState === GAME_STATES.KOMANG || 
+                       gameEngine.currentState === GAME_STATES.NADIMU ||
+                       gameEngine.currentState === GAME_STATES.JATUH_SUKA ||
+                       gameEngine.currentState === GAME_STATES.TARAGAK_PULANG;
       const isHome = gameEngine.currentState === GAME_STATES.HOME;
-      const isFullscreenActive = this.isFullscreen || isTvSong || isHome;
+      const isFullscreenActive = true;
 
-      // Handle background particle canvas: Disabled on Home screen (bagian awal)
+      // Handle background particle canvas: Disabled on Home screen & TV gameplay sessions
       if (this.bgCanvas) {
-        if (isHome) {
+        if (isHome || isTvSong) {
           this.bgCanvas.style.display = 'none';
           if (this.particleSystem) this.particleSystem.stop();
         } else {
@@ -419,36 +438,14 @@ class App {
       }
 
       this.appEl.innerHTML = `
-        ${isHome ? '' : `
-          <button class="viewport-toggle-btn" id="btn-toggle-viewport">
-            ${this.isFullscreen ? '📱 Phone Frame' : '🖥️ Fullscreen'}
-          </button>
-        `}
-
-        <div class="phone-shell ${isFullscreenActive ? 'fullscreen-mode tv-mode' : ''} ${(isHome && isFullscreenActive) ? 'home-fullscreen-shell' : ''}">
-          ${isFullscreenActive ? '' : `
-            <div class="phone-status-bar">
-              <span>${timeStr}</span>
-              <div class="notch-pill"></div>
-              <span>5G ⚡</span>
-            </div>
-          `}
-
+        <div class="phone-shell fullscreen-mode tv-mode ${(isHome || isTvSong) ? 'home-fullscreen-shell' : ''}">
           <div class="screen-container ${(isTvSong || isHome) ? 'tv-screen-container home-screen-container' : ''}" id="screen-viewport">
             ${this._getScreenTemplate()}
           </div>
         </div>
       `;
 
-      // Rebind Viewport Toggle Button (if present)
-      const toggleBtn = document.getElementById('btn-toggle-viewport');
-      if (toggleBtn) {
-        toggleBtn.onclick = () => {
-          this.isFullscreen = !this.isFullscreen;
-          settingsManager.update('viewportMode', this.isFullscreen ? 'fullscreen' : 'mobile-frame');
-          this.render();
-        };
-      }
+
 
       // Attach view-specific hooks
       this._afterRender();
@@ -696,7 +693,10 @@ class App {
                 </div>
                 <button class="btn-menu-bgm-pill ${audioManager.isBgmEnabled ? 'active' : ''}" id="btn-home-bgm-toggle" title="Putar / Jeda Backsound Flix">
                   <span class="bgm-dot ${audioManager.isBgmEnabled ? 'active' : ''}"></span>
-                  <span>🎵 Backsound: <strong>${audioManager.isBgmEnabled ? 'ON' : 'OFF'}</strong></span>
+                  <span class="bgm-label-wrap">
+                    <svg class="bgm-icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>
+                    <span>Backsound: <strong>${audioManager.isBgmEnabled ? 'ON' : 'OFF'}</strong></span>
+                  </span>
                 </button>
               </div>
 
@@ -709,21 +709,27 @@ class App {
 
               <div class="stats-row-clean">
                 <div class="stat-card-clean">
-                  <span class="stat-icon-wrap trophy">🏆</span>
+                  <span class="stat-icon-wrap trophy">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+                  </span>
                   <div class="stat-meta">
                     <span class="stat-label">Skor Terbaik</span>
                     <span class="stat-val">${scoreManager.bestScore.toLocaleString()}%</span>
                   </div>
                 </div>
                 <div class="stat-card-clean">
-                  <span class="stat-icon-wrap fire">🔥</span>
+                  <span class="stat-icon-wrap fire">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff8c00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+                  </span>
                   <div class="stat-meta">
                     <span class="stat-label">Rekor Kombo</span>
                     <span class="stat-val">x${scoreManager.bestCombo}</span>
                   </div>
                 </div>
                 <div class="stat-card-clean">
-                  <span class="stat-icon-wrap star">⭐</span>
+                  <span class="stat-icon-wrap star">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  </span>
                   <div class="stat-meta">
                     <span class="stat-label">Level Tertinggi</span>
                     <span class="stat-val">Lv ${scoreManager.highestLevel}</span>
@@ -736,7 +742,10 @@ class App {
             <div class="home-main-action-wrap">
               <button class="vibrant-card hero-competition-card" id="btn-home-tracks">
                 <div class="hero-card-left">
-                  <div class="hero-card-tag">🏆 TANTANGAN UTAMA BERHADIAH</div>
+                  <div class="hero-card-tag">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+                    TANTANGAN UTAMA BERHADIAH
+                  </div>
                   <div class="hero-card-title">PILIH LAGU & PAPAN SKOR JUARA</div>
                   <div class="hero-card-desc">Mainkan lagu pilihan (Komang, Jingle Bells & Pop) • 1 Papan Peringkat Terpadu (100.000 Pts) • Scan QR Rebut Hadiah!</div>
                 </div>
@@ -750,19 +759,24 @@ class App {
             <!-- BAGIAN GAMBAR 3: Bottom Navigation Bar -->
             <div class="home-bottom-nav">
               <button class="nav-pill-btn" id="btn-home-leaderboard">
-                <span class="nav-icon">🏆</span> <span>PAPAN SKOR</span>
+                <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34"></path><path d="M6 4h12v6a6 6 0 0 1-12 0V4z"></path></svg>
+                <span>PAPAN SKOR</span>
               </button>
               <button class="nav-pill-btn" id="btn-home-levels">
-                <span class="nav-icon">🗺️</span> <span>CAMPAIGN</span>
+                <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="18"></line><line x1="15" y1="6" x2="15" y2="21"></line></svg>
+                <span>CAMPAIGN</span>
               </button>
               <button class="nav-pill-btn" id="btn-home-calibration">
-                <span class="nav-icon">🎯</span> <span>KALIBRASI</span>
+                <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+                <span>KALIBRASI</span>
               </button>
               <button class="nav-pill-btn" id="btn-home-how">
-                <span class="nav-icon">📖</span> <span>CARA MAIN</span>
+                <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="10" y1="7" x2="16" y2="7"></line><line x1="10" y1="11" x2="16" y2="11"></line></svg>
+                <span>CARA MAIN</span>
               </button>
               <button class="nav-pill-btn" id="btn-home-settings">
-                <span class="nav-icon">⚙️</span> <span>PENGATURAN</span>
+                <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span>PENGATURAN</span>
               </button>
             </div>
           </section>
@@ -1772,14 +1786,14 @@ class App {
         if (!gestureResult.hasHand) {
           liveDot.className = 'live-dot';
           liveText.innerText = (gestureResult.guidance === 'MOVE YOUR HAND CLOSER')
-            ? 'Kamera: Dekatkan tangan ke kamera ✋'
-            : 'Kamera: Tunjukkan tangan di depan kamera 📷';
+            ? 'Kamera: Dekatkan tangan ke kamera'
+            : 'Kamera: Tunjukkan tangan di depan kamera';
         } else if (gestureResult.totalFingers === curNote.fingerCount) {
           liveDot.className = 'live-dot matched';
-          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK! ✔)`;
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK!)`;
         } else {
           liveDot.className = 'live-dot waiting';
-          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curNote.fingerCount} Jari ${curNote.emoji})`;
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curNote.fingerCount} Jari)`;
         }
       }
     }
@@ -1794,14 +1808,14 @@ class App {
         if (!gestureResult.hasHand) {
           liveDot.className = 'live-dot';
           liveText.innerText = (gestureResult.guidance === 'MOVE YOUR HAND CLOSER')
-            ? 'Kamera: Dekatkan tangan ke kamera ✋'
-            : 'Kamera: Tunjukkan tangan di depan kamera 📷';
+            ? 'Kamera: Dekatkan tangan ke kamera'
+            : 'Kamera: Tunjukkan tangan di depan kamera';
         } else if (isMatched) {
           liveDot.className = 'live-dot matched';
-          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK ${curMeasure.chord}! ✔ PERFECT)`;
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK ${curMeasure.chord}! PERFECT)`;
         } else {
           liveDot.className = 'live-dot waiting';
-          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curMeasure.fingerCount} Jari ${curMeasure.emoji})`;
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curMeasure.fingerCount} Jari • ${curMeasure.chord})`;
         }
 
         // Live update the illustrated hand guide in the bottom corner
@@ -1819,14 +1833,14 @@ class App {
         if (!gestureResult.hasHand) {
           liveDot.className = 'live-dot';
           liveText.innerText = (gestureResult.guidance === 'MOVE YOUR HAND CLOSER')
-            ? 'Kamera: Dekatkan tangan ke kamera ✋'
-            : 'Kamera: Tunjukkan tangan di depan kamera 📷';
+            ? 'Kamera: Dekatkan tangan ke kamera'
+            : 'Kamera: Tunjukkan tangan di depan kamera';
         } else if (isMatched) {
           liveDot.className = 'live-dot matched';
-          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK ${curMeasure.chord}! ✔ PERFECT)`;
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (COCOK ${curMeasure.chord}! PERFECT)`;
         } else {
           liveDot.className = 'live-dot waiting';
-          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curMeasure.fingerCount} Jari ${curMeasure.emoji})`;
+          liveText.innerText = `Terdeteksi: ${gestureResult.totalFingers} Jari (Butuh: ${curMeasure.fingerCount} Jari • ${curMeasure.chord})`;
         }
 
         this._renderNadimuHandGuide(curMeasure, gestureResult.totalFingers, isMatched);
@@ -2439,12 +2453,14 @@ class App {
             <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Pilih Lagu">‹</button>
             <div>
               <div class="komang-title">
-                <span class="komang-logo-pulse">🌺</span> KOMANG — RAIM LAODE
+                <span class="komang-logo-pulse">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:#ff3366;"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+                </span> KOMANG — RAIM LAODE
               </div>
               <span class="komang-subtitle">
                 ${komangService.sessionMode === '30S_RANDOM' 
-                  ? `⏱️ SESI 45 DETIK (BAGIAN RANDOM: ${komangService.currentSegment?.title || 'Intro'}) • 130 BPM` 
-                  : '🎹 MODE LAGU PENUH (4:30) • Raim Laode • G Major'}
+                  ? `SESI 45 DETIK (BAGIAN RANDOM: ${komangService.currentSegment?.title || 'Intro'}) • 130 BPM` 
+                  : 'MODE LAGU PENUH (4:30) • Raim Laode • G Major'}
               </span>
             </div>
           </div>
@@ -2454,38 +2470,54 @@ class App {
             <!-- 45S RANDOM vs FULL SONG Switcher -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${komangService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-komang-mode-30s" title="Main cepat 45 detik dari bagian acak lagu Komang (Makin lama makin cepat!)">
-                🎲 45s RANDOM
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="8" cy="8" r="1.5" fill="currentColor"></circle><circle cx="16" cy="16" r="1.5" fill="currentColor"></circle><circle cx="12" cy="12" r="1.5" fill="currentColor"></circle><circle cx="16" cy="8" r="1.5" fill="currentColor"></circle><circle cx="8" cy="16" r="1.5" fill="currentColor"></circle></svg>
+                <span>45s RANDOM</span>
               </button>
               <button class="komang-view-btn ${komangService.sessionMode === 'FULL_SONG' ? 'active' : ''}" id="btn-komang-mode-full" title="Main lagu penuh dari awal sampai akhir">
-                🎵 Penuh
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+                <span>Penuh</span>
               </button>
             </div>
 
             <!-- PIANO TILES vs PARTITUR View Toggle -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${isTilesView ? 'active' : ''}" id="btn-komang-view-tiles">
-                🎹 Tiles
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path><path d="M2 14h20"></path></svg>
+                <span>Tiles</span>
               </button>
               <button class="komang-view-btn ${!isTilesView ? 'active' : ''}" id="btn-komang-view-sheet">
-                🎼 Partitur
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle><line x1="2" y1="9" x2="22" y2="9"></line></svg>
+                <span>Partitur</span>
               </button>
             </div>
 
             <!-- Audio Modes -->
             <div class="jingle-mode-pills">
-              <button class="mode-pill ${isPlayAlong ? 'active' : ''}" id="btn-komang-mode-playalong">🎵 MP3</button>
-              <button class="mode-pill ${isGuide ? 'active' : ''}" id="btn-komang-mode-guide">🎓 Belajar</button>
-              <button class="mode-pill ${isTempo ? 'active' : ''}" id="btn-komang-mode-tempo">⏱️ 130 BPM</button>
+              <button class="mode-pill ${isPlayAlong ? 'active' : ''}" id="btn-komang-mode-playalong">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>
+                <span>MP3</span>
+              </button>
+              <button class="mode-pill ${isGuide ? 'active' : ''}" id="btn-komang-mode-guide">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                <span>Belajar</span>
+              </button>
+              <button class="mode-pill ${isTempo ? 'active' : ''}" id="btn-komang-mode-tempo">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>130 BPM</span>
+              </button>
             </div>
 
             <!-- No-Fail / Challenge Mode Toggle Button -->
             <button class="mode-pill ${komangService.isNoFail ? 'active' : ''}" id="btn-komang-nofail-toggle" title="Klik untuk beralih antara Mode Santai atau Tantangan">
-              ${komangService.isNoFail ? '🛡️ Santai' : '🎮 5 Nyawa'}
+              ${komangService.isNoFail 
+                ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><span>Santai</span>` 
+                : `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="btn-svg-icon" style="color:#ff3366;"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg><span>5 Nyawa</span>`}
             </button>
 
             <!-- TV Fullscreen Button -->
             <button class="btn-tv-fullscreen" id="btn-komang-fullscreen-tv" title="Tampilkan Fullscreen">
-              🖥️ TV
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              <span>TV</span>
             </button>
           </div>
         </div>
@@ -2509,17 +2541,17 @@ class App {
                 <div class="tv-score-item lives-item">
                   <span class="tv-stat-kicker">SISA NYAWA</span>
                   <div class="komang-hearts-row" id="komang-hearts-row">
-                    ${komangService.isNoFail ? '<span style="font-size:12px; color:#00ffaa; font-weight:900; font-family:var(--font-display);">🛡️ BEBAS</span>' : `${'❤️'.repeat(Math.max(0, komangService.lives))}${'🖤'.repeat(Math.max(0, komangService.maxLives - komangService.lives))}`}
+                    ${renderHeartsSvg(komangService.lives, komangService.maxLives, komangService.isNoFail)}
                   </div>
                 </div>
               </div>
               <div class="tv-multiplier-row">
-                <span class="multiplier-pill" id="komang-multiplier-pill">⚡ MULTIPLIER 1.0x</span>
+                <span class="multiplier-pill" id="komang-multiplier-pill">MULTIPLIER 1.0x</span>
                 <div class="komang-speed-selector">
                   <span style="font-size:10px; color:var(--text-muted); font-weight:800; letter-spacing:0.5px;">KECEPATAN UBIN:</span>
-                  <button class="speed-chip ${komangService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" title="Sangat Santai & Pelan (Cocok untuk Pemula)">🐢 Santai (0.75x)</button>
-                  <button class="speed-chip ${komangService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" title="Tenang & Pas (Rekomendasi Standar)">🌿 Normal (1.0x)</button>
-                  <button class="speed-chip ${komangService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" title="Lebih Cepat (Tantangan)">⚡ Cepat (1.3x)</button>
+                  <button class="speed-chip ${komangService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" title="Sangat Santai & Pelan (Cocok untuk Pemula)">Santai (0.75x)</button>
+                  <button class="speed-chip ${komangService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" title="Tenang & Pas (Rekomendasi Standar)">Normal (1.0x)</button>
+                  <button class="speed-chip ${komangService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" title="Lebih Cepat (Tantangan)">Cepat (1.3x)</button>
                 </div>
               </div>
             </div>
@@ -2528,12 +2560,12 @@ class App {
             <div class="komang-karaoke-card">
               <div class="karaoke-badge-row">
                 <span class="tv-tag" id="komang-session-tag">
-                  ${komangService.sessionMode === '30S_RANDOM' ? `🎲 45s: ${komangService.currentSegment?.title || 'Intro'}` : '🎹 AKOR SEKARANG'}
+                  ${komangService.sessionMode === '30S_RANDOM' ? `45s: ${komangService.currentSegment?.title || 'Intro'}` : 'AKOR SEKARANG'}
                 </span>
                 <span class="komang-chord-badge" id="komang-cur-chord">${curMeasure.chord}</span>
               </div>
               <div class="komang-next-lyric-cue" id="komang-next-preview">
-                👉 Bar ${curMeasure.measure} / 16 (G Major)
+                Bar ${curMeasure.measure} / 16 (G Major)
               </div>
               <div class="komang-chord-desc-bar" id="komang-cur-desc">
                 ${curMeasure.chordDesc}
@@ -2543,7 +2575,7 @@ class App {
             <!-- Audio Backing Player Card -->
             <div class="komang-player-card">
               <div class="komang-transport-row">
-                <span style="font-size:10.5px; font-weight:800; color:var(--ice-blue); letter-spacing:0.5px; font-family:var(--font-display);">🎚️ PENGATURAN SUARA & SYNC</span>
+                <span style="font-size:10.5px; font-weight:800; color:var(--ice-blue); letter-spacing:0.5px; font-family:var(--font-display);">PENGATURAN SUARA & SYNC</span>
                 <span class="komang-time-badge" style="font-size:10px;">G Major • 130 BPM</span>
               </div>
 
@@ -2553,50 +2585,50 @@ class App {
 
               <div class="komang-sync-row">
                 <div class="komang-offset-controls">
-                  <span>⏱️ Sync:</span>
+                  <span>Sync:</span>
                   <button class="komang-offset-btn" id="komang-offset-minus">-0.1s</button>
                   <span id="komang-offset-val">${komangService.audioOffsetSec.toFixed(1)}s</span>
                   <button class="komang-offset-btn" id="komang-offset-plus">+0.1s</button>
                   <button class="komang-offset-btn" id="komang-offset-zero">0.0s</button>
                 </div>
                 <div class="komang-vol-row">
-                  <span>🔊 MP3:</span>
+                  <span>MP3:</span>
                   <input type="range" class="komang-vol-slider" id="komang-vol-backing" min="0" max="1" step="0.05" value="${komangService.backingVolume}">
-                  <span>🎹 Piano:</span>
+                  <span>Piano:</span>
                   <input type="range" class="komang-vol-slider" id="komang-vol-player" min="0" max="1" step="0.05" value="${komangService.playerVolume}">
                 </div>
               </div>
             </div>
 
-            <!-- 4. PANDUAN PINTASAN & INPUT (Mengisi kolom kiri secara seimbang & informatif) -->
+            <!-- 4. PANDUAN PINTASAN & INPUT -->
             <div class="komang-controls-card">
               <div class="controls-card-header">
-                <span>🎮</span> PANDUAN PINTASAN & INPUT
+                PANDUAN PINTASAN & INPUT
               </div>
               <div class="controls-guide-grid">
                 <div class="cguide-item">
                   <span class="cguide-key">1 / D</span>
-                  <span class="cguide-desc">☝️ G (1 Jari)</span>
+                  <span class="cguide-desc">G (1 Jari)</span>
                 </div>
                 <div class="cguide-item">
                   <span class="cguide-key">2 / F</span>
-                  <span class="cguide-desc">✌️ D/F# (2 Jari)</span>
+                  <span class="cguide-desc">D/F# (2 Jari)</span>
                 </div>
                 <div class="cguide-item">
                   <span class="cguide-key">3 / J</span>
-                  <span class="cguide-desc">🤟 Am (3 Jari)</span>
+                  <span class="cguide-desc">Am (3 Jari)</span>
                 </div>
                 <div class="cguide-item">
                   <span class="cguide-key">4 / K</span>
-                  <span class="cguide-desc">🖐️ Cm (4 Jari)</span>
+                  <span class="cguide-desc">Cm (4 Jari)</span>
                 </div>
               </div>
               <div class="controls-tips-row">
-                <span>⌨️ Ketuk Tuts</span>
+                <span>Ketuk Tuts</span>
                 <span>•</span>
-                <span>📹 Kamera 1-5 Jari</span>
+                <span>Kamera 1-5 Jari</span>
                 <span>•</span>
-                <span>⏸️ Esc: Jeda</span>
+                <span>Esc: Jeda</span>
               </div>
             </div>
           </div>
@@ -2607,12 +2639,12 @@ class App {
               <!-- PIANO TILES 4-LANE HIGHWAY -->
               <div class="komang-highway-wrapper">
                 <div class="highway-top-header">
-                  <span>🎵 PIANO TILES RHYTHM HIGHWAY (4 JALUR NADA)</span>
+                  <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:6px;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>PIANO TILES RHYTHM HIGHWAY (4 JALUR NADA)</span>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <button class="komang-offset-btn" id="btn-toggle-piano-height" title="Ubah ukuran tuts piano (Panjang, Ekstra Panjang, Kompak)">
-                      🎹 Tuts: <span id="label-piano-height">${komangTilesEngine.getKeyHeightLabel ? komangTilesEngine.getKeyHeightLabel() : 'Panjang (35%)'}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:4px;"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path></svg>Tuts: <span id="label-piano-height">${komangTilesEngine.getKeyHeightLabel ? komangTilesEngine.getKeyHeightLabel() : 'Panjang (35%)'}</span>
                     </button>
-                    <span class="highway-hint-keys">Ketuk tuts atau kamera tangan ✋</span>
+                    <span class="highway-hint-keys">Ketuk tuts atau kamera tangan</span>
                   </div>
                 </div>
                 <div class="komang-highway-stage">
@@ -2624,7 +2656,7 @@ class App {
               <div class="komang-sheet-wrapper">
                 <div class="komang-score-card">
                   <div class="score-card-header">
-                    <span class="score-title">🎼 PARTITUR KOMANG — RAIM LAODE (G MAJOR • 130 BPM)</span>
+                    <span class="score-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:6px;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle><line x1="2" y1="9" x2="22" y2="9"></line></svg>PARTITUR KOMANG — RAIM LAODE (G MAJOR • 130 BPM)</span>
                     <span style="font-size:11px; color:var(--text-muted);">Klik bar untuk melompat langsung</span>
                   </div>
                   <div style="display:flex; flex-direction:column; gap:8px;" id="komang-score-container">
@@ -2634,7 +2666,7 @@ class App {
 
                 <div class="komang-piano-card">
                   <div class="piano-card-header">
-                    <span>🎹 VIRTUAL PIANO (Akor ${curMeasure.chord} • Tuts Menyala Pink)</span>
+                    <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:6px;"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path></svg>VIRTUAL PIANO (Akor ${curMeasure.chord} • Tuts Menyala Pink)</span>
                     <span class="piano-hint-text">1F=G • 2F=D/F# • 3F=Am • 4F=Cm • 5F=G</span>
                   </div>
                   <div class="komang-piano-keyboard" id="komang-piano-keyboard">
@@ -2654,11 +2686,13 @@ class App {
               <canvas id="camera-canvas"></canvas>
               <canvas id="tracking-canvas"></canvas>
               <button class="btn-camera-bg-toggle ${virtualBackgroundService.isEnabled ? 'active' : ''}" id="btn-camera-bg-toggle" type="button" title="Ganti Mode Latar Kamera (Flash Tech / Asli)">
-                ${virtualBackgroundService.isEnabled ? '✨ Latar: Flash Tech' : '📷 Latar: Asli'}
+                ${virtualBackgroundService.isEnabled 
+                  ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="btn-svg-icon" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>Latar: Flash Tech' 
+                  : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg-icon" style="margin-right:4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Latar: Asli'}
               </button>
               <div class="camera-guide-frame"></div>
               <div class="camera-guidance-pill" id="komang-guidance-pill">
-                TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}
+                TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord}
               </div>
               ${this._templateCameraOverlay()}
             </div>
@@ -2666,13 +2700,13 @@ class App {
             <!-- Live Status Bar -->
             <div class="komang-live-status-pill">
               <span class="live-dot waiting" id="komang-live-dot"></span>
-              <span class="live-text" id="komang-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari ${curMeasure.emoji}</span>
+              <span class="live-text" id="komang-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari (${curMeasure.chord})</span>
             </div>
 
             <!-- PROMINENT HERO PLAY ACTION CARD (Sangat Terlihat & Jelas) -->
             <div class="komang-hero-cta-card">
               <button class="komang-hero-play-btn ${isPlaying ? 'playing' : ''}" id="btn-komang-play-pause">
-                <span class="hero-play-icon">${isPlaying ? '⏸️' : '▶️'}</span>
+                <span class="hero-play-icon">${isPlaying ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.5"></rect><rect x="14" y="4" width="4" height="16" rx="1.5"></rect></svg>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>'}</span>
                 <div class="hero-play-info">
                   <span class="hero-play-main" id="komang-play-label">${isPlaying ? 'JEDA PERMAINAN' : (komangService.sessionMode === '30S_RANDOM' ? 'MAIN 30 DETIK' : 'PUTAR LAGU PENUH')}</span>
                   <span class="hero-play-sub">${isPlaying ? 'Klik untuk berhenti sejenak' : 'Ketuk tombol atau langsung gunakan kamera'}</span>
@@ -2681,13 +2715,13 @@ class App {
 
               <div class="hero-cta-quick-actions">
                 <button class="btn-hero-util" id="btn-komang-random-segment" title="Ganti bagian 30s acak">
-                  🎲 Acak Bagian
+                  Acak Bagian
                 </button>
                 <button class="btn-hero-util" id="btn-komang-reset" title="Ulang dari awal bagian ini">
-                  ↺ Ulang
+                  Ulang
                 </button>
                 <span class="hero-time-badge" id="komang-time-display">
-                  ${komangService.sessionMode === '30S_RANDOM' ? '⏱️ SISA: 30s' : '0:00 / 4:30'}
+                  ${komangService.sessionMode === '30S_RANDOM' ? 'SISA: 30s' : '0:00 / 4:30'}
                 </span>
               </div>
             </div>
@@ -2695,16 +2729,16 @@ class App {
             <!-- Quick fallback touch buttons for TV remote/mouse -->
             <div class="komang-quick-fbtns-row">
               <button class="komang-fbtn ${curMeasure.fingerCount === 1 ? 'active' : ''}" data-fingers="1" data-chord="G">
-                <span>☝️ 1: G</span>
+                <span>1: G</span>
               </button>
               <button class="komang-fbtn ${curMeasure.fingerCount === 2 ? 'active' : ''}" data-fingers="2" data-chord="D/F#">
-                <span>✌️ 2: D/F#</span>
+                <span>2: D/F#</span>
               </button>
               <button class="komang-fbtn ${curMeasure.fingerCount === 3 ? 'active' : ''}" data-fingers="3" data-chord="Am">
-                <span>🤟 3: Am</span>
+                <span>3: Am</span>
               </button>
               <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-fingers="4" data-chord="Cm">
-                <span>🖐️ 4: Cm</span>
+                <span>4: Cm</span>
               </button>
             </div>
           </div>
@@ -2751,9 +2785,7 @@ class App {
     komangService.onLifeRecovered = (data) => {
       const heartsRow = document.getElementById('komang-hearts-row');
       if (heartsRow && !komangService.isNoFail) {
-        const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
-        const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
-        heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+        heartsRow.innerHTML = renderHeartsSvg(data.lives, data.maxLives, false);
       }
     };
 
@@ -2772,7 +2804,9 @@ class App {
       }
       const icon = document.querySelector('#btn-komang-play-pause .hero-play-icon');
       if (icon) {
-        icon.innerText = isPlaying ? '⏸️' : '▶️';
+        icon.innerHTML = isPlaying 
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.5"></rect><rect x="14" y="4" width="4" height="16" rx="1.5"></rect></svg>' 
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>';
       }
       const heroBtn = document.getElementById('btn-komang-play-pause');
       if (heroBtn) {
@@ -2883,7 +2917,7 @@ class App {
       const timeEl = document.getElementById('komang-time-display');
       if (timeEl) {
         if (data.is30sSession) {
-          timeEl.innerText = `⏱️ SISA: ${curSec}s`;
+          timeEl.innerText = `SISA: ${curSec}s`;
         } else {
           const curM = Math.floor(data.currentTimeSec / 60);
           const curS = Math.floor(data.currentTimeSec % 60);
@@ -2914,9 +2948,9 @@ class App {
         const nxt = data.nextMeasure;
         const timeSec = data.timeToNextMeasureSec;
         if (timeSec <= 1.2) {
-          nextPreviewEl.innerHTML = `<span style="color:#00f7ff; font-weight:800;">👉 ${nxt.chord} (${nxt.emoji} ${nxt.fingerCount}F) in ${timeSec.toFixed(1)}s!</span>`;
+          nextPreviewEl.innerHTML = `<span style="color:#00f7ff; font-weight:800;">Selanjutnya: ${nxt.chord} (${nxt.fingerCount}F) dalam ${timeSec.toFixed(1)}s!</span>`;
         } else {
-          nextPreviewEl.innerText = `👉 Bar ${data.activeMeasure.measure} / 16 • Selanjutnya ${nxt.chord} (${nxt.emoji} ${nxt.fingerCount}F)`;
+          nextPreviewEl.innerText = `Bar ${data.activeMeasure.measure} / 16 • Selanjutnya: ${nxt.chord} (${nxt.fingerCount}F)`;
         }
       }
     }
@@ -2955,16 +2989,14 @@ class App {
 
     const multEl = document.getElementById('komang-multiplier-pill');
     if (multEl && data.multiplier) {
-      multEl.innerText = `⚡ MULTIPLIER ${data.multiplier.toFixed(1)}x`;
+      multEl.innerText = `MULTIPLIER ${data.multiplier.toFixed(1)}x`;
       multEl.classList.toggle('high-mult', data.multiplier >= 2.0);
     }
 
     // Ensure hearts are synced
     const heartsRow = document.getElementById('komang-hearts-row');
     if (heartsRow && data.lives !== undefined) {
-      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
-      const deadHearts = '🖤'.repeat(Math.max(0, komangService.maxLives - data.lives));
-      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      heartsRow.innerHTML = renderHeartsSvg(data.lives, komangService.maxLives, komangService.isNoFail);
     }
 
     // Piano keys press flash
@@ -2982,9 +3014,7 @@ class App {
     // 1. Update Hearts UI with shake animation
     const heartsRow = document.getElementById('komang-hearts-row');
     if (heartsRow) {
-      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
-      const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
-      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      heartsRow.innerHTML = renderHeartsSvg(data.lives, data.maxLives, false);
       heartsRow.classList.add('heart-damage');
       setTimeout(() => heartsRow.classList.remove('heart-damage'), 350);
     }
@@ -2995,7 +3025,7 @@ class App {
 
     const multEl = document.getElementById('komang-multiplier-pill');
     if (multEl) {
-      multEl.innerText = '⚡ MULTIPLIER 1.0x';
+      multEl.innerText = 'MULTIPLIER 1.0x';
       multEl.classList.remove('high-mult');
     }
 
@@ -3004,7 +3034,7 @@ class App {
     const liveText = document.getElementById('komang-live-text');
     if (liveDot && liveText) {
       liveDot.className = 'live-dot miss';
-      liveText.innerText = data.reason === 'WRONG_FINGER' ? 'SALAH JARI! Nyawa -1 💔' : 'MISS! Ubin Terlewat -1 💔';
+      liveText.innerText = data.reason === 'WRONG_FINGER' ? 'SALAH JARI! Nyawa -1' : 'MISS! Ubin Terlewat -1';
       setTimeout(() => {
         if (liveDot) liveDot.className = 'live-dot waiting';
       }, 450);
@@ -3313,12 +3343,14 @@ class App {
             <button class="btn-icon-back" id="btn-back-home" title="Kembali ke Pilih Lagu">‹</button>
             <div>
               <div class="komang-title">
-                <span class="komang-logo-pulse">🎵</span> SELALU ADA DI NADIMU — OST JUMBO
+                <span class="komang-logo-pulse">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan);"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>
+                </span> SELALU ADA DI NADIMU — OST JUMBO
               </div>
               <span class="komang-subtitle">
                 ${nadimuService.sessionMode === '30S_RANDOM' 
-                  ? `⏱️ SESI 45 DETIK (BAGIAN RANDOM: ${nadimuService.currentSegment?.title || 'Bait 1'}) • 78 BPM` 
-                  : '🎹 MODE LAGU PENUH (4:43) • OST Jumbo • Key C Major'}
+                  ? `SESI 45 DETIK (BAGIAN RANDOM: ${nadimuService.currentSegment?.title || 'Bait 1'}) • 78 BPM` 
+                  : 'MODE LAGU PENUH (4:43) • OST Jumbo • Key C Major'}
               </span>
             </div>
           </div>
@@ -3328,38 +3360,54 @@ class App {
             <!-- 45S RANDOM vs FULL SONG Switcher -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${nadimuService.sessionMode === '30S_RANDOM' ? 'active' : ''}" id="btn-nadimu-mode-30s" title="Main cepat 45 detik dari bagian acak lagu Nadimu (Makin lama makin cepat!)">
-                🎲 45s RANDOM
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="8" cy="8" r="1.5" fill="currentColor"></circle><circle cx="16" cy="16" r="1.5" fill="currentColor"></circle><circle cx="12" cy="12" r="1.5" fill="currentColor"></circle><circle cx="16" cy="8" r="1.5" fill="currentColor"></circle><circle cx="8" cy="16" r="1.5" fill="currentColor"></circle></svg>
+                <span>45s RANDOM</span>
               </button>
               <button class="komang-view-btn ${nadimuService.sessionMode === 'FULL_SONG' ? 'active' : ''}" id="btn-nadimu-mode-full" title="Main lagu penuh dari awal sampai akhir">
-                🎵 Penuh
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+                <span>Penuh</span>
               </button>
             </div>
 
             <!-- PIANO TILES vs PARTITUR View Toggle -->
             <div class="komang-view-switcher">
               <button class="komang-view-btn ${isTilesView ? 'active' : ''}" id="btn-nadimu-view-tiles">
-                🎹 Tiles
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path><path d="M2 14h20"></path></svg>
+                <span>Tiles</span>
               </button>
               <button class="komang-view-btn ${!isTilesView ? 'active' : ''}" id="btn-nadimu-view-sheet">
-                🎼 Partitur
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle><line x1="2" y1="9" x2="22" y2="9"></line></svg>
+                <span>Partitur</span>
               </button>
             </div>
 
             <!-- Audio Modes -->
             <div class="jingle-mode-pills">
-              <button class="mode-pill ${nadimuService.mode === 'PLAY_ALONG' ? 'active' : ''}" id="btn-nadimu-mode-playalong">🎵 MP3</button>
-              <button class="mode-pill ${nadimuService.mode === 'GUIDE' ? 'active' : ''}" id="btn-nadimu-mode-guide">🎓 Belajar</button>
-              <button class="mode-pill ${nadimuService.mode === 'TEMPO' ? 'active' : ''}" id="btn-nadimu-mode-tempo">⏱️ 78 BPM</button>
+              <button class="mode-pill ${nadimuService.mode === 'PLAY_ALONG' ? 'active' : ''}" id="btn-nadimu-mode-playalong">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>
+                <span>MP3</span>
+              </button>
+              <button class="mode-pill ${nadimuService.mode === 'GUIDE' ? 'active' : ''}" id="btn-nadimu-mode-guide">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                <span>Belajar</span>
+              </button>
+              <button class="mode-pill ${nadimuService.mode === 'TEMPO' ? 'active' : ''}" id="btn-nadimu-mode-tempo">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>78 BPM</span>
+              </button>
             </div>
 
             <!-- No-Fail / Challenge Mode Toggle Button -->
             <button class="mode-pill ${nadimuService.isNoFail ? 'active' : ''}" id="btn-nadimu-nofail-toggle" title="Klik untuk beralih antara Mode Santai atau Tantangan">
-              ${nadimuService.isNoFail ? '🛡️ Santai' : '🎮 5 Nyawa'}
+              ${nadimuService.isNoFail 
+                ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><span>Santai</span>` 
+                : `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" class="btn-svg-icon" style="color:#ff3366;"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg><span>5 Nyawa</span>`}
             </button>
 
             <!-- TV Fullscreen Button -->
             <button class="btn-tv-fullscreen" id="btn-nadimu-fullscreen-tv" title="Tampilkan Fullscreen">
-              🖥️ TV
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg-icon"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              <span>TV</span>
             </button>
           </div>
         </div>
@@ -3383,17 +3431,17 @@ class App {
                 <div class="tv-score-item lives-item">
                   <span class="tv-stat-kicker">SISA NYAWA</span>
                   <div class="komang-hearts-row" id="nadimu-hearts-row">
-                    ${nadimuService.isNoFail ? '<span style="font-size:12px; color:#00ffaa; font-weight:900; font-family:var(--font-display);">🛡️ BEBAS</span>' : `${'❤️'.repeat(Math.max(0, nadimuService.lives))}${'🖤'.repeat(Math.max(0, nadimuService.maxLives - nadimuService.lives))}`}
+                    ${renderHeartsSvg(nadimuService.lives, nadimuService.maxLives, nadimuService.isNoFail)}
                   </div>
                 </div>
               </div>
               <div class="tv-multiplier-row">
-                <span class="multiplier-pill" id="nadimu-multiplier-pill">⚡ MULTIPLIER 1.0x</span>
+                <span class="multiplier-pill" id="nadimu-multiplier-pill">MULTIPLIER 1.0x</span>
                 <div class="komang-speed-selector">
                   <span style="font-size:10px; color:var(--text-muted); font-weight:800; letter-spacing:0.5px;">KECEPATAN UBIN:</span>
-                  <button class="speed-chip ${nadimuService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" data-song="nadimu" title="Sangat Santai & Pelan (Cocok untuk Pemula)">🐢 Santai (0.75x)</button>
-                  <button class="speed-chip ${nadimuService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" data-song="nadimu" title="Tenang & Pas (Rekomendasi Standar)">🌿 Normal (1.0x)</button>
-                  <button class="speed-chip ${nadimuService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" data-song="nadimu" title="Lebih Cepat (Tantangan)">⚡ Cepat (1.3x)</button>
+                  <button class="speed-chip ${nadimuService.speedMultiplier === 0.75 ? 'active' : ''}" data-speed="0.75" data-song="nadimu" title="Sangat Santai & Pelan (Cocok untuk Pemula)">Santai (0.75x)</button>
+                  <button class="speed-chip ${nadimuService.speedMultiplier === 1.0 ? 'active' : ''}" data-speed="1.0" data-song="nadimu" title="Tenang & Pas (Rekomendasi Standar)">Normal (1.0x)</button>
+                  <button class="speed-chip ${nadimuService.speedMultiplier === 1.3 ? 'active' : ''}" data-speed="1.3" data-song="nadimu" title="Lebih Cepat (Tantangan)">Cepat (1.3x)</button>
                 </div>
               </div>
             </div>
@@ -3402,12 +3450,12 @@ class App {
             <div class="komang-karaoke-card">
               <div class="karaoke-badge-row">
                 <span class="tv-tag" id="nadimu-session-tag">
-                  ${nadimuService.sessionMode === '30S_RANDOM' ? `🎲 45s: ${nadimuService.currentSegment?.title || 'Bait 1'}` : '🎹 AKOR SEKARANG'}
+                  ${nadimuService.sessionMode === '30S_RANDOM' ? `45s: ${nadimuService.currentSegment?.title || 'Bait 1'}` : 'AKOR SEKARANG'}
                 </span>
                 <span class="komang-chord-badge" id="nadimu-cur-chord" style="color:#00f7ff; border-color:#00f7ff; text-shadow:0 0 15px rgba(0,247,255,0.6);">${curMeasure.chord}</span>
               </div>
               <div class="komang-next-lyric-cue" id="nadimu-next-preview">
-                👉 Bar ${curMeasure.measure} / 16 (C Major)
+                Bar ${curMeasure.measure} / 16 (C Major)
               </div>
               <div class="komang-chord-desc-bar" id="nadimu-cur-desc">
                 ${curMeasure.chordDesc}
@@ -3417,7 +3465,7 @@ class App {
             <!-- Audio Backing Player Card -->
             <div class="komang-player-card">
               <div class="komang-transport-row">
-                <span style="font-size:10.5px; font-weight:800; color:var(--ice-blue); letter-spacing:0.5px; font-family:var(--font-display);">🎚️ PENGATURAN SUARA & SYNC</span>
+                <span style="font-size:10.5px; font-weight:800; color:var(--ice-blue); letter-spacing:0.5px; font-family:var(--font-display);">PENGATURAN SUARA & SYNC</span>
                 <span class="komang-time-badge" style="font-size:10px;">C Major • 78 BPM</span>
               </div>
 
@@ -3427,16 +3475,16 @@ class App {
 
               <div class="komang-sync-row">
                 <div class="komang-offset-controls">
-                  <span>⏱️ Sync:</span>
+                  <span>Sync:</span>
                   <button class="komang-offset-btn" id="nadimu-offset-minus">-0.1s</button>
                   <span id="nadimu-offset-val">${nadimuService.audioOffsetSec.toFixed(1)}s</span>
                   <button class="komang-offset-btn" id="nadimu-offset-plus">+0.1s</button>
                   <button class="komang-offset-btn" id="nadimu-offset-zero">0.0s</button>
                 </div>
                 <div class="komang-vol-row">
-                  <span>🔊 MP3:</span>
+                  <span>MP3:</span>
                   <input type="range" class="komang-vol-slider" id="nadimu-vol-backing" min="0" max="1" step="0.05" value="${nadimuService.backingVolume}">
-                  <span>🎹 Piano:</span>
+                  <span>Piano:</span>
                   <input type="range" class="komang-vol-slider" id="nadimu-vol-player" min="0" max="1" step="0.05" value="${nadimuService.playerVolume}">
                 </div>
               </div>
@@ -3445,32 +3493,32 @@ class App {
             <!-- 4. PANDUAN PINTASAN & INPUT (Nadimu) -->
             <div class="komang-controls-card">
               <div class="controls-card-header">
-                <span>🎮</span> PANDUAN PINTASAN & INPUT
+                PANDUAN PINTASAN & INPUT
               </div>
               <div class="controls-guide-grid">
                 <div class="cguide-item">
                   <span class="cguide-key">1 / D</span>
-                  <span class="cguide-desc">☝️ C (1 Jari)</span>
+                  <span class="cguide-desc">C (1 Jari)</span>
                 </div>
                 <div class="cguide-item">
                   <span class="cguide-key">2 / F</span>
-                  <span class="cguide-desc">✌️ F (2 Jari)</span>
+                  <span class="cguide-desc">F (2 Jari)</span>
                 </div>
                 <div class="cguide-item">
                   <span class="cguide-key">3 / J</span>
-                  <span class="cguide-desc">🤟 Em (3 Jari)</span>
+                  <span class="cguide-desc">Em (3 Jari)</span>
                 </div>
                 <div class="cguide-item">
                   <span class="cguide-key">4 / K</span>
-                  <span class="cguide-desc">🖐️ G (4 Jari)</span>
+                  <span class="cguide-desc">G (4 Jari)</span>
                 </div>
               </div>
               <div class="controls-tips-row">
-                <span>⌨️ Ketuk Tuts</span>
+                <span>Ketuk Tuts</span>
                 <span>•</span>
-                <span>📹 Kamera 1-5 Jari</span>
+                <span>Kamera 1-5 Jari</span>
                 <span>•</span>
-                <span>⏸️ Esc: Jeda</span>
+                <span>Esc: Jeda</span>
               </div>
             </div>
 
@@ -3481,12 +3529,12 @@ class App {
             ${isTilesView ? `
               <div class="komang-highway-wrapper">
                 <div class="highway-top-header">
-                  <span>🎵 PIANO TILES RHYTHM HIGHWAY (4 JALUR NADA)</span>
+                  <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:6px;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>PIANO TILES RHYTHM HIGHWAY (4 JALUR NADA)</span>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <button class="komang-offset-btn" id="btn-toggle-piano-height" title="Ubah ukuran tuts piano (Panjang, Ekstra Panjang, Kompak)">
-                      🎹 Tuts: <span id="label-piano-height">${nadimuTilesEngine.getKeyHeightLabel ? nadimuTilesEngine.getKeyHeightLabel() : 'Panjang (35%)'}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:4px;"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path></svg>Tuts: <span id="label-piano-height">${nadimuTilesEngine.getKeyHeightLabel ? nadimuTilesEngine.getKeyHeightLabel() : 'Panjang (35%)'}</span>
                     </button>
-                    <span class="highway-hint-keys">Ketuk tuts atau kamera tangan ✋</span>
+                    <span class="highway-hint-keys">Ketuk tuts atau kamera tangan</span>
                   </div>
                 </div>
                 <div class="komang-highway-stage">
@@ -3497,7 +3545,7 @@ class App {
               <div class="komang-sheet-wrapper">
                 <div class="komang-score-card">
                   <div class="score-card-header">
-                    <span class="score-title">🎼 PARTITUR SELALU ADA DI NADIMU (C MAJOR • 78 BPM)</span>
+                    <span class="score-title"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:6px;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle><line x1="2" y1="9" x2="22" y2="9"></line></svg>PARTITUR SELALU ADA DI NADIMU (C MAJOR • 78 BPM)</span>
                   </div>
                   <div style="display:flex; flex-direction:column; gap:8px;" id="nadimu-score-container">
                     ${systemsHtml}
@@ -3506,7 +3554,7 @@ class App {
 
                 <div class="komang-piano-card">
                   <div class="piano-card-header">
-                    <span>🎹 VIRTUAL PIANO (Akor ${curMeasure.chord} • Tuts Menyala Cyan)</span>
+                    <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="btn-svg-icon" style="margin-right:6px;"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 4v10"></path><path d="M10 4v10"></path><path d="M14 4v10"></path><path d="M18 4v10"></path></svg>VIRTUAL PIANO (Akor ${curMeasure.chord} • Tuts Menyala Cyan)</span>
                   </div>
                   <div class="komang-piano-keyboard" id="nadimu-piano-keyboard">
                     ${whiteKeysHtml}
@@ -3523,24 +3571,26 @@ class App {
               <canvas id="camera-canvas"></canvas>
               <canvas id="tracking-canvas"></canvas>
               <button class="btn-camera-bg-toggle ${virtualBackgroundService.isEnabled ? 'active' : ''}" id="btn-camera-bg-toggle" type="button" title="Ganti Mode Latar Kamera (Flash Tech / Asli)">
-                ${virtualBackgroundService.isEnabled ? '✨ Latar: Flash Tech' : '📷 Latar: Asli'}
+                ${virtualBackgroundService.isEnabled 
+                  ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" class="btn-svg-icon" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>Latar: Flash Tech' 
+                  : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-svg-icon" style="margin-right:4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>Latar: Asli'}
               </button>
               <div class="camera-guide-frame"></div>
               <div class="camera-guidance-pill" id="nadimu-guidance-pill" style="border-color:#14b3d4; color:#14b3d4;">
-                TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord} ${curMeasure.emoji}
+                TUNJUKKAN ${curMeasure.fingerCount} JARI UNTUK ${curMeasure.chord}
               </div>
               ${this._templateCameraOverlay()}
             </div>
 
             <div class="komang-live-status-pill">
               <span class="live-dot waiting" id="nadimu-live-dot"></span>
-              <span class="live-text" id="nadimu-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari ${curMeasure.emoji}</span>
+              <span class="live-text" id="nadimu-live-text">Kamera: Tunjukkan ${curMeasure.fingerCount} Jari (${curMeasure.chord})</span>
             </div>
 
             <!-- PROMINENT HERO PLAY ACTION CARD -->
             <div class="komang-hero-cta-card">
               <button class="komang-hero-play-btn ${isPlaying ? 'playing' : ''}" id="btn-nadimu-play-toggle">
-                <span class="hero-play-icon">${isPlaying ? '⏸️' : '▶️'}</span>
+                <span class="hero-play-icon">${isPlaying ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.5"></rect><rect x="14" y="4" width="4" height="16" rx="1.5"></rect></svg>' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>'}</span>
                 <div class="hero-play-info">
                   <span class="hero-play-main" id="nadimu-play-label">${isPlaying ? 'JEDA PERMAINAN' : (nadimuService.sessionMode === '30S_RANDOM' ? 'MAIN 30 DETIK' : 'PUTAR LAGU PENUH')}</span>
                   <span class="hero-play-sub">${isPlaying ? 'Klik untuk berhenti sejenak' : 'Ketuk tombol atau langsung gunakan kamera'}</span>
@@ -3549,13 +3599,13 @@ class App {
 
               <div class="hero-cta-quick-actions">
                 <button class="btn-hero-util" id="btn-nadimu-random-segment" title="Pilih bagian lagu acak baru">
-                  🎲 Acak Bagian
+                  Acak Bagian
                 </button>
                 <button class="btn-hero-util" id="btn-nadimu-reset" title="Ulang dari awal bagian ini">
-                  ↺ Ulang
+                  Ulang
                 </button>
                 <span class="btn-hero-util util-timer" id="nadimu-session-timer-pill" style="display:${nadimuService.sessionMode === '30S_RANDOM' ? 'inline-flex' : 'none'};">
-                  ⏱️ SISA: <span id="nadimu-timer-countdown">30s</span>
+                  SISA: <span id="nadimu-timer-countdown">30s</span>
                 </span>
               </div>
             </div>
@@ -3563,16 +3613,16 @@ class App {
             <!-- Quick fallback buttons for touch/mouse -->
             <div class="komang-quick-fbtns-row">
               <button class="komang-fbtn ${curMeasure.fingerCount === 1 ? 'active' : ''}" data-song="nadimu" data-fingers="1" data-chord="C">
-                <span>☝️ 1: C</span>
+                <span>1: C</span>
               </button>
               <button class="komang-fbtn ${curMeasure.fingerCount === 2 ? 'active' : ''}" data-song="nadimu" data-fingers="2" data-chord="F">
-                <span>✌️ 2: F</span>
+                <span>2: F</span>
               </button>
               <button class="komang-fbtn ${curMeasure.fingerCount === 3 ? 'active' : ''}" data-song="nadimu" data-fingers="3" data-chord="Em">
-                <span>🤟 3: Em</span>
+                <span>3: Em</span>
               </button>
               <button class="komang-fbtn ${curMeasure.fingerCount === 4 ? 'active' : ''}" data-song="nadimu" data-fingers="4" data-chord="G">
-                <span>🖐️ 4: G</span>
+                <span>4: G</span>
               </button>
             </div>
           </div>
@@ -3615,9 +3665,7 @@ class App {
     nadimuService.onLifeRecovered = (data) => {
       const heartsRow = document.getElementById('nadimu-hearts-row');
       if (heartsRow && !nadimuService.isNoFail) {
-        const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
-        const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
-        heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+        heartsRow.innerHTML = renderHeartsSvg(data.lives, data.maxLives, false);
       }
     };
 
@@ -3632,7 +3680,13 @@ class App {
     nadimuService.onAudioStateChanged = (isPlaying) => {
       const label = document.getElementById('nadimu-play-label');
       if (label) {
-        label.innerText = isPlaying ? '⏸️ JEDA' : '▶️ PUTAR LAGU';
+        label.innerText = isPlaying ? 'JEDA PERMAINAN' : (nadimuService.sessionMode === '30S_RANDOM' ? 'MAIN 30 DETIK' : 'PUTAR LAGU PENUH');
+      }
+      const icon = document.querySelector('#btn-nadimu-play-toggle .hero-play-icon');
+      if (icon) {
+        icon.innerHTML = isPlaying 
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.5"></rect><rect x="14" y="4" width="4" height="16" rx="1.5"></rect></svg>' 
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>';
       }
       if (isPlaying && nadimuTilesEngine) {
         nadimuTilesEngine.start();
@@ -3734,7 +3788,7 @@ class App {
       const timeEl = document.getElementById('nadimu-time-display');
       if (timeEl) {
         if (data.is30sSession) {
-          timeEl.innerText = `⏱️ SISA: ${curSec}s`;
+          timeEl.innerText = `SISA: ${curSec}s`;
         } else {
           const curM = Math.floor((data.currentTimeSec || data.songTime) / 60);
           const curS = Math.floor((data.currentTimeSec || data.songTime) % 60);
@@ -3793,24 +3847,20 @@ class App {
       if (data.combo >= 20) mult = 2.5;
       else if (data.combo >= 10) mult = 2.0;
       else if (data.combo >= 5) mult = 1.5;
-      multEl.innerText = `⚡ MULTIPLIER ${mult.toFixed(1)}x`;
+      multEl.innerText = `MULTIPLIER ${mult.toFixed(1)}x`;
       multEl.classList.toggle('high-mult', mult >= 2.0);
     }
 
     const heartsRow = document.getElementById('nadimu-hearts-row');
     if (heartsRow && data.lives !== undefined && !nadimuService.isNoFail) {
-      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
-      const deadHearts = '🖤'.repeat(Math.max(0, nadimuService.maxLives - data.lives));
-      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      heartsRow.innerHTML = renderHeartsSvg(data.lives, nadimuService.maxLives, false);
     }
   }
 
   _onNadimuLifeLost(data) {
     const heartsRow = document.getElementById('nadimu-hearts-row');
     if (heartsRow) {
-      const activeHearts = '❤️'.repeat(Math.max(0, data.lives));
-      const deadHearts = '🖤'.repeat(Math.max(0, data.maxLives - data.lives));
-      heartsRow.innerHTML = `${activeHearts}${deadHearts}`;
+      heartsRow.innerHTML = renderHeartsSvg(data.lives, data.maxLives, false);
       heartsRow.classList.add('heart-damage');
       setTimeout(() => heartsRow.classList.remove('heart-damage'), 350);
     }
@@ -3820,7 +3870,7 @@ class App {
 
     const multEl = document.getElementById('nadimu-multiplier-pill');
     if (multEl) {
-      multEl.innerText = '⚡ MULTIPLIER 1.0x';
+      multEl.innerText = 'MULTIPLIER 1.0x';
       multEl.classList.remove('high-mult');
     }
 
@@ -3828,7 +3878,7 @@ class App {
     const liveText = document.getElementById('nadimu-live-text');
     if (liveDot && liveText) {
       liveDot.className = 'live-dot miss';
-      liveText.innerText = 'MISS! Ubin Terlewat -1 Nyawa 💔';
+      liveText.innerText = 'MISS! Ubin Terlewat -1 Nyawa';
       setTimeout(() => {
         if (liveDot) liveDot.className = 'live-dot waiting';
       }, 450);
@@ -4115,7 +4165,10 @@ document.addEventListener('click', (e) => {
     btns.forEach(btn => {
       btn.innerHTML = `
         <span class="bgm-dot ${isEnabled ? 'active' : ''}"></span>
-        <span>🎵 Backsound: <strong>${isEnabled ? 'ON' : 'OFF'}</strong></span>
+        <span class="bgm-label-wrap">
+          <svg class="bgm-icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3" fill="currentColor"></circle><circle cx="18" cy="16" r="3" fill="currentColor"></circle></svg>
+          <span>Backsound: <strong>${isEnabled ? 'ON' : 'OFF'}</strong></span>
+        </span>
       `;
       btn.classList.toggle('active', isEnabled);
     });

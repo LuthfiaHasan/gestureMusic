@@ -1014,7 +1014,7 @@ export class TaragakPulangSyncService {
     this.prevFingerPoints = null;
     this.rawSpeed = 0;
     this.smoothedSpeed = 0;
-    this.guidanceMessage = `👋 TUNJUKKAN KE KAMERA: ${this.currentTarget.label} (${this.currentTarget.emoji})`;
+    this.guidanceMessage = `👋 PETUNJUK: TUNJUKKAN ${this.currentTarget.label} (${this.currentTarget.emoji})`;
 
     this.consecutiveMismatchTime = 0;
     this.lastCheckTimestamp = timestamp;
